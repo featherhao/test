@@ -27,5 +27,5 @@ vless://8187887f-b152-48ce-8ab1-3b1d42687364@20.187.89.16:443?encryption=none&se
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@43.132.212.12:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top#HK-2
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@129.226.153.34:443?encryption=none&security=tls&sni=cfsg.qianqingyu.top&fp=randomized&type=ws&host=cfsg.qianqingyu.top&path=%2F%3Fed%3D2048#cfsg.qianqingyu.top#SG-1
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@146.56.149.205:443?encryption=none&security=tls&sni=cfjp.qianqingyu.top&fp=randomized&type=ws&host=cfjp.qianqingyu.top&path=%2F%3Fed%3D2048#cfjp.qianqingyu.top#JP-1
-vless://8187887f-b152-48ce-8ab1-3b1d42687364@43.163.237.3:443?encryption=none&security=tls&sni=cfjp.qianqingyu.top&fp=randomized&type=ws&host=cfjp.qianqingyu.top&path=%2F%3Fed%3D2048#cfjp.qianqingyu.top#JP-2
+vless://8187887f-b152-48ce-8ab1-3b1d42687364@130.162.159.67:443?encryption=none&security=tls&sni=cfjp.qianqingyu.top&fp=randomized&type=ws&host=cfjp.qianqingyu.top&path=%2F%3Fed%3D2048#cfjp.qianqingyu.top#JP-2
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@20.187.89.16:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top#hk
