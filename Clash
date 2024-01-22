@@ -1,9 +1,9 @@
 ####################################
 # 创建者：v2rayse.com
 # 客户端：Clash.Meta
-# 创建时间：2024-01-21 15:11:11
+# 创建时间：2024-01-22 12:51:45
 # 使用模版：V2RaySE 默认模版
-# 节点数量：12
+# 节点数量：17
 ####################################
 # !!当前配置文件请使用基于 Clash.Meta 内核程序
 mixed-port: 7890
@@ -98,6 +98,11 @@ proxies:
   - {"name":"cloudflare-1212","type":"vless","server":"104.16.36.67","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
   - {"name":"cloudflare-1213","type":"vless","server":"104.16.245.202","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
   - {"name":"cloudflare-1214","type":"vless","server":"104.16.149.152","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
+  - {"name":"S-110","type":"vless","server":"104.17.114.1","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
+  - {"name":"S-113","type":"vless","server":"104.17.160.113","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
+  - {"name":"S-115","type":"vless","server":"104.18.85.102","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
+  - {"name":"S-118","type":"vless","server":"104.17.118.181","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
+  - {"name":"S-123","type":"vless","server":"104.18.90.16","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
 proxy-groups:
   - name: 🚀 节点选择
     type: select
@@ -116,6 +121,11 @@ proxy-groups:
       - cloudflare-1212
       - cloudflare-1213
       - cloudflare-1214
+      - S-110
+      - S-113
+      - S-115
+      - S-118
+      - S-123
   - name: ♻️ 自动选择
     type: url-test
     url: http://www.gstatic.com/generate_204
@@ -134,6 +144,11 @@ proxy-groups:
       - cloudflare-1212
       - cloudflare-1213
       - cloudflare-1214
+      - S-110
+      - S-113
+      - S-115
+      - S-118
+      - S-123
   - name: 🌍 国外媒体
     type: select
     proxies:
@@ -152,6 +167,11 @@ proxy-groups:
       - cloudflare-1212
       - cloudflare-1213
       - cloudflare-1214
+      - S-110
+      - S-113
+      - S-115
+      - S-118
+      - S-123
   - name: 📲 电报信息
     type: select
     proxies:
@@ -169,6 +189,11 @@ proxy-groups:
       - cloudflare-1212
       - cloudflare-1213
       - cloudflare-1214
+      - S-110
+      - S-113
+      - S-115
+      - S-118
+      - S-123
   - name: Ⓜ️ 微软服务
     type: select
     proxies:
@@ -186,6 +211,11 @@ proxy-groups:
       - cloudflare-1212
       - cloudflare-1213
       - cloudflare-1214
+      - S-110
+      - S-113
+      - S-115
+      - S-118
+      - S-123
   - name: 🍎 苹果服务
     type: select
     proxies:
@@ -203,6 +233,11 @@ proxy-groups:
       - cloudflare-1212
       - cloudflare-1213
       - cloudflare-1214
+      - S-110
+      - S-113
+      - S-115
+      - S-118
+      - S-123
   - name: 🎯 全球直连
     type: select
     proxies:
@@ -237,6 +272,11 @@ proxy-groups:
       - cloudflare-1212
       - cloudflare-1213
       - cloudflare-1214
+      - S-110
+      - S-113
+      - S-115
+      - S-118
+      - S-123
 
 rules:
 # 本地/局域网地址
