@@ -23,3 +23,8 @@ vless://8187887f-b152-48ce-8ab1-3b1d42687364@104.18.85.102:443?encryption=none&s
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@104.17.161.81:443?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=%2F%3Fed%3D2048#cfyuan.qianqingyu.top#CFYUAN-l113
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@165.1.65.88:443?encryption=none&security=tls&sni=cfus.qianqingyu.top&fp=randomized&type=ws&host=cfus.qianqingyu.top&path=%2F%3Fed%3D2048#cfus.qianqingyu.top#US-1
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@192.18.153.34:443?encryption=none&security=tls&sni=cfus.qianqingyu.top&fp=randomized&type=ws&host=cfus.qianqingyu.top&path=%2F%3Fed%3D2048#cfus.qianqingyu.top#US-2
+vless://8187887f-b152-48ce-8ab1-3b1d42687364@8.210.110.29:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top#HK-1
+vless://8187887f-b152-48ce-8ab1-3b1d42687364@20.187.89.16:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top#HK-2
+vless://8187887f-b152-48ce-8ab1-3b1d42687364@8.222.221.163:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top#SG-1
+vless://8187887f-b152-48ce-8ab1-3b1d42687364@47.74.37.227:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top#JP-1
+vless://8187887f-b152-48ce-8ab1-3b1d42687364@146.56.149.205:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top#JP-2
