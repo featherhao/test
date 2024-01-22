@@ -1,9 +1,9 @@
 ####################################
 # 创建者：v2rayse.com
 # 客户端：Clash.Meta
-# 创建时间：2024-01-22 18:33:52
+# 创建时间：2024-01-22 21:44:56
 # 使用模版：V2RaySE 默认模版
-# 节点数量：14
+# 节点数量：18
 ####################################
 # !!当前配置文件请使用基于 Clash.Meta 内核程序
 mixed-port: 7890
@@ -100,6 +100,10 @@ proxies:
   - {"name":"CF30S2","type":"vless","server":"104.16.193.46","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
   - {"name":"CF30S3","type":"vless","server":"104.19.146.39","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
   - {"name":"CF30S4","type":"vless","server":"104.16.197.212","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
+  - {"name":"CF30L113","type":"vless","server":"104.17.161.81","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
+  - {"name":"CF30L117","type":"vless","server":"104.16.149.7","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
+  - {"name":"CF30L118","type":"vless","server":"104.17.113.25","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
+  - {"name":"CF30l121","type":"vless","server":"104.17.162.192","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
 proxy-groups:
   - name: 🚀 节点选择
     type: select
@@ -120,6 +124,10 @@ proxy-groups:
       - CF30S2
       - CF30S3
       - CF30S4
+      - CF30L113
+      - CF30L117
+      - CF30L118
+      - CF30l121
   - name: ♻️ 自动选择
     type: url-test
     url: http://www.gstatic.com/generate_204
@@ -140,6 +148,10 @@ proxy-groups:
       - CF30S2
       - CF30S3
       - CF30S4
+      - CF30L113
+      - CF30L117
+      - CF30L118
+      - CF30l121
   - name: 🌍 国外媒体
     type: select
     proxies:
@@ -160,6 +172,10 @@ proxy-groups:
       - CF30S2
       - CF30S3
       - CF30S4
+      - CF30L113
+      - CF30L117
+      - CF30L118
+      - CF30l121
   - name: 📲 电报信息
     type: select
     proxies:
@@ -179,6 +195,10 @@ proxy-groups:
       - CF30S2
       - CF30S3
       - CF30S4
+      - CF30L113
+      - CF30L117
+      - CF30L118
+      - CF30l121
   - name: Ⓜ️ 微软服务
     type: select
     proxies:
@@ -198,6 +218,10 @@ proxy-groups:
       - CF30S2
       - CF30S3
       - CF30S4
+      - CF30L113
+      - CF30L117
+      - CF30L118
+      - CF30l121
   - name: 🍎 苹果服务
     type: select
     proxies:
@@ -217,6 +241,10 @@ proxy-groups:
       - CF30S2
       - CF30S3
       - CF30S4
+      - CF30L113
+      - CF30L117
+      - CF30L118
+      - CF30l121
   - name: 🎯 全球直连
     type: select
     proxies:
@@ -253,6 +281,10 @@ proxy-groups:
       - CF30S2
       - CF30S3
       - CF30S4
+      - CF30L113
+      - CF30L117
+      - CF30L118
+      - CF30l121
 
 rules:
 # 本地/局域网地址
