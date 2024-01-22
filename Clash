@@ -1,9 +1,9 @@
 ####################################
 # 创建者：v2rayse.com
 # 客户端：Clash.Meta
-# 创建时间：2024-01-22 21:44:56
+# 创建时间：2024-01-22 22:48:31
 # 使用模版：V2RaySE 默认模版
-# 节点数量：18
+# 节点数量：23
 ####################################
 # !!当前配置文件请使用基于 Clash.Meta 内核程序
 mixed-port: 7890
@@ -104,6 +104,11 @@ proxies:
   - {"name":"CF30L117","type":"vless","server":"104.16.149.7","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
   - {"name":"CF30L118","type":"vless","server":"104.17.113.25","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
   - {"name":"CF30l121","type":"vless","server":"104.17.162.192","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
+  - {"name":"CFYUAN","type":"vless","server":"cfyuan.qianqingyu.top","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"CFYUAN-110","type":"vless","server":"104.17.114.1","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"CFYUAN-113","type":"vless","server":"104.17.160.113","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"CFYUAN-115","type":"vless","server":"104.18.85.102","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"CFYUAN-l113","type":"vless","server":"104.17.161.81","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
 proxy-groups:
   - name: 🚀 节点选择
     type: select
@@ -128,6 +133,11 @@ proxy-groups:
       - CF30L117
       - CF30L118
       - CF30l121
+      - CFYUAN
+      - CFYUAN-110
+      - CFYUAN-113
+      - CFYUAN-115
+      - CFYUAN-l113
   - name: ♻️ 自动选择
     type: url-test
     url: http://www.gstatic.com/generate_204
@@ -152,6 +162,11 @@ proxy-groups:
       - CF30L117
       - CF30L118
       - CF30l121
+      - CFYUAN
+      - CFYUAN-110
+      - CFYUAN-113
+      - CFYUAN-115
+      - CFYUAN-l113
   - name: 🌍 国外媒体
     type: select
     proxies:
@@ -176,6 +191,11 @@ proxy-groups:
       - CF30L117
       - CF30L118
       - CF30l121
+      - CFYUAN
+      - CFYUAN-110
+      - CFYUAN-113
+      - CFYUAN-115
+      - CFYUAN-l113
   - name: 📲 电报信息
     type: select
     proxies:
@@ -199,6 +219,11 @@ proxy-groups:
       - CF30L117
       - CF30L118
       - CF30l121
+      - CFYUAN
+      - CFYUAN-110
+      - CFYUAN-113
+      - CFYUAN-115
+      - CFYUAN-l113
   - name: Ⓜ️ 微软服务
     type: select
     proxies:
@@ -222,6 +247,11 @@ proxy-groups:
       - CF30L117
       - CF30L118
       - CF30l121
+      - CFYUAN
+      - CFYUAN-110
+      - CFYUAN-113
+      - CFYUAN-115
+      - CFYUAN-l113
   - name: 🍎 苹果服务
     type: select
     proxies:
@@ -245,6 +275,11 @@ proxy-groups:
       - CF30L117
       - CF30L118
       - CF30l121
+      - CFYUAN
+      - CFYUAN-110
+      - CFYUAN-113
+      - CFYUAN-115
+      - CFYUAN-l113
   - name: 🎯 全球直连
     type: select
     proxies:
@@ -285,6 +320,11 @@ proxy-groups:
       - CF30L117
       - CF30L118
       - CF30l121
+      - CFYUAN
+      - CFYUAN-110
+      - CFYUAN-113
+      - CFYUAN-115
+      - CFYUAN-l113
 
 rules:
 # 本地/局域网地址
