@@ -7,4 +7,9 @@ vless://0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b@104.17.160.113:443?encryption=none&
 vless://0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b@104.18.85.102:443?encryption=none&security=tls&sni=cf-8ul.pages.dev&alpn=h2&fp=random&type=ws&host=cf-8ul.pages.dev#S-115
 vless://0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b@104.17.118.181:443?encryption=none&security=tls&sni=cf-8ul.pages.dev&alpn=h2&fp=random&type=ws&host=cf-8ul.pages.dev#S-118
 vless://0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b@104.18.90.16:443?encryption=none&security=tls&sni=cf-8ul.pages.dev&alpn=h2&fp=random&type=ws&host=cf-8ul.pages.dev#S-123
-vless://ae8dab00-f85a-45fb-98e0-3f28de3146cc@104.17.160.113:443?encryption=none&security=tls&sni=cf30.qianqingyu.top&fp=chrome&type=ws&host=cf30.qianqingyu.top#CF30
+vless://ae8dab00-f85a-45fb-98e0-3f28de3146cc@104.17.160.113:443?encryption=none&security=tls&sni=cf30.qianqingyu.top&fp=chrome&type=ws&host=cf30.qianqingyu.top#CF30S113
+vless://ae8dab00-f85a-45fb-98e0-3f28de3146cc@104.16.157.158:443?encryption=none&security=tls&sni=cf30.qianqingyu.top&fp=chrome&type=ws&host=cf30.qianqingyu.top#CF30S1
+vless://ae8dab00-f85a-45fb-98e0-3f28de3146cc@104.16.193.46:443?encryption=none&security=tls&sni=cf30.qianqingyu.top&fp=chrome&type=ws&host=cf30.qianqingyu.top#CF30S2
+vless://ae8dab00-f85a-45fb-98e0-3f28de3146cc@104.19.146.39:443?encryption=none&security=tls&sni=cf30.qianqingyu.top&fp=chrome&type=ws&host=cf30.qianqingyu.top#CF30S3
+vless://ae8dab00-f85a-45fb-98e0-3f28de3146cc@104.16.197.212:443?encryption=none&security=tls&sni=cf30.qianqingyu.top&fp=chrome&type=ws&host=cf30.qianqingyu.top#CF30S4
+
