@@ -1,7 +1,7 @@
 ####################################
 # 创建者：v2rayse.com
 # 客户端：Clash.Meta
-# 创建时间：2024-01-23 18:34:02
+# 创建时间：2024-01-23 18:55:57
 # 使用模版：V2RaySE 默认模版
 # 节点数量：33
 ####################################
@@ -115,9 +115,9 @@ proxies:
   - {"name":"US-2","type":"vless","server":"23.105.194.121","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"US-3","type":"vless","server":"45.32.79.228","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"US-4","type":"vless","server":"45.32.67.210","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"hk","type":"vless","server":"103.160.204.245","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"hk—US","type":"vless","server":"103.160.204.245","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"HK-1","type":"vless","server":"43.198.11.234","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"HK-2","type":"vless","server":"103.232.213.38","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"HK-2—JP","type":"vless","server":"103.232.213.38","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"SG-1","type":"vless","server":"139.162.16.182","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfsg.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfsg.qianqingyu.top"}},"client-fingerprint":"randomized"}
 proxy-groups:
   - name: 🚀 节点选择
@@ -154,9 +154,9 @@ proxy-groups:
       - US-2
       - US-3
       - US-4
-      - hk
+      - hk—US
       - HK-1
-      - HK-2
+      - HK-2—JP
       - SG-1
   - name: ♻️ 自动选择
     type: url-test
@@ -193,9 +193,9 @@ proxy-groups:
       - US-2
       - US-3
       - US-4
-      - hk
+      - hk—US
       - HK-1
-      - HK-2
+      - HK-2—JP
       - SG-1
   - name: 🌍 国外媒体
     type: select
@@ -232,9 +232,9 @@ proxy-groups:
       - US-2
       - US-3
       - US-4
-      - hk
+      - hk—US
       - HK-1
-      - HK-2
+      - HK-2—JP
       - SG-1
   - name: 📲 电报信息
     type: select
@@ -270,9 +270,9 @@ proxy-groups:
       - US-2
       - US-3
       - US-4
-      - hk
+      - hk—US
       - HK-1
-      - HK-2
+      - HK-2—JP
       - SG-1
   - name: Ⓜ️ 微软服务
     type: select
@@ -308,9 +308,9 @@ proxy-groups:
       - US-2
       - US-3
       - US-4
-      - hk
+      - hk—US
       - HK-1
-      - HK-2
+      - HK-2—JP
       - SG-1
   - name: 🍎 苹果服务
     type: select
@@ -346,9 +346,9 @@ proxy-groups:
       - US-2
       - US-3
       - US-4
-      - hk
+      - hk—US
       - HK-1
-      - HK-2
+      - HK-2—JP
       - SG-1
   - name: 🎯 全球直连
     type: select
@@ -401,9 +401,9 @@ proxy-groups:
       - US-2
       - US-3
       - US-4
-      - hk
+      - hk—US
       - HK-1
-      - HK-2
+      - HK-2—JP
       - SG-1
 
 rules:
