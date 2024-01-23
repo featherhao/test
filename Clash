@@ -1,7 +1,7 @@
 ####################################
 # 创建者：v2rayse.com
 # 客户端：Clash.Meta
-# 创建时间：2024-01-23 18:30:02
+# 创建时间：2024-01-23 18:34:02
 # 使用模版：V2RaySE 默认模版
 # 节点数量：33
 ####################################
@@ -111,14 +111,14 @@ proxies:
   - {"name":"CFYUAN-l113","type":"vless","server":"104.17.161.81","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"JP-1","type":"vless","server":"45.143.234.76","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"JP-2","type":"vless","server":"195.245.242.72","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"US-1","type":"vless","server":"23.105.214.132","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"US-2","type":"vless","server":"23.105.194.121","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"US-3","type":"vless","server":"45.32.79.228","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"US-4","type":"vless","server":"45.32.67.210","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"hk","type":"vless","server":"103.160.204.245","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"US-1_1","type":"vless","server":"23.105.214.132","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"US-2_1","type":"vless","server":"23.105.194.121","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"HK-1","type":"vless","server":"43.198.11.234","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"HK-2","type":"vless","server":"103.232.213.38","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"SG-1","type":"vless","server":"139.162.16.182","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfsg.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfsg.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"US-1_2","type":"vless","server":"45.32.79.228","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"US-2_2","type":"vless","server":"45.32.67.210","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
 proxy-groups:
   - name: 🚀 节点选择
     type: select
@@ -150,14 +150,14 @@ proxy-groups:
       - CFYUAN-l113
       - JP-1
       - JP-2
+      - US-1
+      - US-2
+      - US-3
+      - US-4
       - hk
-      - US-1_1
-      - US-2_1
       - HK-1
       - HK-2
       - SG-1
-      - US-1_2
-      - US-2_2
   - name: ♻️ 自动选择
     type: url-test
     url: http://www.gstatic.com/generate_204
@@ -189,14 +189,14 @@ proxy-groups:
       - CFYUAN-l113
       - JP-1
       - JP-2
+      - US-1
+      - US-2
+      - US-3
+      - US-4
       - hk
-      - US-1_1
-      - US-2_1
       - HK-1
       - HK-2
       - SG-1
-      - US-1_2
-      - US-2_2
   - name: 🌍 国外媒体
     type: select
     proxies:
@@ -228,14 +228,14 @@ proxy-groups:
       - CFYUAN-l113
       - JP-1
       - JP-2
+      - US-1
+      - US-2
+      - US-3
+      - US-4
       - hk
-      - US-1_1
-      - US-2_1
       - HK-1
       - HK-2
       - SG-1
-      - US-1_2
-      - US-2_2
   - name: 📲 电报信息
     type: select
     proxies:
@@ -266,14 +266,14 @@ proxy-groups:
       - CFYUAN-l113
       - JP-1
       - JP-2
+      - US-1
+      - US-2
+      - US-3
+      - US-4
       - hk
-      - US-1_1
-      - US-2_1
       - HK-1
       - HK-2
       - SG-1
-      - US-1_2
-      - US-2_2
   - name: Ⓜ️ 微软服务
     type: select
     proxies:
@@ -304,14 +304,14 @@ proxy-groups:
       - CFYUAN-l113
       - JP-1
       - JP-2
+      - US-1
+      - US-2
+      - US-3
+      - US-4
       - hk
-      - US-1_1
-      - US-2_1
       - HK-1
       - HK-2
       - SG-1
-      - US-1_2
-      - US-2_2
   - name: 🍎 苹果服务
     type: select
     proxies:
@@ -342,14 +342,14 @@ proxy-groups:
       - CFYUAN-l113
       - JP-1
       - JP-2
+      - US-1
+      - US-2
+      - US-3
+      - US-4
       - hk
-      - US-1_1
-      - US-2_1
       - HK-1
       - HK-2
       - SG-1
-      - US-1_2
-      - US-2_2
   - name: 🎯 全球直连
     type: select
     proxies:
@@ -397,14 +397,14 @@ proxy-groups:
       - CFYUAN-l113
       - JP-1
       - JP-2
+      - US-1
+      - US-2
+      - US-3
+      - US-4
       - hk
-      - US-1_1
-      - US-2_1
       - HK-1
       - HK-2
       - SG-1
-      - US-1_2
-      - US-2_2
 
 rules:
 # 本地/局域网地址
