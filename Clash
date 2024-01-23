@@ -1,7 +1,7 @@
 ####################################
 # 创建者：v2rayse.com
 # 客户端：Clash.Meta
-# 创建时间：2024-01-23 13:43:21
+# 创建时间：2024-01-23 15:55:32
 # 使用模版：V2RaySE 默认模版
 # 节点数量：31
 ####################################
@@ -114,8 +114,8 @@ proxies:
   - {"name":"HK-1","type":"vless","server":"43.154.90.139","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"HK-2","type":"vless","server":"43.132.212.12","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"SG-1","type":"vless","server":"129.226.153.34","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfsg.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfsg.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"JP-1","type":"vless","server":"192.169.127.242","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"JP-2","type":"vless","server":"212.50.232.244","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"JP-1","type":"vless","server":"45.143.234.76","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"JP-2","type":"vless","server":"195.245.242.72","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"hk","type":"vless","server":"43.155.75.66","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
 proxy-groups:
   - name: 🚀 节点选择
