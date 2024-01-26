@@ -1,9 +1,9 @@
 ####################################
 # 创建者：v2rayse.com
 # 客户端：Clash.Meta
-# 创建时间：2024-01-24 14:31:38
+# 创建时间：2024-01-27 01:20:02
 # 使用模版：V2RaySE 默认模版
-# 节点数量：36
+# 节点数量：37
 ####################################
 # !!当前配置文件请使用基于 Clash.Meta 内核程序
 mixed-port: 7890
@@ -112,10 +112,11 @@ proxies:
   - {"name":"cfyuan.qianqingyu.top-CFYUAN-113","type":"vless","server":"104.17.160.113","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfyuan.qianqingyu.top-CFYUAN-115","type":"vless","server":"104.18.85.102","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfyuan.qianqingyu.top-CFYUAN-l113","type":"vless","server":"104.17.161.81","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfjp.qianqingyu.top-JP-1","type":"vless","server":"45.143.234.76","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfjp.qianqingyu.top-JP-2","type":"vless","server":"195.245.242.72","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfus.qianqingyu.top-US-1","type":"vless","server":"23.105.214.132","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfus.qianqingyu.top-US-2","type":"vless","server":"23.105.194.121","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"cfjp.qianqingyu.top-JP-1","type":"vless","server":"wz.weishao2023.dk.eu.org","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"cfjp.qianqingyu.top-JP-2_1","type":"vless","server":"acjp.cloudflarest.link","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"cfjp.qianqingyu.top-JP-2_2","type":"vless","server":"fbi.gov","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"cfus.qianqingyu.top-US-1-fbi","type":"vless","server":"fbi.gov","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"cfus.qianqingyu.top-US-2","type":"vless","server":"www.udemy.com","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfus.qianqingyu.top-US-3","type":"vless","server":"45.32.79.228","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfus.qianqingyu.top-US-4","type":"vless","server":"45.32.67.210","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfhk.qianqingyu.top-hk—US","type":"vless","server":"103.160.204.245","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
@@ -155,8 +156,9 @@ proxy-groups:
       - cfyuan.qianqingyu.top-CFYUAN-115
       - cfyuan.qianqingyu.top-CFYUAN-l113
       - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2
-      - cfus.qianqingyu.top-US-1
+      - cfjp.qianqingyu.top-JP-2_1
+      - cfjp.qianqingyu.top-JP-2_2
+      - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-US-3
       - cfus.qianqingyu.top-US-4
@@ -197,8 +199,9 @@ proxy-groups:
       - cfyuan.qianqingyu.top-CFYUAN-115
       - cfyuan.qianqingyu.top-CFYUAN-l113
       - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2
-      - cfus.qianqingyu.top-US-1
+      - cfjp.qianqingyu.top-JP-2_1
+      - cfjp.qianqingyu.top-JP-2_2
+      - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-US-3
       - cfus.qianqingyu.top-US-4
@@ -239,8 +242,9 @@ proxy-groups:
       - cfyuan.qianqingyu.top-CFYUAN-115
       - cfyuan.qianqingyu.top-CFYUAN-l113
       - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2
-      - cfus.qianqingyu.top-US-1
+      - cfjp.qianqingyu.top-JP-2_1
+      - cfjp.qianqingyu.top-JP-2_2
+      - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-US-3
       - cfus.qianqingyu.top-US-4
@@ -280,8 +284,9 @@ proxy-groups:
       - cfyuan.qianqingyu.top-CFYUAN-115
       - cfyuan.qianqingyu.top-CFYUAN-l113
       - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2
-      - cfus.qianqingyu.top-US-1
+      - cfjp.qianqingyu.top-JP-2_1
+      - cfjp.qianqingyu.top-JP-2_2
+      - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-US-3
       - cfus.qianqingyu.top-US-4
@@ -321,8 +326,9 @@ proxy-groups:
       - cfyuan.qianqingyu.top-CFYUAN-115
       - cfyuan.qianqingyu.top-CFYUAN-l113
       - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2
-      - cfus.qianqingyu.top-US-1
+      - cfjp.qianqingyu.top-JP-2_1
+      - cfjp.qianqingyu.top-JP-2_2
+      - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-US-3
       - cfus.qianqingyu.top-US-4
@@ -362,8 +368,9 @@ proxy-groups:
       - cfyuan.qianqingyu.top-CFYUAN-115
       - cfyuan.qianqingyu.top-CFYUAN-l113
       - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2
-      - cfus.qianqingyu.top-US-1
+      - cfjp.qianqingyu.top-JP-2_1
+      - cfjp.qianqingyu.top-JP-2_2
+      - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-US-3
       - cfus.qianqingyu.top-US-4
@@ -420,8 +427,9 @@ proxy-groups:
       - cfyuan.qianqingyu.top-CFYUAN-115
       - cfyuan.qianqingyu.top-CFYUAN-l113
       - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2
-      - cfus.qianqingyu.top-US-1
+      - cfjp.qianqingyu.top-JP-2_1
+      - cfjp.qianqingyu.top-JP-2_2
+      - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-US-3
       - cfus.qianqingyu.top-US-4
