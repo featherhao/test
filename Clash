@@ -1,9 +1,9 @@
 ####################################
 # 创建者：v2rayse.com
 # 客户端：Clash.Meta
-# 创建时间：2024-01-27 01:20:02
+# 创建时间：2024-01-27 13:09:03
 # 使用模版：V2RaySE 默认模版
-# 节点数量：37
+# 节点数量：38
 ####################################
 # !!当前配置文件请使用基于 Clash.Meta 内核程序
 mixed-port: 7890
@@ -117,8 +117,9 @@ proxies:
   - {"name":"cfjp.qianqingyu.top-JP-2_2","type":"vless","server":"fbi.gov","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfus.qianqingyu.top-US-1-fbi","type":"vless","server":"fbi.gov","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfus.qianqingyu.top-US-2","type":"vless","server":"www.udemy.com","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfus.qianqingyu.top-US-3","type":"vless","server":"45.32.79.228","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfus.qianqingyu.top-US-4","type":"vless","server":"45.32.67.210","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"cfus.qianqingyu.top-USacjp-3","type":"vless","server":"acjp.cloudflarest.link","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"cfus.qianqingyu.top-USacus-4","type":"vless","server":"acus.cloudflarest.link","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"cfus.qianqingyu.top-USyouxuan","type":"vless","server":"146.56.161.229","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfhk.qianqingyu.top-hk—US","type":"vless","server":"103.160.204.245","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfhk.qianqingyu.top-HK-1","type":"vless","server":"43.198.11.234","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfhk.qianqingyu.top-HK-2—JP","type":"vless","server":"103.232.213.38","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
@@ -160,8 +161,9 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2_2
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-US-3
-      - cfus.qianqingyu.top-US-4
+      - cfus.qianqingyu.top-USacjp-3
+      - cfus.qianqingyu.top-USacus-4
+      - cfus.qianqingyu.top-USyouxuan
       - cfhk.qianqingyu.top-hk—US
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
@@ -203,8 +205,9 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2_2
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-US-3
-      - cfus.qianqingyu.top-US-4
+      - cfus.qianqingyu.top-USacjp-3
+      - cfus.qianqingyu.top-USacus-4
+      - cfus.qianqingyu.top-USyouxuan
       - cfhk.qianqingyu.top-hk—US
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
@@ -246,8 +249,9 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2_2
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-US-3
-      - cfus.qianqingyu.top-US-4
+      - cfus.qianqingyu.top-USacjp-3
+      - cfus.qianqingyu.top-USacus-4
+      - cfus.qianqingyu.top-USyouxuan
       - cfhk.qianqingyu.top-hk—US
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
@@ -288,8 +292,9 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2_2
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-US-3
-      - cfus.qianqingyu.top-US-4
+      - cfus.qianqingyu.top-USacjp-3
+      - cfus.qianqingyu.top-USacus-4
+      - cfus.qianqingyu.top-USyouxuan
       - cfhk.qianqingyu.top-hk—US
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
@@ -330,8 +335,9 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2_2
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-US-3
-      - cfus.qianqingyu.top-US-4
+      - cfus.qianqingyu.top-USacjp-3
+      - cfus.qianqingyu.top-USacus-4
+      - cfus.qianqingyu.top-USyouxuan
       - cfhk.qianqingyu.top-hk—US
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
@@ -372,8 +378,9 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2_2
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-US-3
-      - cfus.qianqingyu.top-US-4
+      - cfus.qianqingyu.top-USacjp-3
+      - cfus.qianqingyu.top-USacus-4
+      - cfus.qianqingyu.top-USyouxuan
       - cfhk.qianqingyu.top-hk—US
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
@@ -431,8 +438,9 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2_2
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-US-3
-      - cfus.qianqingyu.top-US-4
+      - cfus.qianqingyu.top-USacjp-3
+      - cfus.qianqingyu.top-USacus-4
+      - cfus.qianqingyu.top-USyouxuan
       - cfhk.qianqingyu.top-hk—US
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
