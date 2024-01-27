@@ -32,7 +32,7 @@ vless://8187887f-b152-48ce-8ab1-3b1d42687364@fbi.gov:443?encryption=none&securit
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@fbi.gov:443?encryption=none&security=tls&sni=cfus.qianqingyu.top&fp=randomized&type=ws&host=cfus.qianqingyu.top&path=%2F%3Fed%3D2048#cfus.qianqingyu.top-US-1-fbi
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@www.udemy.com:443?encryption=none&security=tls&sni=cfus.qianqingyu.top&fp=randomized&type=ws&host=cfus.qianqingyu.top&path=%2F%3Fed%3D2048#cfus.qianqingyu.top-US-2
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@45.32.79.228:443?encryption=none&security=tls&sni=cfus.qianqingyu.top&fp=randomized&type=ws&host=cfus.qianqingyu.top&path=%2F%3Fed%3D2048#cfus.qianqingyu.top-US-3
-vless://8187887f-b152-48ce-8ab1-3b1d42687364@45.32.67.210:443?encryption=none&security=tls&sni=cfus.qianqingyu.top&fp=randomized&type=ws&host=cfus.qianqingyu.top&path=%2F%3Fed%3D2048#cfus.qianqingyu.top-US-4
+vless://8187887f-b152-48ce-8ab1-3b1d42687364@cfyuan.qianqingyu.top:443?encryption=none&security=tls&sni=cfus.qianqingyu.top&fp=randomized&type=ws&host=cfus.qianqingyu.top&path=%2F%3Fed%3D2048#cfus.qianqingyu.top-US-4
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@103.160.204.245:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top-hk—US
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@43.198.11.234:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top-HK-1
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@103.232.213.38:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top-HK-2—JP
