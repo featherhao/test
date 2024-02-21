@@ -1,9 +1,9 @@
 ####################################
 # 创建者：v2rayse.com
 # 客户端：Clash.Meta
-# 创建时间：2024-01-28 23:32:20
+# 创建时间：2024-02-22 00:44:13
 # 使用模版：V2RaySE 默认模版
-# 节点数量：39
+# 节点数量：45
 ####################################
 # !!当前配置文件请使用基于 Clash.Meta 内核程序
 mixed-port: 7890
@@ -86,8 +86,14 @@ dns:
       - 0.0.0.0/32
 
 proxies:
-  - {"name":"cfpage-zidong","type":"vless","server":"wz.weishao2023.dk.eu.org","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
+  - {"name":"cfpage-weishao2023","type":"vless","server":"wz.weishao2023.dk.eu.org","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
   - {"name":"cfpage-cdnyx","type":"vless","server":"cdnyx.qianqingyu.top","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
+  - {"name":"cfpage-cdnfd","type":"vless","server":"cdnfd.qianqingyu.top","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
+  - {"name":"cfpage-cdnfd1","type":"vless","server":"14.102.228.8","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
+  - {"name":"cfpage-cdnfd2","type":"vless","server":"116.203.58.165","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
+  - {"name":"cfpage-cdnfd3","type":"vless","server":"141.98.197.137","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
+  - {"name":"cfpage-cdnfd4","type":"vless","server":"5.75.214.65","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
+  - {"name":"cfpage-cdnfd5","type":"vless","server":"20.218.125.181","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
   - {"name":"cfpage-1212","type":"vless","server":"104.16.36.67","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
   - {"name":"cfpage-1213","type":"vless","server":"104.16.245.202","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
   - {"name":"cfpage-1214","type":"vless","server":"104.16.149.152","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
@@ -131,8 +137,14 @@ proxy-groups:
     proxies:
       - ♻️ 自动选择
       - DIRECT
-      - cfpage-zidong
+      - cfpage-weishao2023
       - cfpage-cdnyx
+      - cfpage-cdnfd
+      - cfpage-cdnfd1
+      - cfpage-cdnfd2
+      - cfpage-cdnfd3
+      - cfpage-cdnfd4
+      - cfpage-cdnfd5
       - cfpage-1212
       - cfpage-1213
       - cfpage-1214
@@ -176,8 +188,14 @@ proxy-groups:
     interval: 300
     tolerance: 50
     proxies:
-      - cfpage-zidong
+      - cfpage-weishao2023
       - cfpage-cdnyx
+      - cfpage-cdnfd
+      - cfpage-cdnfd1
+      - cfpage-cdnfd2
+      - cfpage-cdnfd3
+      - cfpage-cdnfd4
+      - cfpage-cdnfd5
       - cfpage-1212
       - cfpage-1213
       - cfpage-1214
@@ -221,8 +239,14 @@ proxy-groups:
       - 🚀 节点选择
       - ♻️ 自动选择
       - 🎯 全球直连
-      - cfpage-zidong
+      - cfpage-weishao2023
       - cfpage-cdnyx
+      - cfpage-cdnfd
+      - cfpage-cdnfd1
+      - cfpage-cdnfd2
+      - cfpage-cdnfd3
+      - cfpage-cdnfd4
+      - cfpage-cdnfd5
       - cfpage-1212
       - cfpage-1213
       - cfpage-1214
@@ -265,8 +289,14 @@ proxy-groups:
     proxies:
       - 🚀 节点选择
       - 🎯 全球直连
-      - cfpage-zidong
+      - cfpage-weishao2023
       - cfpage-cdnyx
+      - cfpage-cdnfd
+      - cfpage-cdnfd1
+      - cfpage-cdnfd2
+      - cfpage-cdnfd3
+      - cfpage-cdnfd4
+      - cfpage-cdnfd5
       - cfpage-1212
       - cfpage-1213
       - cfpage-1214
@@ -309,8 +339,14 @@ proxy-groups:
     proxies:
       - 🎯 全球直连
       - 🚀 节点选择
-      - cfpage-zidong
+      - cfpage-weishao2023
       - cfpage-cdnyx
+      - cfpage-cdnfd
+      - cfpage-cdnfd1
+      - cfpage-cdnfd2
+      - cfpage-cdnfd3
+      - cfpage-cdnfd4
+      - cfpage-cdnfd5
       - cfpage-1212
       - cfpage-1213
       - cfpage-1214
@@ -353,8 +389,14 @@ proxy-groups:
     proxies:
       - 🚀 节点选择
       - 🎯 全球直连
-      - cfpage-zidong
+      - cfpage-weishao2023
       - cfpage-cdnyx
+      - cfpage-cdnfd
+      - cfpage-cdnfd1
+      - cfpage-cdnfd2
+      - cfpage-cdnfd3
+      - cfpage-cdnfd4
+      - cfpage-cdnfd5
       - cfpage-1212
       - cfpage-1213
       - cfpage-1214
@@ -414,8 +456,14 @@ proxy-groups:
       - 🚀 节点选择
       - 🎯 全球直连
       - ♻️ 自动选择
-      - cfpage-zidong
+      - cfpage-weishao2023
       - cfpage-cdnyx
+      - cfpage-cdnfd
+      - cfpage-cdnfd1
+      - cfpage-cdnfd2
+      - cfpage-cdnfd3
+      - cfpage-cdnfd4
+      - cfpage-cdnfd5
       - cfpage-1212
       - cfpage-1213
       - cfpage-1214
