@@ -1,9 +1,9 @@
 ####################################
 # 创建者：v2rayse.com
 # 客户端：Clash.Meta
-# 创建时间：2024-02-22 01:06:12
+# 创建时间：2024-03-04 13:49:52
 # 使用模版：V2RaySE 默认模版
-# 节点数量：45
+# 节点数量：50
 ####################################
 # !!当前配置文件请使用基于 Clash.Meta 内核程序
 mixed-port: 7890
@@ -131,6 +131,11 @@ proxies:
   - {"name":"cfhk.qianqingyu.top-HK-1","type":"vless","server":"43.198.11.234","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfhk.qianqingyu.top-HK-2—JP","type":"vless","server":"103.232.213.38","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfsg.qianqingyu.top-SG-1","type":"vless","server":"139.162.16.182","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfsg.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfsg.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"bestip-ACJP2","type":"vless","server":"acjp2.cloudflarest.link","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
+  - {"name":"bestip-ACSG3","type":"vless","server":"acsg3.cloudflarest.link","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
+  - {"name":"bestip-weishao2023","type":"vless","server":"104.18.182.168","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
+  - {"name":"bestip-udemy","type":"vless","server":"www.udemy.com","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
+  - {"name":"bestip-fbi","type":"vless","server":"fbi.gov","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
 proxy-groups:
   - name: 🚀 节点选择
     type: select
@@ -182,6 +187,11 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
       - cfsg.qianqingyu.top-SG-1
+      - bestip-ACJP2
+      - bestip-ACSG3
+      - bestip-weishao2023
+      - bestip-udemy
+      - bestip-fbi
   - name: ♻️ 自动选择
     type: url-test
     url: http://www.gstatic.com/generate_204
@@ -233,6 +243,11 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
       - cfsg.qianqingyu.top-SG-1
+      - bestip-ACJP2
+      - bestip-ACSG3
+      - bestip-weishao2023
+      - bestip-udemy
+      - bestip-fbi
   - name: 🌍 国外媒体
     type: select
     proxies:
@@ -284,6 +299,11 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
       - cfsg.qianqingyu.top-SG-1
+      - bestip-ACJP2
+      - bestip-ACSG3
+      - bestip-weishao2023
+      - bestip-udemy
+      - bestip-fbi
   - name: 📲 电报信息
     type: select
     proxies:
@@ -334,6 +354,11 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
       - cfsg.qianqingyu.top-SG-1
+      - bestip-ACJP2
+      - bestip-ACSG3
+      - bestip-weishao2023
+      - bestip-udemy
+      - bestip-fbi
   - name: Ⓜ️ 微软服务
     type: select
     proxies:
@@ -384,6 +409,11 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
       - cfsg.qianqingyu.top-SG-1
+      - bestip-ACJP2
+      - bestip-ACSG3
+      - bestip-weishao2023
+      - bestip-udemy
+      - bestip-fbi
   - name: 🍎 苹果服务
     type: select
     proxies:
@@ -434,6 +464,11 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
       - cfsg.qianqingyu.top-SG-1
+      - bestip-ACJP2
+      - bestip-ACSG3
+      - bestip-weishao2023
+      - bestip-udemy
+      - bestip-fbi
   - name: 🎯 全球直连
     type: select
     proxies:
@@ -501,6 +536,11 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-1
       - cfhk.qianqingyu.top-HK-2—JP
       - cfsg.qianqingyu.top-SG-1
+      - bestip-ACJP2
+      - bestip-ACSG3
+      - bestip-weishao2023
+      - bestip-udemy
+      - bestip-fbi
 
 rules:
 # 本地/局域网地址
