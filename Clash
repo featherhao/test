@@ -1,9 +1,9 @@
 ####################################
 # 创建者：v2rayse.com
 # 客户端：Clash.Meta
-# 创建时间：2024-03-04 13:49:52
+# 创建时间：2024-03-11 12:31:35
 # 使用模版：V2RaySE 默认模版
-# 节点数量：50
+# 节点数量：63
 ####################################
 # !!当前配置文件请使用基于 Clash.Meta 内核程序
 mixed-port: 7890
@@ -136,6 +136,19 @@ proxies:
   - {"name":"bestip-weishao2023","type":"vless","server":"104.18.182.168","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
   - {"name":"bestip-udemy","type":"vless","server":"www.udemy.com","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
   - {"name":"bestip-fbi","type":"vless","server":"fbi.gov","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
+  - {"name":"0311-IP v6","type":"vmess","server":"[2a01:d0:acfb:0:1:0:598e:e1f8]","port":80,"cipher":"auto","uuid":"6d75c5b6-39a7-4b7f-af2e-80fa7a50bd6b","alterId":0,"tls":false,"skip-cert-verify":true,"servername":"","network":"ws","ws-opts":{"path":"/test"}}
+  - {"name":"0311-1","type":"vmess","server":"104.18.182.168","port":443,"cipher":"auto","uuid":"6d75c5b6-39a7-4b7f-af2e-80fa7a50bd6b","alterId":0,"tls":true,"skip-cert-verify":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0128.qianqingyu.top"}}}
+  - {"name":"0311-2","type":"vmess","server":"104.16.157.158","port":443,"cipher":"auto","uuid":"6d75c5b6-39a7-4b7f-af2e-80fa7a50bd6b","alterId":0,"tls":true,"skip-cert-verify":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0128.qianqingyu.top"}}}
+  - {"name":"0311-3","type":"vmess","server":"104.17.160.113","port":443,"cipher":"auto","uuid":"6d75c5b6-39a7-4b7f-af2e-80fa7a50bd6b","alterId":0,"tls":true,"skip-cert-verify":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0128.qianqingyu.top"}}}
+  - {"name":"0311-4","type":"vmess","server":"104.17.161.81","port":443,"cipher":"auto","uuid":"6d75c5b6-39a7-4b7f-af2e-80fa7a50bd6b","alterId":0,"tls":true,"skip-cert-verify":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0128.qianqingyu.top"}}}
+  - {"name":"0311-acjp2","type":"vmess","server":"acjp2.cloudflarest.link","port":443,"cipher":"auto","uuid":"6d75c5b6-39a7-4b7f-af2e-80fa7a50bd6b","alterId":0,"tls":true,"skip-cert-verify":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0128.qianqingyu.top"}}}
+  - {"name":"0311-acsg3_1","type":"vmess","server":"acsg3.cloudflarest.link","port":443,"cipher":"auto","uuid":"6d75c5b6-39a7-4b7f-af2e-80fa7a50bd6b","alterId":0,"tls":true,"skip-cert-verify":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0128.qianqingyu.top"}}}
+  - {"name":"0311-acsg3_2","type":"vmess","server":"acsg3.cloudflarest.link","port":443,"cipher":"auto","uuid":"6d75c5b6-39a7-4b7f-af2e-80fa7a50bd6b","alterId":0,"tls":true,"skip-cert-verify":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0128.qianqingyu.top"}}}
+  - {"name":"0311-alejandracaiccedo","type":"vmess","server":"alejandracaiccedo.com","port":443,"cipher":"auto","uuid":"6d75c5b6-39a7-4b7f-af2e-80fa7a50bd6b","alterId":0,"tls":true,"skip-cert-verify":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0128.qianqingyu.top"}}}
+  - {"name":"0311-cdnyx","type":"vmess","server":"cdnyx.qianqingyu.top","port":443,"cipher":"auto","uuid":"6d75c5b6-39a7-4b7f-af2e-80fa7a50bd6b","alterId":0,"tls":true,"skip-cert-verify":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0128.qianqingyu.top"}}}
+  - {"name":"0311-fbi.gov","type":"vmess","server":"fbi.gov","port":443,"cipher":"auto","uuid":"6d75c5b6-39a7-4b7f-af2e-80fa7a50bd6b","alterId":0,"tls":true,"skip-cert-verify":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0128.qianqingyu.top"}}}
+  - {"name":"0311-test0128","type":"vmess","server":"test0128.qianqingyu.top","port":443,"cipher":"auto","uuid":"6d75c5b6-39a7-4b7f-af2e-80fa7a50bd6b","alterId":0,"tls":true,"skip-cert-verify":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0128.qianqingyu.top"}}}
+  - {"name":"0311-udemy","type":"vmess","server":"www.udemy.com","port":443,"cipher":"auto","uuid":"6d75c5b6-39a7-4b7f-af2e-80fa7a50bd6b","alterId":0,"tls":true,"skip-cert-verify":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0128.qianqingyu.top"}}}
 proxy-groups:
   - name: 🚀 节点选择
     type: select
@@ -192,6 +205,19 @@ proxy-groups:
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
+      - 0311-IP v6
+      - 0311-1
+      - 0311-2
+      - 0311-3
+      - 0311-4
+      - 0311-acjp2
+      - 0311-acsg3_1
+      - 0311-acsg3_2
+      - 0311-alejandracaiccedo
+      - 0311-cdnyx
+      - 0311-fbi.gov
+      - 0311-test0128
+      - 0311-udemy
   - name: ♻️ 自动选择
     type: url-test
     url: http://www.gstatic.com/generate_204
@@ -248,6 +274,19 @@ proxy-groups:
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
+      - 0311-IP v6
+      - 0311-1
+      - 0311-2
+      - 0311-3
+      - 0311-4
+      - 0311-acjp2
+      - 0311-acsg3_1
+      - 0311-acsg3_2
+      - 0311-alejandracaiccedo
+      - 0311-cdnyx
+      - 0311-fbi.gov
+      - 0311-test0128
+      - 0311-udemy
   - name: 🌍 国外媒体
     type: select
     proxies:
@@ -304,6 +343,19 @@ proxy-groups:
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
+      - 0311-IP v6
+      - 0311-1
+      - 0311-2
+      - 0311-3
+      - 0311-4
+      - 0311-acjp2
+      - 0311-acsg3_1
+      - 0311-acsg3_2
+      - 0311-alejandracaiccedo
+      - 0311-cdnyx
+      - 0311-fbi.gov
+      - 0311-test0128
+      - 0311-udemy
   - name: 📲 电报信息
     type: select
     proxies:
@@ -359,6 +411,19 @@ proxy-groups:
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
+      - 0311-IP v6
+      - 0311-1
+      - 0311-2
+      - 0311-3
+      - 0311-4
+      - 0311-acjp2
+      - 0311-acsg3_1
+      - 0311-acsg3_2
+      - 0311-alejandracaiccedo
+      - 0311-cdnyx
+      - 0311-fbi.gov
+      - 0311-test0128
+      - 0311-udemy
   - name: Ⓜ️ 微软服务
     type: select
     proxies:
@@ -414,6 +479,19 @@ proxy-groups:
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
+      - 0311-IP v6
+      - 0311-1
+      - 0311-2
+      - 0311-3
+      - 0311-4
+      - 0311-acjp2
+      - 0311-acsg3_1
+      - 0311-acsg3_2
+      - 0311-alejandracaiccedo
+      - 0311-cdnyx
+      - 0311-fbi.gov
+      - 0311-test0128
+      - 0311-udemy
   - name: 🍎 苹果服务
     type: select
     proxies:
@@ -469,6 +547,19 @@ proxy-groups:
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
+      - 0311-IP v6
+      - 0311-1
+      - 0311-2
+      - 0311-3
+      - 0311-4
+      - 0311-acjp2
+      - 0311-acsg3_1
+      - 0311-acsg3_2
+      - 0311-alejandracaiccedo
+      - 0311-cdnyx
+      - 0311-fbi.gov
+      - 0311-test0128
+      - 0311-udemy
   - name: 🎯 全球直连
     type: select
     proxies:
@@ -541,6 +632,19 @@ proxy-groups:
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
+      - 0311-IP v6
+      - 0311-1
+      - 0311-2
+      - 0311-3
+      - 0311-4
+      - 0311-acjp2
+      - 0311-acsg3_1
+      - 0311-acsg3_2
+      - 0311-alejandracaiccedo
+      - 0311-cdnyx
+      - 0311-fbi.gov
+      - 0311-test0128
+      - 0311-udemy
 
 rules:
 # 本地/局域网地址
