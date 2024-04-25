@@ -69,3 +69,9 @@ vless://e5cb166e-efd5-4005-bc54-a7e9f5617cfd@www.udemy.com:443?encryption=none&s
 vless://e5cb166e-efd5-4005-bc54-a7e9f5617cfd@cfyuan.qianqingyu.top:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest#cfyuan.qianqingyu.top
 vless://e5cb166e-efd5-4005-bc54-a7e9f5617cfd@104.18.182.168:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest#0311-1
 vless://e5cb166e-efd5-4005-bc54-a7e9f5617cfd@cfyuan.qianqingyu.top:80?encryption=none&security=none&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest#cfyuan.qianqingyu.top-80
+
+
+vless://d342d11e-d424-4583-b36e-524ab1f0afa4@cffd.qianqingyu.top:443?encryption=none&security=tls&sni=cffd.qianqingyu.top&fp=randomized&type=ws&host=cffd.qianqingyu.top&path=%2F%3Fed%3D2048#cffd.qianqingyu.top
+vless://d342d11e-d424-4583-b36e-524ab1f0afa4@cdnyx.qianqingyu.top:443?encryption=none&security=tls&sni=cffd.qianqingyu.top&fp=randomized&type=ws&host=cffd.qianqingyu.top&path=%2F%3Fed%3D2048#cffd-cdnyx
+vless://d342d11e-d424-4583-b36e-524ab1f0afa4@104.18.182.168:443?encryption=none&security=tls&sni=cffd.qianqingyu.top&fp=randomized&type=ws&host=cffd.qianqingyu.top&path=%2F%3Fed%3D2048#CFFD-104.18.182.168
+
