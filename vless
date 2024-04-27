@@ -33,7 +33,7 @@ vless://8187887f-b152-48ce-8ab1-3b1d42687364@cfyuan.qianqingyu.top:443?encryptio
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@cdnfd.qianqingyu.top?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=%2F%3Fed%3D2048#CFYUAN-cdnfandai
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@104.17.160.113:443?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=%2F%3Fed%3D2048#CFYUAN-113
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@104.18.85.102:443?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=%2F%3Fed%3D2048#CFYUAN-115
-vless://8187887f-b152-48ce-8ab1-3b1d42687364@cdnyx.qianqingyu.top:443?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=%2F%3Fed%3D2048CFYUAN-CNDYX
+
 
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@cdnyx.qianqingyu.top:443?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=%2F%3Fed%3D2048#CFYUAN-cdnyx
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@172.67.71.128:443?encryption=none&security=tls&sni=cfjp.qianqingyu.top&fp=randomized&type=ws&host=cfjp.qianqingyu.top&path=%2F%3Fed%3D2048#cfjp.qianqingyu.top-JP-1
