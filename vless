@@ -72,6 +72,3 @@ vless://1ee1137f-0627-47bd-a860-8318bfb7ac9d@104.18.182.168:443?encryption=none&
 vless://d342d11e-d424-4583-b36e-524ab1f0afa4@cffd.qianqingyu.top:443?encryption=none&security=tls&sni=cffd.qianqingyu.top&fp=randomized&type=ws&host=cffd.qianqingyu.top&path=%2F%3Fed%3D2048#cffd.qianqingyu.top
 vless://d342d11e-d424-4583-b36e-524ab1f0afa4@cdnyx.qianqingyu.top:443?encryption=none&security=tls&sni=cffd.qianqingyu.top&fp=randomized&type=ws&host=cffd.qianqingyu.top&path=%2F%3Fed%3D2048#cffd-cdnyx
 vless://d342d11e-d424-4583-b36e-524ab1f0afa4@104.18.182.168:443?encryption=none&security=tls&sni=cffd.qianqingyu.top&fp=randomized&type=ws&host=cffd.qianqingyu.top&path=%2F%3Fed%3D2048#CFFD-104.18.182.168
-
-vless://e09b9d15-0b09-4974-dd1a-df09c77c0e6a@test0128.qianqingyu.top:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Fe09b9d15#vless2-0128
-vless://e09b9d15-0b09-4974-dd1a-df09c77c0e6a@www.udemy.com:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Fe09b9d15#vless2-UDEMY
