@@ -44,12 +44,12 @@ vless://8187887f-b152-48ce-8ab1-3b1d42687364@fbi.gov:443?encryption=none&securit
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@fbi.gov:443?encryption=none&security=tls&sni=cfus.qianqingyu.top&fp=randomized&type=ws&host=cfus.qianqingyu.top&path=%2F%3Fed%3D2048#cfus.qianqingyu.top-US-1-fbi
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@www.udemy.com:443?encryption=none&security=tls&sni=cfus.qianqingyu.top&fp=randomized&type=ws&host=cfus.qianqingyu.top&path=%2F%3Fed%3D2048#cfus.qianqingyu.top-US-2
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@acjp2.cloudflarest.link:443?encryption=none&security=tls&sni=cfus.qianqingyu.top&fp=randomized&type=ws&host=cfus.qianqingyu.top&path=%2F%3Fed%3D2048#cfus.qianqingyu.top-USacjp2-3
-vless://8187887f-b152-48ce-8ab1-3b1d42687364@acus.cloudflarest.link:443?encryption=none&security=tls&sni=cfus.qianqingyu.top&fp=randomized&type=ws&host=cfus.qianqingyu.top&path=%2F%3Fed%3D2048#cfus.qianqingyu.top-USacus-4
+vless://8187887f-b152-48ce-8ab1-3b1d42687364@cf.090227.xyz:443?encryption=none&security=tls&sni=cfus.qianqingyu.top&fp=randomized&type=ws&host=cfus.qianqingyu.top&path=%2F%3Fed%3D2048#cfus.qianqingyu.top-US4-cf.090227.xyz
 
 
-vless://8187887f-b152-48ce-8ab1-3b1d42687364@103.160.204.245:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top-hk—US
-vless://8187887f-b152-48ce-8ab1-3b1d42687364@172.64.139.207:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top-HK-1
-vless://8187887f-b152-48ce-8ab1-3b1d42687364@172.64.105.173:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top-HK-2—JP
+vless://8187887f-b152-48ce-8ab1-3b1d42687364@103.160.204.245:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top-hk—1
+vless://8187887f-b152-48ce-8ab1-3b1d42687364@172.64.139.207:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top-HK-2
+vless://8187887f-b152-48ce-8ab1-3b1d42687364@172.64.105.173:443?encryption=none&security=tls&sni=cfhk.qianqingyu.top&fp=randomized&type=ws&host=cfhk.qianqingyu.top&path=%2F%3Fed%3D2048#cfhk.qianqingyu.top-HK-3
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@162.159.138.143:443?encryption=none&security=tls&sni=cfsg.qianqingyu.top&fp=randomized&type=ws&host=cfsg.qianqingyu.top&path=%2F%3Fed%3D2048#cfsg.qianqingyu.top-SG-1
 
 
@@ -67,7 +67,7 @@ vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@104.16.196.132:443?encryption=none&
 vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@acjp.cloudflarest.link:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-acjp
 vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@acjp2.cloudflarest.link:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-acjp2
 vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@acsg3.cloudflarest.link:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-acsg3
-vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@acus.cloudflarest.link:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-acus
+vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@cf.090227.xyz:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-cf.090227.xyz
 vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@alejandracaiccedo.com:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-alejandracaiccedo.com
 vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@test0128.qianqingyu.top:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-test0128
 vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@fbi.gov:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-fbi.gov
