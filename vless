@@ -64,7 +64,7 @@ vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@cdnyx.qianqingyu.top:443?encryption
 vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@104.18.182.168:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-1
 vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@104.19.63.113:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-2
 vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@104.16.196.132:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-3
-vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@acjp.cloudflarest.link:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-acjp
+vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@cmcc.090227.xyz:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-cmcc.090227.xyz
 vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@acjp2.cloudflarest.link:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-acjp2
 vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@acsg3.cloudflarest.link:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-acsg3
 vless://3c3bcb6b-18d3-42e5-8503-f51e3e944645@cf.090227.xyz:443?encryption=none&security=tls&sni=test0128.qianqingyu.top&type=ws&host=test0128.qianqingyu.top&path=%2Ftest1024#test1024-cf.090227.xyz
