@@ -32,7 +32,7 @@ vless://ae8dab00-f85a-45fb-98e0-3f28de3146cc@104.17.113.25:443?encryption=none&s
 vless://ae8dab00-f85a-45fb-98e0-3f28de3146cc@104.17.162.192:443?encryption=none&security=tls&sni=cf30.qianqingyu.top&fp=chrome&type=ws&host=cf30.qianqingyu.top#CF30l121
 
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@cfyuan.qianqingyu.top:443?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=%2F%3Fed%3D2048#CFYUAN
-vless://8187887f-b152-48ce-8ab1-3b1d42687364@cdnfd.qianqingyu.top?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=%2F%3Fed%3D2048#CFYUAN-cdnfandai
+vless://8187887f-b152-48ce-8ab1-3b1d42687364@cdnfd.qianqingyu.top:443?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=%2F%3Fed%3D2048#CFYUAN-cdnfandai
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@104.17.160.113:443?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=%2F%3Fed%3D2048#CFYUAN-113
 vless://8187887f-b152-48ce-8ab1-3b1d42687364@104.18.85.102:443?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=%2F%3Fed%3D2048#CFYUAN-115
 
