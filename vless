@@ -80,10 +80,11 @@ vless://25929700-e730-4a81-f405-5e654e37817e@test0124.qianqingyu.top:443?encrypt
 vless://25929700-e730-4a81-f405-5e654e37817e@cdnyx.qianqingyu.top:443?encryption=none&security=tls&sni=test0124.qianqingyu.top&type=ws&host=test0124.qianqingyu.top&path=%2Ftest#test-CNDYX
 vless://25929700-e730-4a81-f405-5e654e37817e@acjp2.cloudflarest.link:443?encryption=none&security=tls&sni=test0124.qianqingyu.top&type=ws&host=test0124.qianqingyu.top&path=%2Ftest#test-CNDYX
 
-vless://c8dfaa72-8445-4e1c-c692-9121df4c90ba@[2a01:d0:acfb::1:d040:3a38]:2052?encryption=none&security=none&type=ws&host=test0124.qianqingyu.top&path=%2Ftest2#test2
+vless://c8dfaa72-8445-4e1c-c692-9121df4c90ba@[2a01:d0:acfb::1:d040:3a38]:2052?encryption=none&security=none&type=ws&host=test0124.qianqingyu.top&path=%2Ftest2#test2-ipv6
 vless://c8dfaa72-8445-4e1c-c692-9121df4c90ba@cdnyx.qianqingyu.top:2052?encryption=none&security=none&type=ws&host=test0124.qianqingyu.top&path=%2Ftest2#test2-cdnyx.qianqingyu.top
 vless://c8dfaa72-8445-4e1c-c692-9121df4c90ba@acjp2.cloudflarest.link:2052?encryption=none&security=none&type=ws&host=test0124.qianqingyu.top&path=%2Ftest2#test2-acjp2.cloudflarest.link
 vless://c8dfaa72-8445-4e1c-c692-9121df4c90ba@acsg3.cloudflarest.link:2052?encryption=none&security=none&type=ws&host=test0124.qianqingyu.top&path=%2Ftest2#test2-acsg3.cloudflarest.link
-vless://c8dfaa72-8445-4e1c-c692-9121df4c90ba@fbi.gov:2052?encryption=none&security=none&type=ws&host=test0124.qianqingyu.top&path=%2Ftest2#test2-cdnyx.qianqingyu.top
+vless://c8dfaa72-8445-4e1c-c692-9121df4c90ba@fbi.gov:2052?encryption=none&security=none&type=ws&host=test0124.qianqingyu.top&path=%2Ftest2#test2-fbi.gov
 vless://c8dfaa72-8445-4e1c-c692-9121df4c90ba@test0124.qianqingyu.top:2052?encryption=none&security=none&type=ws&host=test0124.qianqingyu.top&path=%2Ftest2#test2-yuan
+
 
