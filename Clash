@@ -1,9 +1,9 @@
 ####################################
 # 创建者：v2rayse.com
 # 客户端：Clash.Meta
-# 创建时间：2024-05-02 18:10:36
+# 创建时间：2024-06-30 15:44:01
 # 使用模版：V2RaySE 默认模版
-# 节点数量：70
+# 节点数量：67
 ####################################
 # !!当前配置文件请使用基于 Clash.Meta 内核程序
 mixed-port: 7890
@@ -114,7 +114,7 @@ proxies:
   - {"name":"CF30L118","type":"vless","server":"104.17.113.25","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
   - {"name":"CF30l121","type":"vless","server":"104.17.162.192","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
   - {"name":"CFYUAN","type":"vless","server":"cfyuan.qianqingyu.top","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"CFYUAN-cdnfandai","type":"vless","server":"8187887f-b152-48ce-8ab1-3b1d42687364@cdnfd.qianqingyu.top?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=/?ed=2048#CFYUAN-cdnfandai","port":8187887,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"CFYUAN-cdnfandai","type":"vless","server":"cdnfd.qianqingyu.top","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"CFYUAN-113","type":"vless","server":"104.17.160.113","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"CFYUAN-115","type":"vless","server":"104.18.85.102","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"CFYUAN-cdnyx","type":"vless","server":"cdnyx.qianqingyu.top","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
@@ -122,8 +122,8 @@ proxies:
   - {"name":"cfjp.qianqingyu.top-JP-2-acjp2","type":"vless","server":"acjp2.cloudflarest.link","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfjp.qianqingyu.top-JP-3-fbi","type":"vless","server":"fbi.gov","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org","type":"vless","server":"bestproxy.onecf.eu.org","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfjp.qianqingyu.top-JP-5-proxy.xxxxxxxx.tk","type":"vless","server":"proxy.xxxxxxxx.tk","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfjp.qianqingyu.top-JP-6-cdn-b100.xn--b6gac.eu.org","type":"vless","server":"cdn-b100.xn--b6gac.eu.org","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"反代优选域名-OTC大佬提供维护","type":"vless","server":"proxy.xxxxxxxx.tk","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"cdn-b100.↗↘↗.eu.org反代优选域名","type":"vless","server":"cdn-b100.xn--b6gac.eu.org","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfus.qianqingyu.top-US-1-fbi","type":"vless","server":"fbi.gov","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfus.qianqingyu.top-US-2","type":"vless","server":"www.udemy.com","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfus.qianqingyu.top-USacjp2-3","type":"vless","server":"acjp2.cloudflarest.link","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
@@ -133,29 +133,26 @@ proxies:
   - {"name":"cfhk.qianqingyu.top-HK-3","type":"vless","server":"172.64.105.173","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfsg.qianqingyu.top-SG-1","type":"vless","server":"162.159.138.143","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfsg.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfsg.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cfsg.qianqingyu.top-SG-2","type":"vless","server":"bestproxy.onecf.eu.org","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfsg.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfsg.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"cfsg.qianqingyu.top-SG-3","type":"vless","server":"8.219.101.138","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfsg.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfsg.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"cfsg.qianqingyu.top-SG-4","type":"vless","server":"168.138.168.57","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfsg.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfsg.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"bestip-ACJP2","type":"vless","server":"acjp2.cloudflarest.link","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
   - {"name":"bestip-ACSG3","type":"vless","server":"acsg3.cloudflarest.link","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
   - {"name":"bestip-weishao2023","type":"vless","server":"104.18.182.168","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
   - {"name":"bestip-udemy","type":"vless","server":"www.udemy.com","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
   - {"name":"bestip-fbi","type":"vless","server":"fbi.gov","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
-  - {"name":"test1024-IPV6","type":"vless","server":"[2a01","port":80,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":false,"network":"ws","ws-opts":{"path":"/test1024"}}
-  - {"name":"test1024-cdnyx","type":"vless","server":"cdnyx.qianqingyu.top","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
-  - {"name":"test1024-1","type":"vless","server":"104.18.182.168","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
-  - {"name":"test1024-2","type":"vless","server":"104.19.63.113","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
-  - {"name":"test1024-3","type":"vless","server":"104.16.196.132","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
-  - {"name":"test1024-cmcc.090227.xyz","type":"vless","server":"cmcc.090227.xyz","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
-  - {"name":"test1024-acjp2","type":"vless","server":"acjp2.cloudflarest.link","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
-  - {"name":"test1024-acsg3","type":"vless","server":"acsg3.cloudflarest.link","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
-  - {"name":"test1024-cf.090227.xyz","type":"vless","server":"cf.090227.xyz","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
-  - {"name":"test1024-alejandracaiccedo.com","type":"vless","server":"alejandracaiccedo.com","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
-  - {"name":"test1024-test0128","type":"vless","server":"test0128.qianqingyu.top","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
-  - {"name":"test1024-fbi.gov","type":"vless","server":"fbi.gov","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
-  - {"name":"test1024-udemy","type":"vless","server":"www.udemy.com","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
-  - {"name":"test1024-yx.887141.xyz","type":"vless","server":"yx.887141.xyz","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
-  - {"name":"test1024-cdnfd.qianqingyu.top","type":"vless","server":"cdnfd.qianqingyu.top","port":443,"uuid":"3c3bcb6b-18d3-42e5-8503-f51e3e944645","tls":true,"servername":"test0128.qianqingyu.top","network":"ws","ws-opts":{"path":"/test1024","headers":{"host":"test0128.qianqingyu.top"}}}
   - {"name":"cffd.qianqingyu.top","type":"vless","server":"cffd.qianqingyu.top","port":443,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":true,"servername":"cffd.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cffd.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cffd-cdnyx","type":"vless","server":"cdnyx.qianqingyu.top","port":443,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":true,"servername":"cffd.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cffd.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"CFFD-104.18.182.168","type":"vless","server":"104.18.182.168","port":443,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":true,"servername":"cffd.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cffd.qianqingyu.top"}},"client-fingerprint":"randomized"}
+  - {"name":"test-IP V6","type":"vless","server":"2a01:d0:acfb::1:d040:3a38","port":80,"uuid":"25929700-e730-4a81-f405-5e654e37817e","tls":false,"network":"ws","ws-opts":{"path":"/test"}}
+  - {"name":"test-YUAN","type":"vless","server":"test0124.qianqingyu.top","port":443,"uuid":"25929700-e730-4a81-f405-5e654e37817e","tls":true,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0124.qianqingyu.top"}}}
+  - {"name":"test-CNDYX_1","type":"vless","server":"cdnyx.qianqingyu.top","port":443,"uuid":"25929700-e730-4a81-f405-5e654e37817e","tls":true,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0124.qianqingyu.top"}}}
+  - {"name":"test-CNDYX_2","type":"vless","server":"acjp2.cloudflarest.link","port":443,"uuid":"25929700-e730-4a81-f405-5e654e37817e","tls":true,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0124.qianqingyu.top"}}}
+  - {"name":"test2-ipv6","type":"vless","server":"2a01:d0:acfb::1:d040:3a38","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
+  - {"name":"test2-cdnyx.qianqingyu.top","type":"vless","server":"cdnyx.qianqingyu.top","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
+  - {"name":"test2-acjp2.cloudflarest.link","type":"vless","server":"acjp2.cloudflarest.link","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
+  - {"name":"test2-acsg3.cloudflarest.link","type":"vless","server":"acsg3.cloudflarest.link","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
+  - {"name":"test2-fbi.gov","type":"vless","server":"fbi.gov","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
+  - {"name":"test2-yuan","type":"vless","server":"test0124.qianqingyu.top","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
 proxy-groups:
   - name: 🚀 节点选择
     type: select
@@ -198,8 +195,8 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2-acjp2
       - cfjp.qianqingyu.top-JP-3-fbi
       - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - cfjp.qianqingyu.top-JP-5-proxy.xxxxxxxx.tk
-      - cfjp.qianqingyu.top-JP-6-cdn-b100.xn--b6gac.eu.org
+      - 反代优选域名-OTC大佬提供维护
+      - cdn-b100.↗↘↗.eu.org反代优选域名
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-USacjp2-3
@@ -209,29 +206,26 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-3
       - cfsg.qianqingyu.top-SG-1
       - cfsg.qianqingyu.top-SG-2
+      - cfsg.qianqingyu.top-SG-3
+      - cfsg.qianqingyu.top-SG-4
       - bestip-ACJP2
       - bestip-ACSG3
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
-      - test1024-IPV6
-      - test1024-cdnyx
-      - test1024-1
-      - test1024-2
-      - test1024-3
-      - test1024-cmcc.090227.xyz
-      - test1024-acjp2
-      - test1024-acsg3
-      - test1024-cf.090227.xyz
-      - test1024-alejandracaiccedo.com
-      - test1024-test0128
-      - test1024-fbi.gov
-      - test1024-udemy
-      - test1024-yx.887141.xyz
-      - test1024-cdnfd.qianqingyu.top
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
+      - test-IP V6
+      - test-YUAN
+      - test-CNDYX_1
+      - test-CNDYX_2
+      - test2-ipv6
+      - test2-cdnyx.qianqingyu.top
+      - test2-acjp2.cloudflarest.link
+      - test2-acsg3.cloudflarest.link
+      - test2-fbi.gov
+      - test2-yuan
   - name: ♻️ 自动选择
     type: url-test
     url: http://www.gstatic.com/generate_204
@@ -274,8 +268,8 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2-acjp2
       - cfjp.qianqingyu.top-JP-3-fbi
       - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - cfjp.qianqingyu.top-JP-5-proxy.xxxxxxxx.tk
-      - cfjp.qianqingyu.top-JP-6-cdn-b100.xn--b6gac.eu.org
+      - 反代优选域名-OTC大佬提供维护
+      - cdn-b100.↗↘↗.eu.org反代优选域名
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-USacjp2-3
@@ -285,29 +279,26 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-3
       - cfsg.qianqingyu.top-SG-1
       - cfsg.qianqingyu.top-SG-2
+      - cfsg.qianqingyu.top-SG-3
+      - cfsg.qianqingyu.top-SG-4
       - bestip-ACJP2
       - bestip-ACSG3
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
-      - test1024-IPV6
-      - test1024-cdnyx
-      - test1024-1
-      - test1024-2
-      - test1024-3
-      - test1024-cmcc.090227.xyz
-      - test1024-acjp2
-      - test1024-acsg3
-      - test1024-cf.090227.xyz
-      - test1024-alejandracaiccedo.com
-      - test1024-test0128
-      - test1024-fbi.gov
-      - test1024-udemy
-      - test1024-yx.887141.xyz
-      - test1024-cdnfd.qianqingyu.top
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
+      - test-IP V6
+      - test-YUAN
+      - test-CNDYX_1
+      - test-CNDYX_2
+      - test2-ipv6
+      - test2-cdnyx.qianqingyu.top
+      - test2-acjp2.cloudflarest.link
+      - test2-acsg3.cloudflarest.link
+      - test2-fbi.gov
+      - test2-yuan
   - name: 🌍 国外媒体
     type: select
     proxies:
@@ -350,8 +341,8 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2-acjp2
       - cfjp.qianqingyu.top-JP-3-fbi
       - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - cfjp.qianqingyu.top-JP-5-proxy.xxxxxxxx.tk
-      - cfjp.qianqingyu.top-JP-6-cdn-b100.xn--b6gac.eu.org
+      - 反代优选域名-OTC大佬提供维护
+      - cdn-b100.↗↘↗.eu.org反代优选域名
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-USacjp2-3
@@ -361,29 +352,26 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-3
       - cfsg.qianqingyu.top-SG-1
       - cfsg.qianqingyu.top-SG-2
+      - cfsg.qianqingyu.top-SG-3
+      - cfsg.qianqingyu.top-SG-4
       - bestip-ACJP2
       - bestip-ACSG3
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
-      - test1024-IPV6
-      - test1024-cdnyx
-      - test1024-1
-      - test1024-2
-      - test1024-3
-      - test1024-cmcc.090227.xyz
-      - test1024-acjp2
-      - test1024-acsg3
-      - test1024-cf.090227.xyz
-      - test1024-alejandracaiccedo.com
-      - test1024-test0128
-      - test1024-fbi.gov
-      - test1024-udemy
-      - test1024-yx.887141.xyz
-      - test1024-cdnfd.qianqingyu.top
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
+      - test-IP V6
+      - test-YUAN
+      - test-CNDYX_1
+      - test-CNDYX_2
+      - test2-ipv6
+      - test2-cdnyx.qianqingyu.top
+      - test2-acjp2.cloudflarest.link
+      - test2-acsg3.cloudflarest.link
+      - test2-fbi.gov
+      - test2-yuan
   - name: 📲 电报信息
     type: select
     proxies:
@@ -425,8 +413,8 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2-acjp2
       - cfjp.qianqingyu.top-JP-3-fbi
       - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - cfjp.qianqingyu.top-JP-5-proxy.xxxxxxxx.tk
-      - cfjp.qianqingyu.top-JP-6-cdn-b100.xn--b6gac.eu.org
+      - 反代优选域名-OTC大佬提供维护
+      - cdn-b100.↗↘↗.eu.org反代优选域名
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-USacjp2-3
@@ -436,29 +424,26 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-3
       - cfsg.qianqingyu.top-SG-1
       - cfsg.qianqingyu.top-SG-2
+      - cfsg.qianqingyu.top-SG-3
+      - cfsg.qianqingyu.top-SG-4
       - bestip-ACJP2
       - bestip-ACSG3
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
-      - test1024-IPV6
-      - test1024-cdnyx
-      - test1024-1
-      - test1024-2
-      - test1024-3
-      - test1024-cmcc.090227.xyz
-      - test1024-acjp2
-      - test1024-acsg3
-      - test1024-cf.090227.xyz
-      - test1024-alejandracaiccedo.com
-      - test1024-test0128
-      - test1024-fbi.gov
-      - test1024-udemy
-      - test1024-yx.887141.xyz
-      - test1024-cdnfd.qianqingyu.top
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
+      - test-IP V6
+      - test-YUAN
+      - test-CNDYX_1
+      - test-CNDYX_2
+      - test2-ipv6
+      - test2-cdnyx.qianqingyu.top
+      - test2-acjp2.cloudflarest.link
+      - test2-acsg3.cloudflarest.link
+      - test2-fbi.gov
+      - test2-yuan
   - name: Ⓜ️ 微软服务
     type: select
     proxies:
@@ -500,8 +485,8 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2-acjp2
       - cfjp.qianqingyu.top-JP-3-fbi
       - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - cfjp.qianqingyu.top-JP-5-proxy.xxxxxxxx.tk
-      - cfjp.qianqingyu.top-JP-6-cdn-b100.xn--b6gac.eu.org
+      - 反代优选域名-OTC大佬提供维护
+      - cdn-b100.↗↘↗.eu.org反代优选域名
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-USacjp2-3
@@ -511,29 +496,26 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-3
       - cfsg.qianqingyu.top-SG-1
       - cfsg.qianqingyu.top-SG-2
+      - cfsg.qianqingyu.top-SG-3
+      - cfsg.qianqingyu.top-SG-4
       - bestip-ACJP2
       - bestip-ACSG3
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
-      - test1024-IPV6
-      - test1024-cdnyx
-      - test1024-1
-      - test1024-2
-      - test1024-3
-      - test1024-cmcc.090227.xyz
-      - test1024-acjp2
-      - test1024-acsg3
-      - test1024-cf.090227.xyz
-      - test1024-alejandracaiccedo.com
-      - test1024-test0128
-      - test1024-fbi.gov
-      - test1024-udemy
-      - test1024-yx.887141.xyz
-      - test1024-cdnfd.qianqingyu.top
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
+      - test-IP V6
+      - test-YUAN
+      - test-CNDYX_1
+      - test-CNDYX_2
+      - test2-ipv6
+      - test2-cdnyx.qianqingyu.top
+      - test2-acjp2.cloudflarest.link
+      - test2-acsg3.cloudflarest.link
+      - test2-fbi.gov
+      - test2-yuan
   - name: 🍎 苹果服务
     type: select
     proxies:
@@ -575,8 +557,8 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2-acjp2
       - cfjp.qianqingyu.top-JP-3-fbi
       - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - cfjp.qianqingyu.top-JP-5-proxy.xxxxxxxx.tk
-      - cfjp.qianqingyu.top-JP-6-cdn-b100.xn--b6gac.eu.org
+      - 反代优选域名-OTC大佬提供维护
+      - cdn-b100.↗↘↗.eu.org反代优选域名
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-USacjp2-3
@@ -586,29 +568,26 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-3
       - cfsg.qianqingyu.top-SG-1
       - cfsg.qianqingyu.top-SG-2
+      - cfsg.qianqingyu.top-SG-3
+      - cfsg.qianqingyu.top-SG-4
       - bestip-ACJP2
       - bestip-ACSG3
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
-      - test1024-IPV6
-      - test1024-cdnyx
-      - test1024-1
-      - test1024-2
-      - test1024-3
-      - test1024-cmcc.090227.xyz
-      - test1024-acjp2
-      - test1024-acsg3
-      - test1024-cf.090227.xyz
-      - test1024-alejandracaiccedo.com
-      - test1024-test0128
-      - test1024-fbi.gov
-      - test1024-udemy
-      - test1024-yx.887141.xyz
-      - test1024-cdnfd.qianqingyu.top
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
+      - test-IP V6
+      - test-YUAN
+      - test-CNDYX_1
+      - test-CNDYX_2
+      - test2-ipv6
+      - test2-cdnyx.qianqingyu.top
+      - test2-acjp2.cloudflarest.link
+      - test2-acsg3.cloudflarest.link
+      - test2-fbi.gov
+      - test2-yuan
   - name: 🎯 全球直连
     type: select
     proxies:
@@ -667,8 +646,8 @@ proxy-groups:
       - cfjp.qianqingyu.top-JP-2-acjp2
       - cfjp.qianqingyu.top-JP-3-fbi
       - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - cfjp.qianqingyu.top-JP-5-proxy.xxxxxxxx.tk
-      - cfjp.qianqingyu.top-JP-6-cdn-b100.xn--b6gac.eu.org
+      - 反代优选域名-OTC大佬提供维护
+      - cdn-b100.↗↘↗.eu.org反代优选域名
       - cfus.qianqingyu.top-US-1-fbi
       - cfus.qianqingyu.top-US-2
       - cfus.qianqingyu.top-USacjp2-3
@@ -678,29 +657,26 @@ proxy-groups:
       - cfhk.qianqingyu.top-HK-3
       - cfsg.qianqingyu.top-SG-1
       - cfsg.qianqingyu.top-SG-2
+      - cfsg.qianqingyu.top-SG-3
+      - cfsg.qianqingyu.top-SG-4
       - bestip-ACJP2
       - bestip-ACSG3
       - bestip-weishao2023
       - bestip-udemy
       - bestip-fbi
-      - test1024-IPV6
-      - test1024-cdnyx
-      - test1024-1
-      - test1024-2
-      - test1024-3
-      - test1024-cmcc.090227.xyz
-      - test1024-acjp2
-      - test1024-acsg3
-      - test1024-cf.090227.xyz
-      - test1024-alejandracaiccedo.com
-      - test1024-test0128
-      - test1024-fbi.gov
-      - test1024-udemy
-      - test1024-yx.887141.xyz
-      - test1024-cdnfd.qianqingyu.top
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
+      - test-IP V6
+      - test-YUAN
+      - test-CNDYX_1
+      - test-CNDYX_2
+      - test2-ipv6
+      - test2-cdnyx.qianqingyu.top
+      - test2-acjp2.cloudflarest.link
+      - test2-acsg3.cloudflarest.link
+      - test2-fbi.gov
+      - test2-yuan
 
 rules:
 # 本地/局域网地址
