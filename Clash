@@ -1,9 +1,9 @@
 ####################################
 # 创建者：v2rayse.com
 # 客户端：Clash.Meta
-# 创建时间：2024-06-30 15:44:01
+# 创建时间：2024-08-12 16:49:37
 # 使用模版：V2RaySE 默认模版
-# 节点数量：67
+# 节点数量：64
 ####################################
 # !!当前配置文件请使用基于 Clash.Meta 内核程序
 mixed-port: 7890
@@ -143,14 +143,11 @@ proxies:
   - {"name":"cffd.qianqingyu.top","type":"vless","server":"cffd.qianqingyu.top","port":443,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":true,"servername":"cffd.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cffd.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"cffd-cdnyx","type":"vless","server":"cdnyx.qianqingyu.top","port":443,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":true,"servername":"cffd.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cffd.qianqingyu.top"}},"client-fingerprint":"randomized"}
   - {"name":"CFFD-104.18.182.168","type":"vless","server":"104.18.182.168","port":443,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":true,"servername":"cffd.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cffd.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"test-IP V6","type":"vless","server":"2a01:d0:acfb::1:d040:3a38","port":80,"uuid":"25929700-e730-4a81-f405-5e654e37817e","tls":false,"network":"ws","ws-opts":{"path":"/test"}}
-  - {"name":"test-YUAN","type":"vless","server":"test0124.qianqingyu.top","port":443,"uuid":"25929700-e730-4a81-f405-5e654e37817e","tls":true,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0124.qianqingyu.top"}}}
-  - {"name":"test-CNDYX_1","type":"vless","server":"cdnyx.qianqingyu.top","port":443,"uuid":"25929700-e730-4a81-f405-5e654e37817e","tls":true,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0124.qianqingyu.top"}}}
-  - {"name":"test-CNDYX_2","type":"vless","server":"acjp2.cloudflarest.link","port":443,"uuid":"25929700-e730-4a81-f405-5e654e37817e","tls":true,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0124.qianqingyu.top"}}}
+  - {"name":"test-1024","type":"vless","server":"test0124.qianqingyu.top","port":443,"uuid":"25929700-e730-4a81-f405-5e654e37817e","tls":true,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0124.qianqingyu.top"}}}
   - {"name":"test2-ipv6","type":"vless","server":"2a01:d0:acfb::1:d040:3a38","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
   - {"name":"test2-cdnyx.qianqingyu.top","type":"vless","server":"cdnyx.qianqingyu.top","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
-  - {"name":"test2-acjp2.cloudflarest.link","type":"vless","server":"acjp2.cloudflarest.link","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
-  - {"name":"test2-acsg3.cloudflarest.link","type":"vless","server":"acsg3.cloudflarest.link","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
+  - {"name":"test2-cffd.qianqingyu.top","type":"vless","server":"cffd.qianqingyu.top","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
+  - {"name":"test2-www.udemy.com","type":"vless","server":"www.udemy.com","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
   - {"name":"test2-fbi.gov","type":"vless","server":"fbi.gov","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
   - {"name":"test2-yuan","type":"vless","server":"test0124.qianqingyu.top","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
 proxy-groups:
@@ -216,14 +213,11 @@ proxy-groups:
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
-      - test-IP V6
-      - test-YUAN
-      - test-CNDYX_1
-      - test-CNDYX_2
+      - test-1024
       - test2-ipv6
       - test2-cdnyx.qianqingyu.top
-      - test2-acjp2.cloudflarest.link
-      - test2-acsg3.cloudflarest.link
+      - test2-cffd.qianqingyu.top
+      - test2-www.udemy.com
       - test2-fbi.gov
       - test2-yuan
   - name: ♻️ 自动选择
@@ -289,14 +283,11 @@ proxy-groups:
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
-      - test-IP V6
-      - test-YUAN
-      - test-CNDYX_1
-      - test-CNDYX_2
+      - test-1024
       - test2-ipv6
       - test2-cdnyx.qianqingyu.top
-      - test2-acjp2.cloudflarest.link
-      - test2-acsg3.cloudflarest.link
+      - test2-cffd.qianqingyu.top
+      - test2-www.udemy.com
       - test2-fbi.gov
       - test2-yuan
   - name: 🌍 国外媒体
@@ -362,14 +353,11 @@ proxy-groups:
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
-      - test-IP V6
-      - test-YUAN
-      - test-CNDYX_1
-      - test-CNDYX_2
+      - test-1024
       - test2-ipv6
       - test2-cdnyx.qianqingyu.top
-      - test2-acjp2.cloudflarest.link
-      - test2-acsg3.cloudflarest.link
+      - test2-cffd.qianqingyu.top
+      - test2-www.udemy.com
       - test2-fbi.gov
       - test2-yuan
   - name: 📲 电报信息
@@ -434,14 +422,11 @@ proxy-groups:
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
-      - test-IP V6
-      - test-YUAN
-      - test-CNDYX_1
-      - test-CNDYX_2
+      - test-1024
       - test2-ipv6
       - test2-cdnyx.qianqingyu.top
-      - test2-acjp2.cloudflarest.link
-      - test2-acsg3.cloudflarest.link
+      - test2-cffd.qianqingyu.top
+      - test2-www.udemy.com
       - test2-fbi.gov
       - test2-yuan
   - name: Ⓜ️ 微软服务
@@ -506,14 +491,11 @@ proxy-groups:
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
-      - test-IP V6
-      - test-YUAN
-      - test-CNDYX_1
-      - test-CNDYX_2
+      - test-1024
       - test2-ipv6
       - test2-cdnyx.qianqingyu.top
-      - test2-acjp2.cloudflarest.link
-      - test2-acsg3.cloudflarest.link
+      - test2-cffd.qianqingyu.top
+      - test2-www.udemy.com
       - test2-fbi.gov
       - test2-yuan
   - name: 🍎 苹果服务
@@ -578,14 +560,11 @@ proxy-groups:
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
-      - test-IP V6
-      - test-YUAN
-      - test-CNDYX_1
-      - test-CNDYX_2
+      - test-1024
       - test2-ipv6
       - test2-cdnyx.qianqingyu.top
-      - test2-acjp2.cloudflarest.link
-      - test2-acsg3.cloudflarest.link
+      - test2-cffd.qianqingyu.top
+      - test2-www.udemy.com
       - test2-fbi.gov
       - test2-yuan
   - name: 🎯 全球直连
@@ -667,14 +646,11 @@ proxy-groups:
       - cffd.qianqingyu.top
       - cffd-cdnyx
       - CFFD-104.18.182.168
-      - test-IP V6
-      - test-YUAN
-      - test-CNDYX_1
-      - test-CNDYX_2
+      - test-1024
       - test2-ipv6
       - test2-cdnyx.qianqingyu.top
-      - test2-acjp2.cloudflarest.link
-      - test2-acsg3.cloudflarest.link
+      - test2-cffd.qianqingyu.top
+      - test2-www.udemy.com
       - test2-fbi.gov
       - test2-yuan
 
