@@ -1,572 +1,994 @@
-####################################
-# 创建者：v2rayse.com
-# 客户端：Clash.Meta
-# 创建时间：2024-08-12 16:49:37
-# 使用模版：V2RaySE 默认模版
-# 节点数量：64
-####################################
-# !!当前配置文件请使用基于 Clash.Meta 内核程序
+# 生成地址：v2rayse.com
+# 模版名称：defaultName
+# 生成时间：2025-01-15 11:12:38
+# 不要随意改变关键字，否则会导致出错
+# acl4SSR规则
+# 去广告：支持
+# 自动测速：支持
+# 微软分流：支持
+# 苹果分流：支持
+# 增强中国IP段：不支持
+# 增强国外GFW：不支持
+
 mixed-port: 7890
-allow-lan: true
+allow-lan: false
+mode: rule
+ipv6: false
 log-level: info
 external-controller: 0.0.0.0:9090
 dns:
-  enabled: true
-  listen: 0.0.0.0:1053
-  ipv6: true
+  enable: true
+  listen: 0.0.0.0:53
+  ipv6: false
   default-nameserver:
     - 223.5.5.5
     - 114.114.114.114
+  nameserver:
+    - 223.5.5.5
+    - 114.114.114.114
+    - 119.29.29.29
+    - 180.76.76.76
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter:
-    - '*.lan'
-    - '*.linksys.com'
-    - '*.linksyssmartwifi.com'
-    - swscan.apple.com
-    - mesu.apple.com
-    - '*.msftconnecttest.com'
-    - '*.msftncsi.com'
-    - time.*.com
-    - time.*.gov
-    - time.*.edu.cn
-    - time.*.apple.com
-    - time1.*.com
-    - time2.*.com
-    - time3.*.com
-    - time4.*.com
-    - time5.*.com
-    - time6.*.com
-    - time7.*.com
-    - ntp.*.com
-    - ntp.*.com
-    - ntp1.*.com
-    - ntp2.*.com
-    - ntp3.*.com
-    - ntp4.*.com
-    - ntp5.*.com
-    - ntp6.*.com
-    - ntp7.*.com
-    - '*.time.edu.cn'
-    - '*.ntp.org.cn'
-    - +.pool.ntp.org
-    - time1.cloud.tencent.com
-    - +.music.163.com
-    - '*.126.net'
-    - musicapi.taihe.com
-    - music.taihe.com
-    - songsearch.kugou.com
-    - trackercdn.kugou.com
-    - '*.kuwo.cn'
-    - api-jooxtt.sanook.com
-    - api.joox.com
-    - joox.com
-    - +.y.qq.com
-    - +.music.tc.qq.com
-    - aqqmusic.tc.qq.com
-    - +.stream.qqmusic.qq.com
-    - '*.xiami.com'
-    - +.music.migu.cn
-    - +.srv.nintendo.net
-    - +.stun.playstation.net
-    - xbox.*.microsoft.com
-    - +.xboxlive.com
+    - "*.lan"
+    - "*.localdomain"
+    - "*.example"
+    - "*.invalid"
+    - "*.localhost"
+    - "*.test"
+    - "*.local"
+    - "*.home.arpa"
+    - router.asus.com
+    - localhost.sec.qq.com
     - localhost.ptlogin2.qq.com
-    - proxy.golang.org
-    - stun.*.*
-    - stun.*.*.*
-    - '*.mcdn.bilivideo.cn'
-  nameserver:
-    - https://doh.pub/dns-query
-    - https://dns.alidns.com/dns-query
-  fallback-filter:
-    geoip: false
-    ipcidr:
-      - 240.0.0.0/4
-      - 0.0.0.0/32
-
+    - +.msftconnecttest.com
+tun:
+  enable: true
+  stack: system
+  auto-route: true
+  auto-detect-interface: true
+  dns-hijack:
+    - 114.114.114.114
+    - 180.76.76.76
+    - 119.29.29.29
+    - 223.5.5.5
+    - 8.8.8.8
+    - 8.8.4.4
+    - 1.1.1.1
+    - 1.0.0.1
 proxies:
-  - {"name":"cfpage-www.udemy.com","type":"vless","server":"www.udemy.com","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
-  - {"name":"cfpage-cdnyx","type":"vless","server":"cdnyx.qianqingyu.top","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
-  - {"name":"cfpage-1212","type":"vless","server":"104.16.36.67","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
-  - {"name":"cfpage-1213","type":"vless","server":"104.16.245.202","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
-  - {"name":"cfpage-1214","type":"vless","server":"104.16.149.152","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
-  - {"name":"cfpage-S-110","type":"vless","server":"104.17.114.1","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
-  - {"name":"cfpage-S-113","type":"vless","server":"104.17.160.113","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
-  - {"name":"cfpage-S-115","type":"vless","server":"104.18.85.102","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
-  - {"name":"cfpage-S-118","type":"vless","server":"104.17.118.181","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
-  - {"name":"cfpage-S-123","type":"vless","server":"104.18.90.16","port":443,"uuid":"0cb1d9e6-ddbb-43bc-84f8-2e2ce8d33f3b","tls":true,"servername":"cf-8ul.pages.dev","network":"ws","ws-opts":{"headers":{"host":"cf-8ul.pages.dev"}},"alpn":["h2"],"client-fingerprint":"random"}
-  - {"name":"CFYUAN-cdnfd","type":"vless","server":"8187887f-b152-48ce-8ab1-3b1d42687364@cdnfd.qianqingyu.top?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=/?ed=2048#CFYUAN-cdnfd","port":8187887,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"CFYUAN-cdnfd1","type":"vless","server":"8187887f-b152-48ce-8ab1-3b1d42687364@14.102.228.8?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=/?ed=2048#CFYUAN-cdnfd1","port":8187887,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"CFYUAN-cdnfd2","type":"vless","server":"8187887f-b152-48ce-8ab1-3b1d42687364@116.203.58.165?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=/?ed=2048#CFYUAN-cdnfd2","port":8187887,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"CFYUAN-cdnfd3","type":"vless","server":"8187887f-b152-48ce-8ab1-3b1d42687364@141.98.197.137?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=/?ed=2048#CFYUAN-cdnfd3","port":8187887,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"CFYUAN-cdnfd4","type":"vless","server":"8187887f-b152-48ce-8ab1-3b1d42687364@5.75.214.65?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=/?ed=2048#CFYUAN-cdnfd4","port":8187887,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"CFYUAN-cdnfd5","type":"vless","server":"8187887f-b152-48ce-8ab1-3b1d42687364@20.218.125.181?encryption=none&security=tls&sni=cfyuan.qianqingyu.top&fp=randomized&type=ws&host=cfyuan.qianqingyu.top&path=/?ed=2048#CFYUAN-cdnfd5","port":8187887,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"CF30-www.udemy.com","type":"vless","server":"www.udemy.com","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
-  - {"name":"cdnyx","type":"vless","server":"cdnyx.qianqingyu.top","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
-  - {"name":"cdnyxym","type":"vless","server":"cdnyxym.qianqingyu.top","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
-  - {"name":"CF30S1","type":"vless","server":"104.16.157.158","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
-  - {"name":"CF30S2","type":"vless","server":"104.16.193.46","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
-  - {"name":"CF30S3","type":"vless","server":"104.19.146.39","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
-  - {"name":"CF30S4","type":"vless","server":"104.16.197.212","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
-  - {"name":"CF30L113","type":"vless","server":"104.17.161.81","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
-  - {"name":"CF30L117","type":"vless","server":"104.16.149.7","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
-  - {"name":"CF30L118","type":"vless","server":"104.17.113.25","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
-  - {"name":"CF30l121","type":"vless","server":"104.17.162.192","port":443,"uuid":"ae8dab00-f85a-45fb-98e0-3f28de3146cc","tls":true,"servername":"cf30.qianqingyu.top","network":"ws","ws-opts":{"headers":{"host":"cf30.qianqingyu.top"}},"client-fingerprint":"chrome"}
-  - {"name":"CFYUAN","type":"vless","server":"cfyuan.qianqingyu.top","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"CFYUAN-cdnfandai","type":"vless","server":"cdnfd.qianqingyu.top","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"CFYUAN-113","type":"vless","server":"104.17.160.113","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"CFYUAN-115","type":"vless","server":"104.18.85.102","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"CFYUAN-cdnyx","type":"vless","server":"cdnyx.qianqingyu.top","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfyuan.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfyuan.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfjp.qianqingyu.top-JP-1","type":"vless","server":"172.67.71.128","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfjp.qianqingyu.top-JP-2-acjp2","type":"vless","server":"acjp2.cloudflarest.link","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfjp.qianqingyu.top-JP-3-fbi","type":"vless","server":"fbi.gov","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org","type":"vless","server":"bestproxy.onecf.eu.org","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"反代优选域名-OTC大佬提供维护","type":"vless","server":"proxy.xxxxxxxx.tk","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cdn-b100.↗↘↗.eu.org反代优选域名","type":"vless","server":"cdn-b100.xn--b6gac.eu.org","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfjp.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfjp.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfus.qianqingyu.top-US-1-fbi","type":"vless","server":"fbi.gov","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfus.qianqingyu.top-US-2","type":"vless","server":"www.udemy.com","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfus.qianqingyu.top-USacjp2-3","type":"vless","server":"acjp2.cloudflarest.link","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfus.qianqingyu.top-US4-cf.090227.xyz","type":"vless","server":"cf.090227.xyz","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfus.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfus.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfhk.qianqingyu.top-hk—1","type":"vless","server":"103.160.204.245","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfhk.qianqingyu.top-HK-2","type":"vless","server":"172.64.139.207","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfhk.qianqingyu.top-HK-3","type":"vless","server":"172.64.105.173","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfhk.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfhk.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfsg.qianqingyu.top-SG-1","type":"vless","server":"162.159.138.143","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfsg.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfsg.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfsg.qianqingyu.top-SG-2","type":"vless","server":"bestproxy.onecf.eu.org","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfsg.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfsg.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfsg.qianqingyu.top-SG-3","type":"vless","server":"8.219.101.138","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfsg.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfsg.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cfsg.qianqingyu.top-SG-4","type":"vless","server":"168.138.168.57","port":443,"uuid":"8187887f-b152-48ce-8ab1-3b1d42687364","tls":true,"servername":"cfsg.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cfsg.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"bestip-ACJP2","type":"vless","server":"acjp2.cloudflarest.link","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
-  - {"name":"bestip-ACSG3","type":"vless","server":"acsg3.cloudflarest.link","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
-  - {"name":"bestip-weishao2023","type":"vless","server":"104.18.182.168","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
-  - {"name":"bestip-udemy","type":"vless","server":"www.udemy.com","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
-  - {"name":"bestip-fbi","type":"vless","server":"fbi.gov","port":2052,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":false,"servername":"0304.featherhao.workers.dev","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"0304.featherhao.workers.dev"}},"client-fingerprint":"randomized"}
-  - {"name":"cffd.qianqingyu.top","type":"vless","server":"cffd.qianqingyu.top","port":443,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":true,"servername":"cffd.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cffd.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"cffd-cdnyx","type":"vless","server":"cdnyx.qianqingyu.top","port":443,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":true,"servername":"cffd.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cffd.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"CFFD-104.18.182.168","type":"vless","server":"104.18.182.168","port":443,"uuid":"d342d11e-d424-4583-b36e-524ab1f0afa4","tls":true,"servername":"cffd.qianqingyu.top","network":"ws","ws-opts":{"path":"/?ed=2048","headers":{"host":"cffd.qianqingyu.top"}},"client-fingerprint":"randomized"}
-  - {"name":"test-1024","type":"vless","server":"test0124.qianqingyu.top","port":443,"uuid":"25929700-e730-4a81-f405-5e654e37817e","tls":true,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test","headers":{"host":"test0124.qianqingyu.top"}}}
-  - {"name":"test2-ipv6","type":"vless","server":"2a01:d0:acfb::1:d040:3a38","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
-  - {"name":"test2-cdnyx.qianqingyu.top","type":"vless","server":"cdnyx.qianqingyu.top","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
-  - {"name":"test2-cffd.qianqingyu.top","type":"vless","server":"cffd.qianqingyu.top","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
-  - {"name":"test2-www.udemy.com","type":"vless","server":"www.udemy.com","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
-  - {"name":"test2-fbi.gov","type":"vless","server":"fbi.gov","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
-  - {"name":"test2-yuan","type":"vless","server":"test0124.qianqingyu.top","port":2052,"uuid":"c8dfaa72-8445-4e1c-c692-9121df4c90ba","tls":false,"servername":"test0124.qianqingyu.top","network":"ws","ws-opts":{"path":"/test2","headers":{"host":"test0124.qianqingyu.top"}}}
+  - name: 关注频道t.me/GieGie777
+    port: 443
+    server: 104.251.227.182
+    type: trojan
+    udp: true
+    sni: hezijiasuqi.com
+    password: 43e5eeacbad3032bfe4c25a2f011b6b7
+    skip-cert-verify: true
+  - name: HK-06
+    port: 15007
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 6DZOXOR02CWUY93M
+    cipher: aes-256-gcm
+  - name: HK-011
+    port: 15012
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: LK0X1S0P0RA9R3HC
+    cipher: aes-256-gcm
+  - name: HK-01
+    port: 15002
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: CNF38ZN14RXY6VNG
+    cipher: aes-256-gcm
+  - name: HK-08
+    port: 15009
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 88MEVNR54IRFID52
+    cipher: aes-256-gcm
+  - name: HK-014
+    port: 15015
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: J4K709RGHDDUTV54
+    cipher: aes-256-gcm
+  - name: HK-05
+    port: 15006
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: ZU12KSB1TJCYVBVR
+    cipher: aes-256-gcm
+  - name: HK-03
+    port: 15004
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: O7W7NS6JIB4OOOV0
+    cipher: aes-256-gcm
+  - name: HK-010
+    port: 15011
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: F87B8GVTSX74GUR5
+    cipher: aes-256-gcm
+  - name: HK-07
+    port: 15008
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: GK9EZA0WWVAL6NVX
+    cipher: aes-256-gcm
+  - name: HK-012
+    port: 15013
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: MKLJYFU2QK5ZNKKU
+    cipher: aes-256-gcm
+  - name: HK-013
+    port: 15014
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: ZQWTSMBSGLGYE880
+    cipher: aes-256-gcm
+  - name: HK-04
+    port: 15005
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: NFYDVXE3DMWI2M3W
+    cipher: aes-256-gcm
+  - name: HK-02
+    port: 15003
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: KJKU1GR9HO5Y0EGE
+    cipher: aes-256-gcm
+  - name: HK-09
+    port: 15010
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: YPNNBXGRNCAXB9N7
+    cipher: aes-256-gcm
+  - name: HK-015
+    port: 15016
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: W17JIB78FG3UGGBE
+    cipher: aes-256-gcm
+  - name: US-16
+    port: 17016
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: LXOVCPO047S2F51E
+    cipher: aes-256-gcm
+  - name: US-15
+    port: 17015
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: JFH4E68X8G51RCR2
+    cipher: aes-256-gcm
+  - name: US-02
+    port: 17002
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: OLB8D3182GQ0YITM
+    cipher: aes-256-gcm
+  - name: US-13
+    port: 17013
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: CPQWHKPVLF2MZTP5
+    cipher: aes-256-gcm
+  - name: US-01
+    port: 17001
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: QBNVUDH1J62ZEVWK
+    cipher: aes-256-gcm
+  - name: US-09
+    port: 17009
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: CUV2013VAG31BP2P
+    cipher: aes-256-gcm
+  - name: US-14
+    port: 17014
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: B28SWSHWNNGF8YC1
+    cipher: aes-256-gcm
+  - name: US-12
+    port: 17012
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: TIOZ18GI7GKRUI79
+    cipher: aes-256-gcm
+  - name: US-04
+    port: 17004
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 32SUNO46W6F66308
+    cipher: aes-256-gcm
+  - name: US-06
+    port: 17006
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 2A19S5IXSWFUYJS1
+    cipher: aes-256-gcm
+  - name: US-10
+    port: 17010
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 4UKEPXKXKCF4LH81
+    cipher: aes-256-gcm
+  - name: US-05
+    port: 17005
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 3DVJYNMKGWIU7T1H
+    cipher: aes-256-gcm
+  - name: US-08
+    port: 17008
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: Y88VKLVJEQXD9ONY
+    cipher: aes-256-gcm
+  - name: US-07
+    port: 17007
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 2IA7EGYTGRTIK3WP
+    cipher: aes-256-gcm
+  - name: US-03
+    port: 17003
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: MAPK3HLL6G8WE2JY
+    cipher: aes-256-gcm
+  - name: US-11
+    port: 17011
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 6Q4L4OFVXX4GJS01
+    cipher: aes-256-gcm
+  - name: SG-07
+    port: 16007
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: D1DGE1U3C7AL63NO
+    cipher: aes-256-gcm
+  - name: SG-014
+    port: 16014
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: KDK8J93TENKX7LGT
+    cipher: aes-256-gcm
+  - name: SG-04
+    port: 16004
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 8KPJLXF36HRG9H2S
+    cipher: aes-256-gcm
+  - name: SG-05
+    port: 16005
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: QLGOZZ1PU14GVBSZ
+    cipher: aes-256-gcm
+  - name: SG-011
+    port: 16011
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: R8RBQLWLSTRE0ZK9
+    cipher: aes-256-gcm
+  - name: SG-016
+    port: 16016
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 6KYL3YM7UAOAE94Q
+    cipher: aes-256-gcm
+  - name: SG-06
+    port: 16006
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 73VY23AL1QNM2FWF
+    cipher: aes-256-gcm
+  - name: SG-010
+    port: 16010
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 0DKHU53Y9DPO8BVY
+    cipher: aes-256-gcm
+  - name: SG-09
+    port: 16009
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 2R3VKZHFXPO9UYC0
+    cipher: aes-256-gcm
+  - name: SG-03
+    port: 16003
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: FAJT26PIM7CB71OZ
+    cipher: aes-256-gcm
+  - name: SG-01
+    port: 16001
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: F0EYDK28S4A8MQ2R
+    cipher: aes-256-gcm
+  - name: SG-013
+    port: 16013
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: WZ5SQV9U2LYU28ME
+    cipher: aes-256-gcm
+  - name: SG-08
+    port: 16008
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: JSN11TKQ4W1W0J0S
+    cipher: aes-256-gcm
+  - name: SG-02
+    port: 16002
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: E0YBNJ2VW7WUDVW9
+    cipher: aes-256-gcm
+  - name: SG-015
+    port: 16015
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: B20Q02BG41IXWO8D
+    cipher: aes-256-gcm
+  - name: SG-012
+    port: 16012
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: TET9FL235GM0K5QP
+    cipher: aes-256-gcm
+  - name: CH-01
+    port: 20001
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: A9Q4DF3A6VP7MCD2
+    cipher: aes-256-gcm
+  - name: RU-01
+    port: 20002
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 7WZOFM65J3XURW6U
+    cipher: aes-256-gcm
+  - name: PT-01
+    port: 20003
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: UFZ6GKPBKDAL5QAR
+    cipher: aes-256-gcm
+  - name: GR-01
+    port: 20004
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: LY07134VEAC3AF5L
+    cipher: aes-256-gcm
+  - name: NL-01
+    port: 20000
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: M2FWLBHU4A88R71R
+    cipher: aes-256-gcm
+  - name: JP-03
+    port: 18003
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: B4AZUPAOPM12K6UX
+    cipher: aes-256-gcm
+  - name: JP-16
+    port: 18016
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: D56RP4I5E1CWLAE3
+    cipher: aes-256-gcm
+  - name: JP-02
+    port: 18002
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: JQVEP1GGOUFB0LI4
+    cipher: aes-256-gcm
+  - name: JP-06
+    port: 18006
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 8OO4GL4PQXH9AOYR
+    cipher: aes-256-gcm
+  - name: JP-13
+    port: 18013
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 7ZD182CF9QZLXPRW
+    cipher: aes-256-gcm
+  - name: JP-07
+    port: 18007
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 73P0Y4NX68S13VDM
+    cipher: aes-256-gcm
+  - name: JP-15
+    port: 18015
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: UI22ADBIK9V1ZIBK
+    cipher: aes-256-gcm
+  - name: JP-12
+    port: 18012
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: NGD9SSJ082X3ZZNU
+    cipher: aes-256-gcm
+  - name: JP-10
+    port: 18010
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: SJ4S1CQLCXSG3QJB
+    cipher: aes-256-gcm
+  - name: JP-05
+    port: 18005
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: PMHC04CLEH02TQZ1
+    cipher: aes-256-gcm
+  - name: JP-11
+    port: 18011
+    server: qh62onjn.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: OS7E5HF73NQCSXLD
+    cipher: aes-256-gcm
+  - name: JP-01
+    port: 18001
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: MMRTIYVECN33018T
+    cipher: aes-256-gcm
+  - name: JP-04
+    port: 18004
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: 561CK43Y67YG6ISL
+    cipher: aes-256-gcm
+  - name: JP-09
+    port: 18009
+    server: 8tv68qhq.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: UE4TXH2CJWQF5SLU
+    cipher: aes-256-gcm
+  - name: JP-14
+    port: 18014
+    server: ti3hyra4.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: AZ9BZQ9Q8M2TSCTD
+    cipher: aes-256-gcm
+  - name: JP-08
+    port: 18008
+    server: w72tapyb.slashdevslashnetslashtun.net
+    type: ss
+    udp: true
+    password: RG9GNUKPJSBAEMOO
+    cipher: aes-256-gcm
 proxy-groups:
   - name: 🚀 节点选择
     type: select
     proxies:
       - ♻️ 自动选择
       - DIRECT
-      - cfpage-www.udemy.com
-      - cfpage-cdnyx
-      - cfpage-1212
-      - cfpage-1213
-      - cfpage-1214
-      - cfpage-S-110
-      - cfpage-S-113
-      - cfpage-S-115
-      - cfpage-S-118
-      - cfpage-S-123
-      - CFYUAN-cdnfd
-      - CFYUAN-cdnfd1
-      - CFYUAN-cdnfd2
-      - CFYUAN-cdnfd3
-      - CFYUAN-cdnfd4
-      - CFYUAN-cdnfd5
-      - CF30-www.udemy.com
-      - cdnyx
-      - cdnyxym
-      - CF30S1
-      - CF30S2
-      - CF30S3
-      - CF30S4
-      - CF30L113
-      - CF30L117
-      - CF30L118
-      - CF30l121
-      - CFYUAN
-      - CFYUAN-cdnfandai
-      - CFYUAN-113
-      - CFYUAN-115
-      - CFYUAN-cdnyx
-      - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2-acjp2
-      - cfjp.qianqingyu.top-JP-3-fbi
-      - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - 反代优选域名-OTC大佬提供维护
-      - cdn-b100.↗↘↗.eu.org反代优选域名
-      - cfus.qianqingyu.top-US-1-fbi
-      - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-USacjp2-3
-      - cfus.qianqingyu.top-US4-cf.090227.xyz
-      - cfhk.qianqingyu.top-hk—1
-      - cfhk.qianqingyu.top-HK-2
-      - cfhk.qianqingyu.top-HK-3
-      - cfsg.qianqingyu.top-SG-1
-      - cfsg.qianqingyu.top-SG-2
-      - cfsg.qianqingyu.top-SG-3
-      - cfsg.qianqingyu.top-SG-4
-      - bestip-ACJP2
-      - bestip-ACSG3
-      - bestip-weishao2023
-      - bestip-udemy
-      - bestip-fbi
-      - cffd.qianqingyu.top
-      - cffd-cdnyx
-      - CFFD-104.18.182.168
-      - test-1024
-      - test2-ipv6
-      - test2-cdnyx.qianqingyu.top
-      - test2-cffd.qianqingyu.top
-      - test2-www.udemy.com
-      - test2-fbi.gov
-      - test2-yuan
+      - 关注频道t.me/GieGie777
+      - HK-06
+      - HK-011
+      - HK-01
+      - HK-08
+      - HK-014
+      - HK-05
+      - HK-03
+      - HK-010
+      - HK-07
+      - HK-012
+      - HK-013
+      - HK-04
+      - HK-02
+      - HK-09
+      - HK-015
+      - US-16
+      - US-15
+      - US-02
+      - US-13
+      - US-01
+      - US-09
+      - US-14
+      - US-12
+      - US-04
+      - US-06
+      - US-10
+      - US-05
+      - US-08
+      - US-07
+      - US-03
+      - US-11
+      - SG-07
+      - SG-014
+      - SG-04
+      - SG-05
+      - SG-011
+      - SG-016
+      - SG-06
+      - SG-010
+      - SG-09
+      - SG-03
+      - SG-01
+      - SG-013
+      - SG-08
+      - SG-02
+      - SG-015
+      - SG-012
+      - CH-01
+      - RU-01
+      - PT-01
+      - GR-01
+      - NL-01
+      - JP-03
+      - JP-16
+      - JP-02
+      - JP-06
+      - JP-13
+      - JP-07
+      - JP-15
+      - JP-12
+      - JP-10
+      - JP-05
+      - JP-11
+      - JP-01
+      - JP-04
+      - JP-09
+      - JP-14
+      - JP-08
   - name: ♻️ 自动选择
     type: url-test
     url: http://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
     proxies:
-      - cfpage-www.udemy.com
-      - cfpage-cdnyx
-      - cfpage-1212
-      - cfpage-1213
-      - cfpage-1214
-      - cfpage-S-110
-      - cfpage-S-113
-      - cfpage-S-115
-      - cfpage-S-118
-      - cfpage-S-123
-      - CFYUAN-cdnfd
-      - CFYUAN-cdnfd1
-      - CFYUAN-cdnfd2
-      - CFYUAN-cdnfd3
-      - CFYUAN-cdnfd4
-      - CFYUAN-cdnfd5
-      - CF30-www.udemy.com
-      - cdnyx
-      - cdnyxym
-      - CF30S1
-      - CF30S2
-      - CF30S3
-      - CF30S4
-      - CF30L113
-      - CF30L117
-      - CF30L118
-      - CF30l121
-      - CFYUAN
-      - CFYUAN-cdnfandai
-      - CFYUAN-113
-      - CFYUAN-115
-      - CFYUAN-cdnyx
-      - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2-acjp2
-      - cfjp.qianqingyu.top-JP-3-fbi
-      - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - 反代优选域名-OTC大佬提供维护
-      - cdn-b100.↗↘↗.eu.org反代优选域名
-      - cfus.qianqingyu.top-US-1-fbi
-      - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-USacjp2-3
-      - cfus.qianqingyu.top-US4-cf.090227.xyz
-      - cfhk.qianqingyu.top-hk—1
-      - cfhk.qianqingyu.top-HK-2
-      - cfhk.qianqingyu.top-HK-3
-      - cfsg.qianqingyu.top-SG-1
-      - cfsg.qianqingyu.top-SG-2
-      - cfsg.qianqingyu.top-SG-3
-      - cfsg.qianqingyu.top-SG-4
-      - bestip-ACJP2
-      - bestip-ACSG3
-      - bestip-weishao2023
-      - bestip-udemy
-      - bestip-fbi
-      - cffd.qianqingyu.top
-      - cffd-cdnyx
-      - CFFD-104.18.182.168
-      - test-1024
-      - test2-ipv6
-      - test2-cdnyx.qianqingyu.top
-      - test2-cffd.qianqingyu.top
-      - test2-www.udemy.com
-      - test2-fbi.gov
-      - test2-yuan
+      - 关注频道t.me/GieGie777
+      - HK-06
+      - HK-011
+      - HK-01
+      - HK-08
+      - HK-014
+      - HK-05
+      - HK-03
+      - HK-010
+      - HK-07
+      - HK-012
+      - HK-013
+      - HK-04
+      - HK-02
+      - HK-09
+      - HK-015
+      - US-16
+      - US-15
+      - US-02
+      - US-13
+      - US-01
+      - US-09
+      - US-14
+      - US-12
+      - US-04
+      - US-06
+      - US-10
+      - US-05
+      - US-08
+      - US-07
+      - US-03
+      - US-11
+      - SG-07
+      - SG-014
+      - SG-04
+      - SG-05
+      - SG-011
+      - SG-016
+      - SG-06
+      - SG-010
+      - SG-09
+      - SG-03
+      - SG-01
+      - SG-013
+      - SG-08
+      - SG-02
+      - SG-015
+      - SG-012
+      - CH-01
+      - RU-01
+      - PT-01
+      - GR-01
+      - NL-01
+      - JP-03
+      - JP-16
+      - JP-02
+      - JP-06
+      - JP-13
+      - JP-07
+      - JP-15
+      - JP-12
+      - JP-10
+      - JP-05
+      - JP-11
+      - JP-01
+      - JP-04
+      - JP-09
+      - JP-14
+      - JP-08
   - name: 🌍 国外媒体
     type: select
     proxies:
       - 🚀 节点选择
       - ♻️ 自动选择
       - 🎯 全球直连
-      - cfpage-www.udemy.com
-      - cfpage-cdnyx
-      - cfpage-1212
-      - cfpage-1213
-      - cfpage-1214
-      - cfpage-S-110
-      - cfpage-S-113
-      - cfpage-S-115
-      - cfpage-S-118
-      - cfpage-S-123
-      - CFYUAN-cdnfd
-      - CFYUAN-cdnfd1
-      - CFYUAN-cdnfd2
-      - CFYUAN-cdnfd3
-      - CFYUAN-cdnfd4
-      - CFYUAN-cdnfd5
-      - CF30-www.udemy.com
-      - cdnyx
-      - cdnyxym
-      - CF30S1
-      - CF30S2
-      - CF30S3
-      - CF30S4
-      - CF30L113
-      - CF30L117
-      - CF30L118
-      - CF30l121
-      - CFYUAN
-      - CFYUAN-cdnfandai
-      - CFYUAN-113
-      - CFYUAN-115
-      - CFYUAN-cdnyx
-      - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2-acjp2
-      - cfjp.qianqingyu.top-JP-3-fbi
-      - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - 反代优选域名-OTC大佬提供维护
-      - cdn-b100.↗↘↗.eu.org反代优选域名
-      - cfus.qianqingyu.top-US-1-fbi
-      - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-USacjp2-3
-      - cfus.qianqingyu.top-US4-cf.090227.xyz
-      - cfhk.qianqingyu.top-hk—1
-      - cfhk.qianqingyu.top-HK-2
-      - cfhk.qianqingyu.top-HK-3
-      - cfsg.qianqingyu.top-SG-1
-      - cfsg.qianqingyu.top-SG-2
-      - cfsg.qianqingyu.top-SG-3
-      - cfsg.qianqingyu.top-SG-4
-      - bestip-ACJP2
-      - bestip-ACSG3
-      - bestip-weishao2023
-      - bestip-udemy
-      - bestip-fbi
-      - cffd.qianqingyu.top
-      - cffd-cdnyx
-      - CFFD-104.18.182.168
-      - test-1024
-      - test2-ipv6
-      - test2-cdnyx.qianqingyu.top
-      - test2-cffd.qianqingyu.top
-      - test2-www.udemy.com
-      - test2-fbi.gov
-      - test2-yuan
+      - 关注频道t.me/GieGie777
+      - HK-06
+      - HK-011
+      - HK-01
+      - HK-08
+      - HK-014
+      - HK-05
+      - HK-03
+      - HK-010
+      - HK-07
+      - HK-012
+      - HK-013
+      - HK-04
+      - HK-02
+      - HK-09
+      - HK-015
+      - US-16
+      - US-15
+      - US-02
+      - US-13
+      - US-01
+      - US-09
+      - US-14
+      - US-12
+      - US-04
+      - US-06
+      - US-10
+      - US-05
+      - US-08
+      - US-07
+      - US-03
+      - US-11
+      - SG-07
+      - SG-014
+      - SG-04
+      - SG-05
+      - SG-011
+      - SG-016
+      - SG-06
+      - SG-010
+      - SG-09
+      - SG-03
+      - SG-01
+      - SG-013
+      - SG-08
+      - SG-02
+      - SG-015
+      - SG-012
+      - CH-01
+      - RU-01
+      - PT-01
+      - GR-01
+      - NL-01
+      - JP-03
+      - JP-16
+      - JP-02
+      - JP-06
+      - JP-13
+      - JP-07
+      - JP-15
+      - JP-12
+      - JP-10
+      - JP-05
+      - JP-11
+      - JP-01
+      - JP-04
+      - JP-09
+      - JP-14
+      - JP-08
   - name: 📲 电报信息
     type: select
     proxies:
       - 🚀 节点选择
       - 🎯 全球直连
-      - cfpage-www.udemy.com
-      - cfpage-cdnyx
-      - cfpage-1212
-      - cfpage-1213
-      - cfpage-1214
-      - cfpage-S-110
-      - cfpage-S-113
-      - cfpage-S-115
-      - cfpage-S-118
-      - cfpage-S-123
-      - CFYUAN-cdnfd
-      - CFYUAN-cdnfd1
-      - CFYUAN-cdnfd2
-      - CFYUAN-cdnfd3
-      - CFYUAN-cdnfd4
-      - CFYUAN-cdnfd5
-      - CF30-www.udemy.com
-      - cdnyx
-      - cdnyxym
-      - CF30S1
-      - CF30S2
-      - CF30S3
-      - CF30S4
-      - CF30L113
-      - CF30L117
-      - CF30L118
-      - CF30l121
-      - CFYUAN
-      - CFYUAN-cdnfandai
-      - CFYUAN-113
-      - CFYUAN-115
-      - CFYUAN-cdnyx
-      - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2-acjp2
-      - cfjp.qianqingyu.top-JP-3-fbi
-      - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - 反代优选域名-OTC大佬提供维护
-      - cdn-b100.↗↘↗.eu.org反代优选域名
-      - cfus.qianqingyu.top-US-1-fbi
-      - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-USacjp2-3
-      - cfus.qianqingyu.top-US4-cf.090227.xyz
-      - cfhk.qianqingyu.top-hk—1
-      - cfhk.qianqingyu.top-HK-2
-      - cfhk.qianqingyu.top-HK-3
-      - cfsg.qianqingyu.top-SG-1
-      - cfsg.qianqingyu.top-SG-2
-      - cfsg.qianqingyu.top-SG-3
-      - cfsg.qianqingyu.top-SG-4
-      - bestip-ACJP2
-      - bestip-ACSG3
-      - bestip-weishao2023
-      - bestip-udemy
-      - bestip-fbi
-      - cffd.qianqingyu.top
-      - cffd-cdnyx
-      - CFFD-104.18.182.168
-      - test-1024
-      - test2-ipv6
-      - test2-cdnyx.qianqingyu.top
-      - test2-cffd.qianqingyu.top
-      - test2-www.udemy.com
-      - test2-fbi.gov
-      - test2-yuan
+      - 关注频道t.me/GieGie777
+      - HK-06
+      - HK-011
+      - HK-01
+      - HK-08
+      - HK-014
+      - HK-05
+      - HK-03
+      - HK-010
+      - HK-07
+      - HK-012
+      - HK-013
+      - HK-04
+      - HK-02
+      - HK-09
+      - HK-015
+      - US-16
+      - US-15
+      - US-02
+      - US-13
+      - US-01
+      - US-09
+      - US-14
+      - US-12
+      - US-04
+      - US-06
+      - US-10
+      - US-05
+      - US-08
+      - US-07
+      - US-03
+      - US-11
+      - SG-07
+      - SG-014
+      - SG-04
+      - SG-05
+      - SG-011
+      - SG-016
+      - SG-06
+      - SG-010
+      - SG-09
+      - SG-03
+      - SG-01
+      - SG-013
+      - SG-08
+      - SG-02
+      - SG-015
+      - SG-012
+      - CH-01
+      - RU-01
+      - PT-01
+      - GR-01
+      - NL-01
+      - JP-03
+      - JP-16
+      - JP-02
+      - JP-06
+      - JP-13
+      - JP-07
+      - JP-15
+      - JP-12
+      - JP-10
+      - JP-05
+      - JP-11
+      - JP-01
+      - JP-04
+      - JP-09
+      - JP-14
+      - JP-08
   - name: Ⓜ️ 微软服务
     type: select
     proxies:
       - 🎯 全球直连
       - 🚀 节点选择
-      - cfpage-www.udemy.com
-      - cfpage-cdnyx
-      - cfpage-1212
-      - cfpage-1213
-      - cfpage-1214
-      - cfpage-S-110
-      - cfpage-S-113
-      - cfpage-S-115
-      - cfpage-S-118
-      - cfpage-S-123
-      - CFYUAN-cdnfd
-      - CFYUAN-cdnfd1
-      - CFYUAN-cdnfd2
-      - CFYUAN-cdnfd3
-      - CFYUAN-cdnfd4
-      - CFYUAN-cdnfd5
-      - CF30-www.udemy.com
-      - cdnyx
-      - cdnyxym
-      - CF30S1
-      - CF30S2
-      - CF30S3
-      - CF30S4
-      - CF30L113
-      - CF30L117
-      - CF30L118
-      - CF30l121
-      - CFYUAN
-      - CFYUAN-cdnfandai
-      - CFYUAN-113
-      - CFYUAN-115
-      - CFYUAN-cdnyx
-      - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2-acjp2
-      - cfjp.qianqingyu.top-JP-3-fbi
-      - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - 反代优选域名-OTC大佬提供维护
-      - cdn-b100.↗↘↗.eu.org反代优选域名
-      - cfus.qianqingyu.top-US-1-fbi
-      - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-USacjp2-3
-      - cfus.qianqingyu.top-US4-cf.090227.xyz
-      - cfhk.qianqingyu.top-hk—1
-      - cfhk.qianqingyu.top-HK-2
-      - cfhk.qianqingyu.top-HK-3
-      - cfsg.qianqingyu.top-SG-1
-      - cfsg.qianqingyu.top-SG-2
-      - cfsg.qianqingyu.top-SG-3
-      - cfsg.qianqingyu.top-SG-4
-      - bestip-ACJP2
-      - bestip-ACSG3
-      - bestip-weishao2023
-      - bestip-udemy
-      - bestip-fbi
-      - cffd.qianqingyu.top
-      - cffd-cdnyx
-      - CFFD-104.18.182.168
-      - test-1024
-      - test2-ipv6
-      - test2-cdnyx.qianqingyu.top
-      - test2-cffd.qianqingyu.top
-      - test2-www.udemy.com
-      - test2-fbi.gov
-      - test2-yuan
+      - 关注频道t.me/GieGie777
+      - HK-06
+      - HK-011
+      - HK-01
+      - HK-08
+      - HK-014
+      - HK-05
+      - HK-03
+      - HK-010
+      - HK-07
+      - HK-012
+      - HK-013
+      - HK-04
+      - HK-02
+      - HK-09
+      - HK-015
+      - US-16
+      - US-15
+      - US-02
+      - US-13
+      - US-01
+      - US-09
+      - US-14
+      - US-12
+      - US-04
+      - US-06
+      - US-10
+      - US-05
+      - US-08
+      - US-07
+      - US-03
+      - US-11
+      - SG-07
+      - SG-014
+      - SG-04
+      - SG-05
+      - SG-011
+      - SG-016
+      - SG-06
+      - SG-010
+      - SG-09
+      - SG-03
+      - SG-01
+      - SG-013
+      - SG-08
+      - SG-02
+      - SG-015
+      - SG-012
+      - CH-01
+      - RU-01
+      - PT-01
+      - GR-01
+      - NL-01
+      - JP-03
+      - JP-16
+      - JP-02
+      - JP-06
+      - JP-13
+      - JP-07
+      - JP-15
+      - JP-12
+      - JP-10
+      - JP-05
+      - JP-11
+      - JP-01
+      - JP-04
+      - JP-09
+      - JP-14
+      - JP-08
   - name: 🍎 苹果服务
     type: select
     proxies:
       - 🚀 节点选择
       - 🎯 全球直连
-      - cfpage-www.udemy.com
-      - cfpage-cdnyx
-      - cfpage-1212
-      - cfpage-1213
-      - cfpage-1214
-      - cfpage-S-110
-      - cfpage-S-113
-      - cfpage-S-115
-      - cfpage-S-118
-      - cfpage-S-123
-      - CFYUAN-cdnfd
-      - CFYUAN-cdnfd1
-      - CFYUAN-cdnfd2
-      - CFYUAN-cdnfd3
-      - CFYUAN-cdnfd4
-      - CFYUAN-cdnfd5
-      - CF30-www.udemy.com
-      - cdnyx
-      - cdnyxym
-      - CF30S1
-      - CF30S2
-      - CF30S3
-      - CF30S4
-      - CF30L113
-      - CF30L117
-      - CF30L118
-      - CF30l121
-      - CFYUAN
-      - CFYUAN-cdnfandai
-      - CFYUAN-113
-      - CFYUAN-115
-      - CFYUAN-cdnyx
-      - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2-acjp2
-      - cfjp.qianqingyu.top-JP-3-fbi
-      - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - 反代优选域名-OTC大佬提供维护
-      - cdn-b100.↗↘↗.eu.org反代优选域名
-      - cfus.qianqingyu.top-US-1-fbi
-      - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-USacjp2-3
-      - cfus.qianqingyu.top-US4-cf.090227.xyz
-      - cfhk.qianqingyu.top-hk—1
-      - cfhk.qianqingyu.top-HK-2
-      - cfhk.qianqingyu.top-HK-3
-      - cfsg.qianqingyu.top-SG-1
-      - cfsg.qianqingyu.top-SG-2
-      - cfsg.qianqingyu.top-SG-3
-      - cfsg.qianqingyu.top-SG-4
-      - bestip-ACJP2
-      - bestip-ACSG3
-      - bestip-weishao2023
-      - bestip-udemy
-      - bestip-fbi
-      - cffd.qianqingyu.top
-      - cffd-cdnyx
-      - CFFD-104.18.182.168
-      - test-1024
-      - test2-ipv6
-      - test2-cdnyx.qianqingyu.top
-      - test2-cffd.qianqingyu.top
-      - test2-www.udemy.com
-      - test2-fbi.gov
-      - test2-yuan
+      - 关注频道t.me/GieGie777
+      - HK-06
+      - HK-011
+      - HK-01
+      - HK-08
+      - HK-014
+      - HK-05
+      - HK-03
+      - HK-010
+      - HK-07
+      - HK-012
+      - HK-013
+      - HK-04
+      - HK-02
+      - HK-09
+      - HK-015
+      - US-16
+      - US-15
+      - US-02
+      - US-13
+      - US-01
+      - US-09
+      - US-14
+      - US-12
+      - US-04
+      - US-06
+      - US-10
+      - US-05
+      - US-08
+      - US-07
+      - US-03
+      - US-11
+      - SG-07
+      - SG-014
+      - SG-04
+      - SG-05
+      - SG-011
+      - SG-016
+      - SG-06
+      - SG-010
+      - SG-09
+      - SG-03
+      - SG-01
+      - SG-013
+      - SG-08
+      - SG-02
+      - SG-015
+      - SG-012
+      - CH-01
+      - RU-01
+      - PT-01
+      - GR-01
+      - NL-01
+      - JP-03
+      - JP-16
+      - JP-02
+      - JP-06
+      - JP-13
+      - JP-07
+      - JP-15
+      - JP-12
+      - JP-10
+      - JP-05
+      - JP-11
+      - JP-01
+      - JP-04
+      - JP-09
+      - JP-14
+      - JP-08
   - name: 🎯 全球直连
     type: select
     proxies:
@@ -589,83 +1011,83 @@ proxy-groups:
       - 🚀 节点选择
       - 🎯 全球直连
       - ♻️ 自动选择
-      - cfpage-www.udemy.com
-      - cfpage-cdnyx
-      - cfpage-1212
-      - cfpage-1213
-      - cfpage-1214
-      - cfpage-S-110
-      - cfpage-S-113
-      - cfpage-S-115
-      - cfpage-S-118
-      - cfpage-S-123
-      - CFYUAN-cdnfd
-      - CFYUAN-cdnfd1
-      - CFYUAN-cdnfd2
-      - CFYUAN-cdnfd3
-      - CFYUAN-cdnfd4
-      - CFYUAN-cdnfd5
-      - CF30-www.udemy.com
-      - cdnyx
-      - cdnyxym
-      - CF30S1
-      - CF30S2
-      - CF30S3
-      - CF30S4
-      - CF30L113
-      - CF30L117
-      - CF30L118
-      - CF30l121
-      - CFYUAN
-      - CFYUAN-cdnfandai
-      - CFYUAN-113
-      - CFYUAN-115
-      - CFYUAN-cdnyx
-      - cfjp.qianqingyu.top-JP-1
-      - cfjp.qianqingyu.top-JP-2-acjp2
-      - cfjp.qianqingyu.top-JP-3-fbi
-      - cfjp.qianqingyu.top-JP-4-bestproxy.onecf.eu.org
-      - 反代优选域名-OTC大佬提供维护
-      - cdn-b100.↗↘↗.eu.org反代优选域名
-      - cfus.qianqingyu.top-US-1-fbi
-      - cfus.qianqingyu.top-US-2
-      - cfus.qianqingyu.top-USacjp2-3
-      - cfus.qianqingyu.top-US4-cf.090227.xyz
-      - cfhk.qianqingyu.top-hk—1
-      - cfhk.qianqingyu.top-HK-2
-      - cfhk.qianqingyu.top-HK-3
-      - cfsg.qianqingyu.top-SG-1
-      - cfsg.qianqingyu.top-SG-2
-      - cfsg.qianqingyu.top-SG-3
-      - cfsg.qianqingyu.top-SG-4
-      - bestip-ACJP2
-      - bestip-ACSG3
-      - bestip-weishao2023
-      - bestip-udemy
-      - bestip-fbi
-      - cffd.qianqingyu.top
-      - cffd-cdnyx
-      - CFFD-104.18.182.168
-      - test-1024
-      - test2-ipv6
-      - test2-cdnyx.qianqingyu.top
-      - test2-cffd.qianqingyu.top
-      - test2-www.udemy.com
-      - test2-fbi.gov
-      - test2-yuan
-
+      - 关注频道t.me/GieGie777
+      - HK-06
+      - HK-011
+      - HK-01
+      - HK-08
+      - HK-014
+      - HK-05
+      - HK-03
+      - HK-010
+      - HK-07
+      - HK-012
+      - HK-013
+      - HK-04
+      - HK-02
+      - HK-09
+      - HK-015
+      - US-16
+      - US-15
+      - US-02
+      - US-13
+      - US-01
+      - US-09
+      - US-14
+      - US-12
+      - US-04
+      - US-06
+      - US-10
+      - US-05
+      - US-08
+      - US-07
+      - US-03
+      - US-11
+      - SG-07
+      - SG-014
+      - SG-04
+      - SG-05
+      - SG-011
+      - SG-016
+      - SG-06
+      - SG-010
+      - SG-09
+      - SG-03
+      - SG-01
+      - SG-013
+      - SG-08
+      - SG-02
+      - SG-015
+      - SG-012
+      - CH-01
+      - RU-01
+      - PT-01
+      - GR-01
+      - NL-01
+      - JP-03
+      - JP-16
+      - JP-02
+      - JP-06
+      - JP-13
+      - JP-07
+      - JP-15
+      - JP-12
+      - JP-10
+      - JP-05
+      - JP-11
+      - JP-01
+      - JP-04
+      - JP-09
+      - JP-14
+      - JP-08
 rules:
-# 本地/局域网地址
-# 参考：https://en.wikipedia.org/wiki/Reserved_IP_addresses
-# ACL4SSR标志 如没有，代表不是用ACL4SSR规则
-# 本地/局域网地址
-# Router managed 路由器管理域名
   - DOMAIN-SUFFIX,acl4.ssr,🎯 全球直连
   - DOMAIN-SUFFIX,ip6-localhost,🎯 全球直连
   - DOMAIN-SUFFIX,ip6-loopback,🎯 全球直连
   - DOMAIN-SUFFIX,lan,🎯 全球直连
   - DOMAIN-SUFFIX,local,🎯 全球直连
   - DOMAIN-SUFFIX,localhost,🎯 全球直连
+  - IP-CIDR,0.0.0.0/8,🎯 全球直连,no-resolve
   - IP-CIDR,10.0.0.0/8,🎯 全球直连,no-resolve
   - IP-CIDR,100.64.0.0/10,🎯 全球直连,no-resolve
   - IP-CIDR,127.0.0.0/8,🎯 全球直连,no-resolve
@@ -680,6 +1102,7 @@ rules:
   - DOMAIN,instant.arubanetworks.com,🎯 全球直连
   - DOMAIN,setmeup.arubanetworks.com,🎯 全球直连
   - DOMAIN,router.asus.com,🎯 全球直连
+  - DOMAIN,www.asusrouter.com,🎯 全球直连
   - DOMAIN-SUFFIX,hiwifi.com,🎯 全球直连
   - DOMAIN-SUFFIX,leike.cc,🎯 全球直连
   - DOMAIN-SUFFIX,miwifi.com,🎯 全球直连
@@ -692,23 +1115,16 @@ rules:
   - DOMAIN-SUFFIX,tendawifi.com,🎯 全球直连
   - DOMAIN-SUFFIX,zte.home,🎯 全球直连
   - DOMAIN-SUFFIX,tplogin.cn,🎯 全球直连
-# 本碎片只包含常见广告关键字、广告联盟。无副作用，放心使用
-# 广告关键词
-# 广告联盟-国内****************
-# 广告联盟-国外****************
-# 垃圾站点****************
-# 运营商广告****************
+  - DOMAIN-SUFFIX,wifi.cmcc,🎯 全球直连
   - DOMAIN-KEYWORD,admarvel,🛑 全球拦截
   - DOMAIN-KEYWORD,admaster,🛑 全球拦截
   - DOMAIN-KEYWORD,adsage,🛑 全球拦截
   - DOMAIN-KEYWORD,adsensor,🛑 全球拦截
-  - DOMAIN-KEYWORD,adservice,🛑 全球拦截
   - DOMAIN-KEYWORD,adsmogo,🛑 全球拦截
   - DOMAIN-KEYWORD,adsrvmedia,🛑 全球拦截
   - DOMAIN-KEYWORD,adsserving,🛑 全球拦截
   - DOMAIN-KEYWORD,adsystem,🛑 全球拦截
   - DOMAIN-KEYWORD,adwords,🛑 全球拦截
-  - DOMAIN-KEYWORD,analysis,🛑 全球拦截
   - DOMAIN-KEYWORD,applovin,🛑 全球拦截
   - DOMAIN-KEYWORD,appsflyer,🛑 全球拦截
   - DOMAIN-KEYWORD,domob,🛑 全球拦截
@@ -722,7 +1138,6 @@ rules:
   - DOMAIN-KEYWORD,pingfore,🛑 全球拦截
   - DOMAIN-KEYWORD,socdm,🛑 全球拦截
   - DOMAIN-KEYWORD,supersonicads,🛑 全球拦截
-  - DOMAIN-KEYWORD,usage,🛑 全球拦截
   - DOMAIN-KEYWORD,wlmonitor,🛑 全球拦截
   - DOMAIN-KEYWORD,zjtoolbar,🛑 全球拦截
   - DOMAIN-SUFFIX,09mk.cn,🛑 全球拦截
@@ -1119,6 +1534,7 @@ rules:
   - DOMAIN-SUFFIX,zhjfad.com,🛑 全球拦截
   - DOMAIN-SUFFIX,zqzxz.com,🛑 全球拦截
   - DOMAIN-SUFFIX,zzsx8.com,🛑 全球拦截
+  - DOMAIN-SUFFIX,wwads.cn,🛑 全球拦截
   - DOMAIN-SUFFIX,acuityplatform.com,🛑 全球拦截
   - DOMAIN-SUFFIX,ad-stir.com,🛑 全球拦截
   - DOMAIN-SUFFIX,ad-survey.com,🛑 全球拦截
@@ -1292,66 +1708,6 @@ rules:
   - DOMAIN-SUFFIX,go.10086.cn,🛑 全球拦截
   - DOMAIN-SUFFIX,hivedata.cc,🛑 全球拦截
   - DOMAIN-SUFFIX,navi.gd.chinamobile.com,🛑 全球拦截
-# 包含常用应用的各种去广告规则。
-# 可能有轻微副作用，可放心使用。（如果网站功能和广告冲突，会删掉去广告规则）
-# 163
-# 17173
-# 178
-# 2345
-# 360
-# 58
-# Alibaba
-# Adobe
-# Apple
-# AutoHome
-# Baidu
-# Book-app 起点 掌阅 书旗 宜搜
-# ByteDance 头条抖音
-# Dangdang
-# Duomi
-# Facebook
-# Fang
-# Google
-# JD
-# Kugou
-# Kuwo
-# Meizu flyme 魅族
-# Meitu
-# Miui 小米
-# Moji
-# Qingting.fm
-# QQ
-# RenRen
-# Sina
-# Sougou
-# Teleplus
-# Twitter
-# UC ali
-# Weifeng
-# WPS Office
-# Wi-Fi key
-# Ximalaya 喜马拉雅
-# Xunlei 迅雷app&看看
-# Yahoo
-# Zhihu
-# Ads in Video apps 下面都是 ********************
-# 6间房
-# Baofeng 暴风影音
-# Douyu
-# Fenghuang 凤凰TV
-# Funshion 风行
-# iqiyi PPS 爱奇艺
-# Ku6 酷6
-# LeTV 乐视
-# MGTV 芒果TV
-# Sohu 搜狐
-# PPTV、PPLive
-# QQ Live
-# Youku & Tudou
-# Youtube
-# Others ads in Video apps
-# Ads in Video apps end 上面都是 ********************
-# 常用网站广告
   - DOMAIN-SUFFIX,a.youdao.com,🍃 应用净化
   - DOMAIN-SUFFIX,adgeo.corp.163.com,🍃 应用净化
   - DOMAIN-SUFFIX,analytics.126.net,🍃 应用净化
@@ -1516,7 +1872,6 @@ rules:
   - DOMAIN-SUFFIX,baidu9635.com,🍃 应用净化
   - DOMAIN-SUFFIX,baidustatic.com,🍃 应用净化
   - DOMAIN-SUFFIX,baidutv.baidu.com,🍃 应用净化
-  - DOMAIN-SUFFIX,baikebcs.bdimg.com,🍃 应用净化
   - DOMAIN-SUFFIX,banlv.baidu.com,🍃 应用净化
   - DOMAIN-SUFFIX,bar.baidu.com,🍃 应用净化
   - DOMAIN-SUFFIX,bdplus.baidu.com,🍃 应用净化
@@ -1874,7 +2229,6 @@ rules:
   - DOMAIN-SUFFIX,stat.pandora.xiaomi.com,🍃 应用净化
   - DOMAIN-SUFFIX,union.mi.com,🍃 应用净化
   - DOMAIN-SUFFIX,wtradv.market.xiaomi.com,🍃 应用净化
-  - DOMAIN-SUFFIX,xmpush.xiaomi.com,🍃 应用净化
   - DOMAIN-SUFFIX,ad.api.moji.com,🍃 应用净化
   - DOMAIN-SUFFIX,app.moji001.com,🍃 应用净化
   - DOMAIN-SUFFIX,cdn.moji002.com,🍃 应用净化
@@ -2069,7 +2423,6 @@ rules:
   - DOMAIN-SUFFIX,ws.progrss.yahoo.com,🍃 应用净化
   - DOMAIN-SUFFIX,yads.yahoo.co.jp,🍃 应用净化
   - DOMAIN-SUFFIX,ybp.yahoo.com,🍃 应用净化
-  - DOMAIN-SUFFIX,zhihu-web-analytics.zhihu.com,🍃 应用净化
   - DOMAIN-SUFFIX,shrek.6.cn,🍃 应用净化
   - DOMAIN-SUFFIX,simba.6.cn,🍃 应用净化
   - DOMAIN-SUFFIX,union.6.cn,🍃 应用净化
@@ -2378,8 +2731,6 @@ rules:
   - DOMAIN-SUFFIX,tralog.ganji.com,🍃 应用净化
   - DOMAIN-SUFFIX,up.qingdaonews.com,🍃 应用净化
   - DOMAIN-SUFFIX,vaserviece.10jqka.com.cn,🍃 应用净化
-# Google China
-#DOMAIN-SUFFIX,translate.googleapis.com
   - DOMAIN-SUFFIX,265.com,🎯 全球直连
   - DOMAIN-SUFFIX,2mdn.net,🎯 全球直连
   - DOMAIN-SUFFIX,alt1-mtalk.google.com,🎯 全球直连
@@ -2391,34 +2742,24 @@ rules:
   - DOMAIN-SUFFIX,alt7-mtalk.google.com,🎯 全球直连
   - DOMAIN-SUFFIX,alt8-mtalk.google.com,🎯 全球直连
   - DOMAIN-SUFFIX,app-measurement.com,🎯 全球直连
-  - DOMAIN-SUFFIX,c.android.clients.google.com,🎯 全球直连
   - DOMAIN-SUFFIX,cache.pack.google.com,🎯 全球直连
   - DOMAIN-SUFFIX,clickserve.dartsearch.net,🎯 全球直连
-  - DOMAIN-SUFFIX,clientservices.googleapis.com,🎯 全球直连
   - DOMAIN-SUFFIX,crl.pki.goog,🎯 全球直连
   - DOMAIN-SUFFIX,dl.google.com,🎯 全球直连
   - DOMAIN-SUFFIX,dl.l.google.com,🎯 全球直连
-  - DOMAIN-SUFFIX,fonts.googleapis.com,🎯 全球直连
-  - DOMAIN-SUFFIX,fonts.gstatic.com,🎯 全球直连
   - DOMAIN-SUFFIX,googletagmanager.com,🎯 全球直连
   - DOMAIN-SUFFIX,googletagservices.com,🎯 全球直连
   - DOMAIN-SUFFIX,gtm.oasisfeng.com,🎯 全球直连
-  - DOMAIN-SUFFIX,imasdk.googleapis.com,🎯 全球直连
   - DOMAIN-SUFFIX,mtalk.google.com,🎯 全球直连
   - DOMAIN-SUFFIX,ocsp.pki.goog,🎯 全球直连
   - DOMAIN-SUFFIX,recaptcha.net,🎯 全球直连
   - DOMAIN-SUFFIX,safebrowsing-cache.google.com,🎯 全球直连
-  - DOMAIN-SUFFIX,safebrowsing.googleapis.com,🎯 全球直连
   - DOMAIN-SUFFIX,settings.crashlytics.com,🎯 全球直连
   - DOMAIN-SUFFIX,ssl-google-analytics.l.google.com,🎯 全球直连
   - DOMAIN-SUFFIX,toolbarqueries.google.com,🎯 全球直连
   - DOMAIN-SUFFIX,tools.google.com,🎯 全球直连
   - DOMAIN-SUFFIX,tools.l.google.com,🎯 全球直连
-  - DOMAIN-SUFFIX,update.googleapis.com,🎯 全球直连
   - DOMAIN-SUFFIX,www-googletagmanager.l.google.com,🎯 全球直连
-  - DOMAIN-SUFFIX,www.gstatic.com,🎯 全球直连
-# 内容：SteamCN
-# 数量：15条
   - DOMAIN,csgo.wmsj.cn,🎯 全球直连
   - DOMAIN,dl.steam.clngaa.com,🎯 全球直连
   - DOMAIN,dl.steam.ksyna.com,🎯 全球直连
@@ -2430,13 +2771,11 @@ rules:
   - DOMAIN,steampowered.com.8686c.com,🎯 全球直连
   - DOMAIN,steamstatic.com.8686c.com,🎯 全球直连
   - DOMAIN,wmsjsteam.com,🎯 全球直连
+  - DOMAIN,xz.pphimalayanrt.com,🎯 全球直连
   - DOMAIN-SUFFIX,cm.steampowered.com,🎯 全球直连
   - DOMAIN-SUFFIX,steamchina.com,🎯 全球直连
   - DOMAIN-SUFFIX,steamcontent.com,🎯 全球直连
   - DOMAIN-SUFFIX,steamusercontent.com,🎯 全球直连
-# Microsoft Services
-# optimized from https://gist.github.com/TTTPOB/ce93fb3b04ba2f21880b09427442d831
-# source: https://docs.microsoft.com/en-us/office365/enterprise/urls-and-ip-address-ranges
   - DOMAIN-KEYWORD,1drv,Ⓜ️ 微软服务
   - DOMAIN-KEYWORD,microsoft,Ⓜ️ 微软服务
   - DOMAIN-SUFFIX,aadrm.com,Ⓜ️ 微软服务
@@ -2449,8 +2788,11 @@ rules:
   - DOMAIN-SUFFIX,azure.com,Ⓜ️ 微软服务
   - DOMAIN-SUFFIX,azure.net,Ⓜ️ 微软服务
   - DOMAIN-SUFFIX,azureedge.net,Ⓜ️ 微软服务
+  - DOMAIN-SUFFIX,azureiotcentral.com,Ⓜ️ 微软服务
   - DOMAIN-SUFFIX,azurerms.com,Ⓜ️ 微软服务
   - DOMAIN-SUFFIX,bing.com,Ⓜ️ 微软服务
+  - DOMAIN-SUFFIX,bing.net,Ⓜ️ 微软服务
+  - DOMAIN-SUFFIX,bingapis.com,Ⓜ️ 微软服务
   - DOMAIN-SUFFIX,cloudapp.net,Ⓜ️ 微软服务
   - DOMAIN-SUFFIX,cloudappsecurity.com,Ⓜ️ 微软服务
   - DOMAIN-SUFFIX,edgesuite.net,Ⓜ️ 微软服务
@@ -2513,12 +2855,11 @@ rules:
   - DOMAIN-SUFFIX,wunderlist.com,Ⓜ️ 微软服务
   - DOMAIN-SUFFIX,yammer.com,Ⓜ️ 微软服务
   - DOMAIN-SUFFIX,yammerusercontent.com,Ⓜ️ 微软服务
-# Apple
-# 一般国内Apple肯定正常,不需要开代理
   - DOMAIN,apple.comscoreresearch.com,🍎 苹果服务
   - DOMAIN-SUFFIX,aaplimg.com,🍎 苹果服务
   - DOMAIN-SUFFIX,akadns.net,🍎 苹果服务
   - DOMAIN-SUFFIX,apple-cloudkit.com,🍎 苹果服务
+  - DOMAIN-SUFFIX,apple-dns.net,🍎 苹果服务
   - DOMAIN-SUFFIX,apple-mapkit.com,🍎 苹果服务
   - DOMAIN-SUFFIX,apple.co,🍎 苹果服务
   - DOMAIN-SUFFIX,apple.com,🍎 苹果服务
@@ -2543,64 +2884,13 @@ rules:
   - IP-CIDR,192.35.50.0/24,🍎 苹果服务,no-resolve
   - IP-CIDR,198.183.17.0/24,🍎 苹果服务,no-resolve
   - IP-CIDR,205.180.175.0/24,🍎 苹果服务,no-resolve
-# 内容：国外媒体列表
-# 更新：2023-01-15 22:06:33
-# 数量：330条
-# ABC
-# AbemaTV
-# All4
-# Amazon
-# AppleNews
-# AppleTV
-# BBCiPlayer
-# Bahamut
-# DAZN
-# Deezer
-# DiscoveryPlus
-# DisneyPlus
-# EncoreTVB
-# FoxNow
-# HBO
-# HBO_GO_HKG
-# HWTV
-# Hulu
-# HuluJapan
-# ITV
-# JOOX
-# Japonx
-# KKBOX
-# KKTV
-# LiTV
-# LineTV
-# My5
-# MyTVSuper
-# Netflix
-# Niconico
-# PBS
-# Pandora
-# Pornhub
-# Qobuz
-# SoundCloud
-# Spotify
-# TIDAL
-# TaiWanGood 台湾好
-# TikTok
-# Twitch
-# ViuTV
-# YouTube
-# YouTubeMusic
   - DOMAIN-SUFFIX,edgedatg.com,🌍 国外媒体
   - DOMAIN-SUFFIX,go.com,🌍 国外媒体
-#   - USER-AGENT,AbemaTV*,🌍 国外媒体
   - DOMAIN-KEYWORD,abematv.akamaized.net,🌍 国外媒体
-  - DOMAIN,api-abematv.bucketeer.jp,🌍 国外媒体
-  - DOMAIN-SUFFIX,abema-tv.com,🌍 国外媒体
   - DOMAIN-SUFFIX,abema.io,🌍 国外媒体
   - DOMAIN-SUFFIX,abema.tv,🌍 国外媒体
   - DOMAIN-SUFFIX,ameba.jp,🌍 国外媒体
   - DOMAIN-SUFFIX,hayabusa.io,🌍 国外媒体
-  - DOMAIN-SUFFIX,hayabusa.media,🌍 国外媒体
-#   - USER-AGENT,All4*,🌍 国外媒体
   - DOMAIN-SUFFIX,c4assets.com,🌍 国外媒体
   - DOMAIN-SUFFIX,channel4.com,🌍 国外媒体
   - DOMAIN-KEYWORD,avoddashs,🌍 国外媒体
@@ -2618,18 +2908,17 @@ rules:
   - DOMAIN-SUFFIX,aiv-cdn.net,🌍 国外媒体
   - DOMAIN-SUFFIX,aiv-delivery.net,🌍 国外媒体
   - DOMAIN-SUFFIX,amazon.jobs,🌍 国外媒体
+  - DOMAIN-SUFFIX,amazontools.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,amazontours.com,🌍 国外媒体
   - DOMAIN-SUFFIX,amazonuniversity.jobs,🌍 国外媒体
   - DOMAIN-SUFFIX,amazonvideo.com,🌍 国外媒体
   - DOMAIN-SUFFIX,media-amazon.com,🌍 国外媒体
   - DOMAIN-SUFFIX,pv-cdn.net,🌍 国外媒体
-#   - URL-REGEX,^https?:\/\/www\.amazon\.com\/(Amazon-Video|gp\/video)\/,🌍 国外媒体
-#   - USER-AGENT,AppleNews*,🌍 国外媒体
-#   - USER-AGENT,com.apple.news*,🌍 国外媒体
+  - DOMAIN-SUFFIX,seattlespheres.com,🌍 国外媒体
   - DOMAIN,gspe1-ssl.ls.apple.com,🌍 国外媒体
   - DOMAIN,np-edge.itunes.apple.com,🌍 国外媒体
   - DOMAIN,play-edge.itunes.apple.com,🌍 国外媒体
   - DOMAIN-SUFFIX,tv.apple.com,🌍 国外媒体
-#   - USER-AGENT,BBCiPlayer*,🌍 国外媒体
   - DOMAIN-KEYWORD,bbcfmt,🌍 国外媒体
   - DOMAIN-KEYWORD,uk-live,🌍 国外媒体
   - DOMAIN,aod-dash-uk-live.akamaized.net,🌍 国外媒体
@@ -2644,13 +2933,11 @@ rules:
   - DOMAIN-SUFFIX,bbci.co,🌍 国外媒体
   - DOMAIN-SUFFIX,bbci.co.uk,🌍 国外媒体
   - DOMAIN-SUFFIX,bidi.net.uk,🌍 国外媒体
-#   - USER-AGENT,Anime*,🌍 国外媒体
   - DOMAIN,bahamut.akamaized.net,🌍 国外媒体
   - DOMAIN,gamer-cds.cdn.hinet.net,🌍 国外媒体
   - DOMAIN,gamer2-cds.cdn.hinet.net,🌍 国外媒体
   - DOMAIN-SUFFIX,bahamut.com.tw,🌍 国外媒体
   - DOMAIN-SUFFIX,gamer.com.tw,🌍 国外媒体
-#   - USER-AGENT,DAZN*,🌍 国外媒体
   - DOMAIN-KEYWORD,voddazn,🌍 国外媒体
   - DOMAIN,d151l6v8er5bdm.cloudfront.net,🌍 国外媒体
   - DOMAIN-SUFFIX,d151l6v8er5bdm.cloudfront.net,🌍 国外媒体
@@ -2662,14 +2949,11 @@ rules:
   - DOMAIN-SUFFIX,indazn.com,🌍 国外媒体
   - DOMAIN-SUFFIX,indaznlab.com,🌍 国外媒体
   - DOMAIN-SUFFIX,sentry.io,🌍 国外媒体
-#   - USER-AGENT,Deezer*,🌍 国外媒体
   - DOMAIN-SUFFIX,deezer.com,🌍 国外媒体
   - DOMAIN-SUFFIX,dzcdn.net,🌍 国外媒体
   - DOMAIN-SUFFIX,disco-api.com,🌍 国外媒体
   - DOMAIN-SUFFIX,discovery.com,🌍 国外媒体
   - DOMAIN-SUFFIX,uplynk.com,🌍 国外媒体
-#   - USER-AGENT,Disney*,🌍 国外媒体
-#   - USER-AGENT,Disney+*,🌍 国外媒体
   - DOMAIN,cdn.registerdisney.go.com,🌍 国外媒体
   - DOMAIN-SUFFIX,adobedtm.com,🌍 国外媒体
   - DOMAIN-SUFFIX,bam.nr-data.net,🌍 国外媒体
@@ -2690,25 +2974,19 @@ rules:
   - DOMAIN-SUFFIX,dssott.com,🌍 国外媒体
   - DOMAIN-SUFFIX,execute-api.us-east-1.amazonaws.com,🌍 国外媒体
   - DOMAIN-SUFFIX,js-agent.newrelic.com,🌍 国外媒体
-#   - USER-AGENT,encoreTVB*,🌍 国外媒体
   - DOMAIN,bcbolt446c5271-a.akamaihd.net,🌍 国外媒体
   - DOMAIN,content.jwplatform.com,🌍 国外媒体
   - DOMAIN,edge.api.brightcove.com,🌍 国外媒体
   - DOMAIN,videos-f.jwpsrv.com,🌍 国外媒体
   - DOMAIN-SUFFIX,encoretvb.com,🌍 国外媒体
-#   - USER-AGENT,FOX%20NOW*,🌍 国外媒体
   - DOMAIN-SUFFIX,fox.com,🌍 国外媒体
   - DOMAIN-SUFFIX,foxdcg.com,🌍 国外媒体
   - DOMAIN-SUFFIX,uplynk.com,🌍 国外媒体
-#   - USER-AGENT,HBO%20NOW*,🌍 国外媒体
-#   - USER-AGENT,HBOMAX*,🌍 国外媒体
   - DOMAIN-SUFFIX,hbo.com,🌍 国外媒体
   - DOMAIN-SUFFIX,hbogo.com,🌍 国外媒体
   - DOMAIN-SUFFIX,hbomax.com,🌍 国外媒体
   - DOMAIN-SUFFIX,hbomaxcdn.com,🌍 国外媒体
   - DOMAIN-SUFFIX,hbonow.com,🌍 国外媒体
-#   - USER-AGENT,HBO%20GO%20PROD*,🌍 国外媒体
-  - DOMAIN-KEYWORD,.hbogoasia.,🌍 国外媒体
   - DOMAIN-KEYWORD,hbogoasia,🌍 国外媒体
   - DOMAIN,44wilhpljf.execute-api.ap-southeast-1.amazonaws.com,🌍 国外媒体
   - DOMAIN,bcbolthboa-a.akamaihd.net,🌍 国外媒体
@@ -2728,7 +3006,6 @@ rules:
   - DOMAIN-SUFFIX,hboasia.com,🌍 国外媒体
   - DOMAIN-SUFFIX,hbogoasia.com,🌍 国外媒体
   - DOMAIN-SUFFIX,hbogoasia.hk,🌍 国外媒体
-#   - USER-AGENT,HWTVMobile*,🌍 国外媒体
   - DOMAIN-SUFFIX,5itv.tv,🌍 国外媒体
   - DOMAIN-SUFFIX,ocnttv.com,🌍 国外媒体
   - DOMAIN-SUFFIX,cws-hulu.conviva.com,🌍 国外媒体
@@ -2744,12 +3021,9 @@ rules:
   - DOMAIN-SUFFIX,prod.hjholdings.tv,🌍 国外媒体
   - DOMAIN-SUFFIX,streaks.jp,🌍 国外媒体
   - DOMAIN-SUFFIX,yb.uncn.jp,🌍 国外媒体
-#   - USER-AGENT,ITV_Player*,🌍 国外媒体
   - DOMAIN,itvpnpmobile-a.akamaihd.net,🌍 国外媒体
   - DOMAIN-SUFFIX,itv.com,🌍 国外媒体
   - DOMAIN-SUFFIX,itvstatic.com,🌍 国外媒体
-#   - USER-AGENT,JOOX*,🌍 国外媒体
-#   - USER-AGENT,WeMusic*,🌍 国外媒体
   - DOMAIN-KEYWORD,jooxweb-api,🌍 国外媒体
   - DOMAIN-SUFFIX,joox.com,🌍 国外媒体
   - DOMAIN-KEYWORD,japonx,🌍 国外媒体
@@ -2765,32 +3039,25 @@ rules:
   - DOMAIN-SUFFIX,kfs.io,🌍 国外媒体
   - DOMAIN-SUFFIX,kkbox.com,🌍 国外媒体
   - DOMAIN-SUFFIX,kkbox.com.tw,🌍 国外媒体
-#   - USER-AGENT,KKTV*,🌍 国外媒体
-#   - USER-AGENT,com.kktv.ios.kktv*,🌍 国外媒体
   - DOMAIN,kktv-theater.kk.stream,🌍 国外媒体
   - DOMAIN,theater-kktv.cdn.hinet.net,🌍 国外媒体
   - DOMAIN-SUFFIX,kktv.com.tw,🌍 国外媒体
   - DOMAIN-SUFFIX,kktv.me,🌍 国外媒体
   - DOMAIN,litvfreemobile-hichannel.cdn.hinet.net,🌍 国外媒体
   - DOMAIN-SUFFIX,litv.tv,🌍 国外媒体
-#   - USER-AGENT,LINE%20TV*,🌍 国外媒体
-#   - USER-AGENT,LINE*,🌍 国外媒体
   - DOMAIN,d3c7rimkq79yfu.cloudfront.net,🌍 国外媒体
   - DOMAIN-SUFFIX,d3c7rimkq79yfu.cloudfront.net,🌍 国外媒体
   - DOMAIN-SUFFIX,linetv.tw,🌍 国外媒体
   - DOMAIN-SUFFIX,profile.line-scdn.net,🌍 国外媒体
-#   - USER-AGENT,My5*,🌍 国外媒体
   - DOMAIN,d349g9zuie06uo.cloudfront.net,🌍 国外媒体
   - DOMAIN-SUFFIX,channel5.com,🌍 国外媒体
   - DOMAIN-SUFFIX,my5.tv,🌍 国外媒体
-#   - USER-AGENT,mytv*,🌍 国外媒体
   - DOMAIN-KEYWORD,nowtv100,🌍 国外媒体
   - DOMAIN-KEYWORD,rthklive,🌍 国外媒体
   - DOMAIN,mytvsuperlimited.hb.omtrdc.net,🌍 国外媒体
   - DOMAIN,mytvsuperlimited.sc.omtrdc.net,🌍 国外媒体
   - DOMAIN-SUFFIX,mytvsuper.com,🌍 国外媒体
   - DOMAIN-SUFFIX,tvb.com,🌍 国外媒体
-#   - USER-AGENT,Argo*,🌍 国外媒体
   - DOMAIN-KEYWORD,apiproxy-device-prod-nlb-,🌍 国外媒体
   - DOMAIN-KEYWORD,dualstack.apiproxy-,🌍 国外媒体
   - DOMAIN-KEYWORD,netflixdnstest,🌍 国外媒体
@@ -2828,27 +3095,60 @@ rules:
   - IP-CIDR,192.173.64.0/18,🌍 国外媒体,no-resolve
   - IP-CIDR,198.38.96.0/19,🌍 国外媒体,no-resolve
   - IP-CIDR,198.45.48.0/20,🌍 国外媒体,no-resolve
+  - IP-CIDR,203.75.84.0/24,🌍 国外媒体,no-resolve
   - IP-CIDR,207.45.72.0/22,🌍 国外媒体,no-resolve
   - IP-CIDR,208.75.76.0/22,🌍 国外媒体,no-resolve
-#   - USER-AGENT,Niconico*,🌍 国外媒体
   - DOMAIN-SUFFIX,dmc.nico,🌍 国外媒体
   - DOMAIN-SUFFIX,nicovideo.jp,🌍 国外媒体
   - DOMAIN-SUFFIX,nimg.jp,🌍 国外媒体
-#   - USER-AGENT,PBS*,🌍 国外媒体
+  - DOMAIN-KEYWORD,nivod,🌍 国外媒体
+  - DOMAIN-SUFFIX,biggggg.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,mudvod.tv,🌍 国外媒体
+  - DOMAIN-SUFFIX,nbys.tv,🌍 国外媒体
+  - DOMAIN-SUFFIX,nbys1.tv,🌍 国外媒体
+  - DOMAIN-SUFFIX,nbyy.tv,🌍 国外媒体
+  - DOMAIN-SUFFIX,newpppp.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,nivod.tv,🌍 国外媒体
+  - DOMAIN-SUFFIX,nivodi.tv,🌍 国外媒体
+  - DOMAIN-SUFFIX,nivodz.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,vod360.net,🌍 国外媒体
+  - DOMAIN-KEYWORD,olevod,🌍 国外媒体
+  - DOMAIN-SUFFIX,haiwaikan.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,iole.tv,🌍 国外媒体
+  - DOMAIN-SUFFIX,olehd.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,olelive.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,olevod.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,olevod.io,🌍 国外媒体
+  - DOMAIN-SUFFIX,olevod.tv,🌍 国外媒体
+  - DOMAIN-SUFFIX,olevodtv.com,🌍 国外媒体
+  - DOMAIN-KEYWORD,openai,🌍 国外媒体
+  - DOMAIN,gemini.google.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,auth0.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,challenges.cloudflare.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,chatgpt.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,client-api.arkoselabs.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,events.statsigapi.net,🌍 国外媒体
+  - DOMAIN-SUFFIX,featuregates.org,🌍 国外媒体
+  - DOMAIN-SUFFIX,identrust.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,intercom.io,🌍 国外媒体
+  - DOMAIN-SUFFIX,intercomcdn.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,oaistatic.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,oaiusercontent.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,openai.com,🌍 国外媒体
+  - DOMAIN-SUFFIX,openaiapi-site.azureedge.net,🌍 国外媒体
+  - DOMAIN-SUFFIX,sentry.io,🌍 国外媒体
+  - DOMAIN-SUFFIX,stripe.com,🌍 国外媒体
   - DOMAIN-SUFFIX,pbs.org,🌍 国外媒体
-#   - USER-AGENT,Pandora*,🌍 国外媒体
   - DOMAIN-SUFFIX,pandora.com,🌍 国外媒体
   - DOMAIN-SUFFIX,phncdn.com,🌍 国外媒体
   - DOMAIN-SUFFIX,phprcdn.com,🌍 国外媒体
   - DOMAIN-SUFFIX,pornhub.com,🌍 国外媒体
   - DOMAIN-SUFFIX,pornhubpremium.com,🌍 国外媒体
   - DOMAIN-SUFFIX,qobuz.com,🌍 国外媒体
-#   - USER-AGENT,SoundCloud*,🌍 国外媒体
   - DOMAIN-SUFFIX,p-cdn.us,🌍 国外媒体
   - DOMAIN-SUFFIX,sndcdn.com,🌍 国外媒体
   - DOMAIN-SUFFIX,soundcloud.com,🌍 国外媒体
-#   - USER-AGENT,Spotify*,🌍 国外媒体
-  - DOMAIN-KEYWORD,-spotify-com,🌍 国外媒体
+  - DOMAIN-KEYWORD,-spotify-,🌍 国外媒体
   - DOMAIN-KEYWORD,spotify.com,🌍 国外媒体
   - DOMAIN-SUFFIX,pscdn.co,🌍 国外媒体
   - DOMAIN-SUFFIX,scdn.co,🌍 国外媒体
@@ -2856,15 +3156,12 @@ rules:
   - DOMAIN-SUFFIX,spotify.com,🌍 国外媒体
   - DOMAIN-SUFFIX,spotifycdn.com,🌍 国外媒体
   - DOMAIN-SUFFIX,spotifycdn.net,🌍 国外媒体
-#   - USER-AGENT,TIDAL*,🌍 国外媒体
   - DOMAIN-SUFFIX,tidal-cms.s3.amazonaws.com,🌍 国外媒体
   - DOMAIN-SUFFIX,tidal.com,🌍 国外媒体
   - DOMAIN-SUFFIX,tidalhifi.com,🌍 国外媒体
-#   - USER-AGENT,TaiwanGood*,🌍 国外媒体
   - DOMAIN,hamifans.emome.net,🌍 国外媒体
   - DOMAIN-SUFFIX,skyking.com.tw,🌍 国外媒体
-#   - USER-AGENT,TikTok*,🌍 国外媒体
-  - DOMAIN-KEYWORD,tiktokcdn-,🌍 国外媒体
+  - DOMAIN-KEYWORD,tiktokcdn,🌍 国外媒体
   - DOMAIN-SUFFIX,byteoversea.com,🌍 国外媒体
   - DOMAIN-SUFFIX,ibytedtos.com,🌍 国外媒体
   - DOMAIN-SUFFIX,ipstatp.com,🌍 国外媒体
@@ -2881,7 +3178,6 @@ rules:
   - DOMAIN-SUFFIX,twitch-ext.rootonline.de,🌍 国外媒体
   - DOMAIN-SUFFIX,twitch.tv,🌍 国外媒体
   - DOMAIN-SUFFIX,twitchcdn.net,🌍 国外媒体
-#   - USER-AGENT,Viu*,🌍 国外媒体
   - PROCESS-NAME,com.viu.pad,🌍 国外媒体
   - PROCESS-NAME,com.viu.phone,🌍 国外媒体
   - PROCESS-NAME,com.vuclip.viu,🌍 国外媒体
@@ -2897,9 +3193,6 @@ rules:
   - DOMAIN-SUFFIX,viu.com,🌍 国外媒体
   - DOMAIN-SUFFIX,viu.now.com,🌍 国外媒体
   - DOMAIN-SUFFIX,viu.tv,🌍 国外媒体
-#   - USER-AGENT,*youtube*,🌍 国外媒体
-#   - USER-AGENT,YouTube*,🌍 国外媒体
-#   - USER-AGENT,com.google.ios.youtube*,🌍 国外媒体
   - DOMAIN-KEYWORD,youtube,🌍 国外媒体
   - DOMAIN,youtubei.googleapis.com,🌍 国外媒体
   - DOMAIN,yt3.ggpht.com,🌍 国外媒体
@@ -2914,14 +3207,7 @@ rules:
   - DOMAIN-SUFFIX,youtubekids.com,🌍 国外媒体
   - DOMAIN-SUFFIX,yt.be,🌍 国外媒体
   - DOMAIN-SUFFIX,ytimg.com,🌍 国外媒体
-#   - USER-AGENT,*YouTubeMusic*,🌍 国外媒体
-#   - USER-AGENT,*com.google.ios.youtubemusic*,🌍 国外媒体
-#   - USER-AGENT,YouTubeMusic*,🌍 国外媒体
-#   - USER-AGENT,com.google.ios.youtubemusic*,🌍 国外媒体
   - DOMAIN,music.youtube.com,🌍 国外媒体
-# Telegram
-#PROCESS-NAME,Telegram.exe
-#PROCESS-NAME,org.telegram.messenger
   - DOMAIN-SUFFIX,t.me,📲 电报信息
   - DOMAIN-SUFFIX,tdesktop.com,📲 电报信息
   - DOMAIN-SUFFIX,telegra.ph,📲 电报信息
@@ -2934,48 +3220,10 @@ rules:
   - IP-CIDR6,2001:67c:4e8::/48,📲 电报信息,no-resolve
   - IP-CIDR6,2001:b28:f23d::/48,📲 电报信息,no-resolve
   - IP-CIDR6,2001:b28:f23f::/48,📲 电报信息,no-resolve
-# 长风网站，自动注入
-  - DOMAIN-SUFFIX,v2rayse.com,🚀 节点选择
-  - DOMAIN-SUFFIX,cff.pw,🚀 节点选择
-  - DOMAIN-SUFFIX,vpnse.org,🚀 节点选择
-  - DOMAIN-SUFFIX,cfmem.com,🚀 节点选择
-# 代理列表
-# MyList && Other
-# 国外域名
-# 国外域名关键字
-# Top Blocked Sites
-# Amazon
-# BBC
-# Developer 开发者常用国外网站、镜像和论坛
-# Discord
-# Facebook
-# Github
-# Google
-# GoogleCNProxyIP 谷歌中国服务 services.googleapis.cn
-# Instagram
-# Kakao Talk
-# Line
-# OneDrive
-#DOMAIN-SUFFIX,aria.microsoft.com
-# Porn
-# Pixiv
-# Spark
-# Steam
-# TapTap
-# Twitch
-# Twitter
-# Telegram
-# TeraBox
-# Whatsapp
-# Wikipedia 维基相关域名
-#飞流直播
-#华文电视
-# VikACG
   - DOMAIN-SUFFIX,1password.com,🚀 节点选择
   - DOMAIN-SUFFIX,adguard.org,🚀 节点选择
   - DOMAIN-SUFFIX,bit.no.com,🚀 节点选择
   - DOMAIN-SUFFIX,btlibrary.me,🚀 节点选择
-  - DOMAIN-SUFFIX,chat.openai.com,🚀 节点选择
   - DOMAIN-SUFFIX,cloudcone.com,🚀 节点选择
   - DOMAIN-SUFFIX,dubox.com,🚀 节点选择
   - DOMAIN-SUFFIX,gameloft.com,🚀 节点选择
@@ -2986,13 +3234,13 @@ rules:
   - DOMAIN-SUFFIX,linkedin.com,🚀 节点选择
   - DOMAIN-SUFFIX,myteamspeak.com,🚀 节点选择
   - DOMAIN-SUFFIX,notion.so,🚀 节点选择
-  - DOMAIN-SUFFIX,openai.com,🚀 节点选择
   - DOMAIN-SUFFIX,ping.pe,🚀 节点选择
   - DOMAIN-SUFFIX,reddit.com,🚀 节点选择
   - DOMAIN-SUFFIX,teddysun.com,🚀 节点选择
   - DOMAIN-SUFFIX,tumbex.com,🚀 节点选择
   - DOMAIN-SUFFIX,twdvd.com,🚀 节点选择
   - DOMAIN-SUFFIX,unsplash.com,🚀 节点选择
+  - DOMAIN-SUFFIX,buzzsprout.com,🚀 节点选择
   - DOMAIN-SUFFIX,eu,🚀 节点选择
   - DOMAIN-SUFFIX,hk,🚀 节点选择
   - DOMAIN-SUFFIX,jp,🚀 节点选择
@@ -3000,7 +3248,6 @@ rules:
   - DOMAIN-SUFFIX,sg,🚀 节点选择
   - DOMAIN-SUFFIX,tw,🚀 节点选择
   - DOMAIN-SUFFIX,uk,🚀 节点选择
-  - DOMAIN-SUFFIX,us,🚀 节点选择
   - DOMAIN-KEYWORD,1e100,🚀 节点选择
   - DOMAIN-KEYWORD,abema,🚀 节点选择
   - DOMAIN-KEYWORD,appledaily,🚀 节点选择
@@ -3151,8 +3398,11 @@ rules:
   - DOMAIN-KEYWORD,uk-live,🚀 节点选择
   - DOMAIN-SUFFIX,bbc.co,🚀 节点选择
   - DOMAIN-SUFFIX,bbc.com,🚀 节点选择
+  - DOMAIN-SUFFIX,claude.ai,🚀 节点选择
+  - DOMAIN-SUFFIX,anthropic.com,🚀 节点选择
   - DOMAIN-SUFFIX,apache.org,🚀 节点选择
   - DOMAIN-SUFFIX,docker.com,🚀 节点选择
+  - DOMAIN-SUFFIX,docker.io,🚀 节点选择
   - DOMAIN-SUFFIX,elastic.co,🚀 节点选择
   - DOMAIN-SUFFIX,elastic.com,🚀 节点选择
   - DOMAIN-SUFFIX,gcr.io,🚀 节点选择
@@ -3267,6 +3517,8 @@ rules:
   - IP-CIDR,119.235.236.0/23,🚀 节点选择,no-resolve
   - IP-CIDR,147.92.128.0/17,🚀 节点选择,no-resolve
   - IP-CIDR,203.104.128.0/19,🚀 节点选择,no-resolve
+  - DOMAIN-SUFFIX,openai.com,🚀 节点选择
+  - DOMAIN-SUFFIX,challenges.cloudflare.com,🚀 节点选择
   - DOMAIN-KEYWORD,1drv,🚀 节点选择
   - DOMAIN-KEYWORD,onedrive,🚀 节点选择
   - DOMAIN-KEYWORD,skydrive,🚀 节点选择
@@ -3304,6 +3556,7 @@ rules:
   - DOMAIN-SUFFIX,ypncdn.com,🚀 节点选择
   - DOMAIN-SUFFIX,pixiv.net,🚀 节点选择
   - DOMAIN-SUFFIX,pximg.net,🚀 节点选择
+  - DOMAIN-SUFFIX,fanbox.cc,🚀 节点选择
   - DOMAIN-SUFFIX,amplitude.com,🚀 节点选择
   - DOMAIN-SUFFIX,firebaseio.com,🚀 节点选择
   - DOMAIN-SUFFIX,hockeyapp.net,🚀 节点选择
@@ -3322,7 +3575,6 @@ rules:
   - DOMAIN-SUFFIX,steamstatic.com,🚀 节点选择
   - DOMAIN-SUFFIX,steamstat.us,🚀 节点选择
   - DOMAIN,steambroadcast.akamaized.net,🚀 节点选择
-  - DOMAIN,steamcdn-a.akamaihd.net,🚀 节点选择
   - DOMAIN,steamcommunity-a.akamaihd.net,🚀 节点选择
   - DOMAIN,steamstore-a.akamaihd.net,🚀 节点选择
   - DOMAIN,steamusercontent-a.akamaihd.net,🚀 节点选择
@@ -3379,59 +3631,14 @@ rules:
   - DOMAIN-SUFFIX,wikiversity.org,🚀 节点选择
   - DOMAIN-SUFFIX,wikivoyage.org,🚀 节点选择
   - DOMAIN-SUFFIX,wiktionary.org,🚀 节点选择
+  - DOMAIN-SUFFIX,zoom.us,🚀 节点选择
+  - DOMAIN-SUFFIX,zoomgov.com,🚀 节点选择
   - DOMAIN-SUFFIX,neulion.com,🚀 节点选择
   - DOMAIN-SUFFIX,icntv.xyz,🚀 节点选择
   - DOMAIN-SUFFIX,flzbcdn.xyz,🚀 节点选择
   - DOMAIN-SUFFIX,ocnttv.com,🚀 节点选择
   - DOMAIN-SUFFIX,vikacg.com,🚀 节点选择
   - DOMAIN-SUFFIX,picjs.xyz,🚀 节点选择
-# 直连列表
-# MyList
-# CN域名直连(中国|公司|网络)
-# 中国国内常见域名关键词直连
-# 360
-# 4399
-# 58
-# Alibaba
-# Baidu
-# Bilibili
-# Blizzard
-# ByteDance
-# CCTV
-# ChinaNet
-# DiDi
-# Douyu 斗鱼
-# Epic
-# HuaWei
-# Iflytek 科大讯飞
-# Iqiyi
-# JD
-# Kingsoft
-# Kuaishou 快手
-# Meitu
-# LeTV 乐视
-# MGTV 芒果TV
-# MI
-# NetEase
-# PPTV、PPLive
-# PDD 拼多多
-# Sina
-# Sohu Sogo
-# Sony
-# SteamCN
-# Tencent
-# Vip 唯品会
-# Ximalaya 喜马拉雅
-# Xunlei 迅雷
-# YYeTs 人人影视
-# Private Tracker
-# TeamViewer
-# Public Direct CDN 公共直连
-#DOMAIN-SUFFIX,ajax.aspnetcdn.com
-#DOMAIN-SUFFIX,ajax.cloudflare.com
-#DOMAIN-SUFFIX,cdnjs.cloudflare.com
-#DOMAIN-SUFFIX,code.jquery.com
-# AccelerateDirectSites
   - DOMAIN-SUFFIX,13th.tech,🎯 全球直连
   - DOMAIN-SUFFIX,423down.com,🎯 全球直连
   - DOMAIN-SUFFIX,bokecc.com,🎯 全球直连
@@ -3447,11 +3654,12 @@ rules:
   - DOMAIN-SUFFIX,pdfwifi.com,🎯 全球直连
   - DOMAIN-SUFFIX,zhenguanyu.biz,🎯 全球直连
   - DOMAIN-SUFFIX,zhenguanyu.com,🎯 全球直连
+  - DOMAIN-SUFFIX,snapdrop.net,🎯 全球直连
+  - DOMAIN-SUFFIX,tebex.io,🎯 全球直连
   - DOMAIN-SUFFIX,cn,🎯 全球直连
   - DOMAIN-SUFFIX,xn--fiqs8s,🎯 全球直连
   - DOMAIN-SUFFIX,xn--55qx5d,🎯 全球直连
   - DOMAIN-SUFFIX,xn--io0a7i,🎯 全球直连
-  - DOMAIN-KEYWORD,-cn,🎯 全球直连
   - DOMAIN-KEYWORD,360buy,🎯 全球直连
   - DOMAIN-KEYWORD,alicdn,🎯 全球直连
   - DOMAIN-KEYWORD,alimama,🎯 全球直连
@@ -3498,6 +3706,7 @@ rules:
   - DOMAIN-SUFFIX,aliyuncdn.com,🎯 全球直连
   - DOMAIN-SUFFIX,aliyuncs.com,🎯 全球直连
   - DOMAIN-SUFFIX,aliyundrive.com,🎯 全球直连
+  - DOMAIN-SUFFIX,aliyundrive.net,🎯 全球直连
   - DOMAIN-SUFFIX,amap.com,🎯 全球直连
   - DOMAIN-SUFFIX,autonavi.com,🎯 全球直连
   - DOMAIN-SUFFIX,dingtalk.com,🎯 全球直连
@@ -3537,6 +3746,8 @@ rules:
   - DOMAIN-SUFFIX,biliapi.com,🎯 全球直连
   - DOMAIN-SUFFIX,biliapi.net,🎯 全球直连
   - DOMAIN-SUFFIX,bilibili.com,🎯 全球直连
+  - DOMAIN-SUFFIX,bilibili.co,🎯 全球直连
+  - DOMAIN-SUFFIX,biliintl.co,🎯 全球直连
   - DOMAIN-SUFFIX,biligame.com,🎯 全球直连
   - DOMAIN-SUFFIX,biligame.net,🎯 全球直连
   - DOMAIN-SUFFIX,bilivideo.com,🎯 全球直连
@@ -3544,9 +3755,6 @@ rules:
   - DOMAIN-SUFFIX,hdslb.com,🎯 全球直连
   - DOMAIN-SUFFIX,im9.com,🎯 全球直连
   - DOMAIN-SUFFIX,smtcdns.net,🎯 全球直连
-  - DOMAIN-SUFFIX,battle.net,🎯 全球直连
-  - DOMAIN-SUFFIX,battlenet.com,🎯 全球直连
-  - DOMAIN-SUFFIX,blizzard.com,🎯 全球直连
   - DOMAIN-SUFFIX,amemv.com,🎯 全球直连
   - DOMAIN-SUFFIX,bdxiguaimg.com,🎯 全球直连
   - DOMAIN-SUFFIX,bdxiguastatic.com,🎯 全球直连
@@ -3561,6 +3769,7 @@ rules:
   - DOMAIN-SUFFIX,bytetos.com,🎯 全球直连
   - DOMAIN-SUFFIX,bytexservice.com,🎯 全球直连
   - DOMAIN-SUFFIX,douyin.com,🎯 全球直连
+  - DOMAIN-SUFFIX,douyincdn.com,🎯 全球直连
   - DOMAIN-SUFFIX,douyinpic.com,🎯 全球直连
   - DOMAIN-SUFFIX,douyinstatic.com,🎯 全球直连
   - DOMAIN-SUFFIX,douyinvod.com,🎯 全球直连
@@ -3609,12 +3818,25 @@ rules:
   - DOMAIN-SUFFIX,dbankcdn.com,🎯 全球直连
   - DOMAIN-SUFFIX,hc-cdn.com,🎯 全球直连
   - DOMAIN-SUFFIX,hicloud.com,🎯 全球直连
+  - DOMAIN-SUFFIX,hihonor.com,🎯 全球直连
   - DOMAIN-SUFFIX,huawei.com,🎯 全球直连
   - DOMAIN-SUFFIX,huaweicloud.com,🎯 全球直连
   - DOMAIN-SUFFIX,huaweishop.net,🎯 全球直连
   - DOMAIN-SUFFIX,hwccpc.com,🎯 全球直连
   - DOMAIN-SUFFIX,vmall.com,🎯 全球直连
   - DOMAIN-SUFFIX,vmallres.com,🎯 全球直连
+  - DOMAIN-SUFFIX,allawnfs.com,🎯 全球直连
+  - DOMAIN-SUFFIX,allawno.com,🎯 全球直连
+  - DOMAIN-SUFFIX,allawntech.com,🎯 全球直连
+  - DOMAIN-SUFFIX,coloros.com,🎯 全球直连
+  - DOMAIN-SUFFIX,heytap.com,🎯 全球直连
+  - DOMAIN-SUFFIX,heytapcs.com,🎯 全球直连
+  - DOMAIN-SUFFIX,heytapdownload.com,🎯 全球直连
+  - DOMAIN-SUFFIX,heytapimage.com,🎯 全球直连
+  - DOMAIN-SUFFIX,heytapmobi.com,🎯 全球直连
+  - DOMAIN-SUFFIX,oppo.com,🎯 全球直连
+  - DOMAIN-SUFFIX,oppoer.me,🎯 全球直连
+  - DOMAIN-SUFFIX,oppomobile.com,🎯 全球直连
   - DOMAIN-SUFFIX,iflyink.com,🎯 全球直连
   - DOMAIN-SUFFIX,iflyrec.com,🎯 全球直连
   - DOMAIN-SUFFIX,iflytek.com,🎯 全球直连
@@ -3714,6 +3936,7 @@ rules:
   - DOMAIN,st.dl.bscstorage.net,🎯 全球直连
   - DOMAIN,st.dl.eccdnx.com,🎯 全球直连
   - DOMAIN,st.dl.pinyuncloud.com,🎯 全球直连
+  - DOMAIN,xz.pphimalayanrt.com,🎯 全球直连
   - DOMAIN,steampipe.steamcontent.tnkjmec.com,🎯 全球直连
   - DOMAIN,steampowered.com.8686c.com,🎯 全球直连
   - DOMAIN,steamstatic.com.8686c.com,🎯 全球直连
@@ -3765,46 +3988,7 @@ rules:
   - DOMAIN-SUFFIX,zmzapi.com,🎯 全球直连
   - DOMAIN-SUFFIX,zmzapi.net,🎯 全球直连
   - DOMAIN-SUFFIX,zmzfile.com,🎯 全球直连
-  - DOMAIN-KEYWORD,announce,🎯 全球直连
-  - DOMAIN-KEYWORD,torrent,🎯 全球直连
-  - DOMAIN-KEYWORD,tracker,🎯 全球直连
-  - DOMAIN-SUFFIX,animebytes.tv,🎯 全球直连
-  - DOMAIN-SUFFIX,animetorrents.me,🎯 全球直连
-  - DOMAIN-SUFFIX,awesome-hd.me,🎯 全球直连
-  - DOMAIN-SUFFIX,beitai.pt,🎯 全球直连
-  - DOMAIN-SUFFIX,bittorrent.com,🎯 全球直连
-  - DOMAIN-SUFFIX,broadcasthe.net,🎯 全球直连
-  - DOMAIN-SUFFIX,chdbits.co,🎯 全球直连
-  - DOMAIN-SUFFIX,classix-unlimited.co.uk,🎯 全球直连
-  - DOMAIN-SUFFIX,empornium.me,🎯 全球直连
-  - DOMAIN-SUFFIX,gazellegames.net,🎯 全球直连
-  - DOMAIN-SUFFIX,hd4fans.org,🎯 全球直连
-  - DOMAIN-SUFFIX,hdchina.org,🎯 全球直连
-  - DOMAIN-SUFFIX,hdhome.org,🎯 全球直连
-  - DOMAIN-SUFFIX,hdsky.me,🎯 全球直连
-  - DOMAIN-SUFFIX,hdtime.org,🎯 全球直连
-  - DOMAIN-SUFFIX,hdzone.me,🎯 全球直连
-  - DOMAIN-SUFFIX,icetorrent.org,🎯 全球直连
-  - DOMAIN-SUFFIX,jpopsuki.eu,🎯 全球直连
-  - DOMAIN-SUFFIX,keepfrds.com,🎯 全球直连
-  - DOMAIN-SUFFIX,leaguehd.com,🎯 全球直连
-  - DOMAIN-SUFFIX,m-team.cc,🎯 全球直连
-  - DOMAIN-SUFFIX,madsrevolution.net,🎯 全球直连
-  - DOMAIN-SUFFIX,msg.vg,🎯 全球直连
-  - DOMAIN-SUFFIX,nanyangpt.com,🎯 全球直连
-  - DOMAIN-SUFFIX,ncore.cc,🎯 全球直连
-  - DOMAIN-SUFFIX,open.cd,🎯 全球直连
-  - DOMAIN-SUFFIX,ourbits.club,🎯 全球直连
-  - DOMAIN-SUFFIX,passthepopcorn.me,🎯 全球直连
-  - DOMAIN-SUFFIX,privatehd.to,🎯 全球直连
-  - DOMAIN-SUFFIX,pthome.net,🎯 全球直连
-  - DOMAIN-SUFFIX,redacted.ch,🎯 全球直连
-  - DOMAIN-SUFFIX,springsunday.net,🎯 全球直连
-  - DOMAIN-SUFFIX,tjupt.org,🎯 全球直连
-  - DOMAIN-SUFFIX,totheglory.im,🎯 全球直连
-  - DOMAIN-SUFFIX,trontv.com,🎯 全球直连
   - DOMAIN-SUFFIX,teamviewer.com,🎯 全球直连
-  - IP-CIDR,109.239.140.0/24,🎯 全球直连,no-resolve
   - IP-CIDR,139.220.243.27/32,🎯 全球直连,no-resolve
   - IP-CIDR,172.16.102.56/32,🎯 全球直连,no-resolve
   - IP-CIDR,185.188.32.1/28,🎯 全球直连,no-resolve
@@ -3818,6 +4002,10 @@ rules:
   - DOMAIN-SUFFIX,jiasule.com,🎯 全球直连
   - DOMAIN-SUFFIX,staticfile.org,🎯 全球直连
   - DOMAIN-SUFFIX,upaiyun.com,🎯 全球直连
+  - DOMAIN-SUFFIX,doh.pub,🎯 全球直连
+  - DOMAIN-SUFFIX,dns.alidns.com,🎯 全球直连
+  - DOMAIN-SUFFIX,doh.360.cn,🎯 全球直连
+  - IP-CIDR,1.12.12.12/32,🎯 全球直连,no-resolve
   - DOMAIN-SUFFIX,10010.com,🎯 全球直连
   - DOMAIN-SUFFIX,115.com,🎯 全球直连
   - DOMAIN-SUFFIX,12306.com,🎯 全球直连
@@ -3847,6 +4035,7 @@ rules:
   - DOMAIN-SUFFIX,biqudu.com,🎯 全球直连
   - DOMAIN-SUFFIX,biquge.com,🎯 全球直连
   - DOMAIN-SUFFIX,bitauto.com,🎯 全球直连
+  - DOMAIN-SUFFIX,bosszhipin.com,🎯 全球直连
   - DOMAIN-SUFFIX,c-ctrip.com,🎯 全球直连
   - DOMAIN-SUFFIX,camera360.com,🎯 全球直连
   - DOMAIN-SUFFIX,cdnmama.com,🎯 全球直连
@@ -3882,6 +4071,7 @@ rules:
   - DOMAIN-SUFFIX,eastday.com,🎯 全球直连
   - DOMAIN-SUFFIX,eastmoney.com,🎯 全球直连
   - DOMAIN-SUFFIX,ecitic.com,🎯 全球直连
+  - DOMAIN-SUFFIX,element-plus.org,🎯 全球直连
   - DOMAIN-SUFFIX,ewqcxz.com,🎯 全球直连
   - DOMAIN-SUFFIX,fang.com,🎯 全球直连
   - DOMAIN-SUFFIX,fantasy.tv,🎯 全球直连
@@ -3960,6 +4150,7 @@ rules:
   - DOMAIN-SUFFIX,nruan.com,🎯 全球直连
   - DOMAIN-SUFFIX,nuomi.com,🎯 全球直连
   - DOMAIN-SUFFIX,onedns.net,🎯 全球直连
+  - DOMAIN-SUFFIX,oneplus.com,🎯 全球直连
   - DOMAIN-SUFFIX,onlinedown.net,🎯 全球直连
   - DOMAIN-SUFFIX,oracle.com,🎯 全球直连
   - DOMAIN-SUFFIX,oschina.net,🎯 全球直连
@@ -3982,6 +4173,7 @@ rules:
   - DOMAIN-SUFFIX,quanmin.tv,🎯 全球直连
   - DOMAIN-SUFFIX,qunar.com,🎯 全球直连
   - DOMAIN-SUFFIX,qunarzz.com,🎯 全球直连
+  - DOMAIN-SUFFIX,realme.com,🎯 全球直连
   - DOMAIN-SUFFIX,repaik.com,🎯 全球直连
   - DOMAIN-SUFFIX,ruguoapp.com,🎯 全球直连
   - DOMAIN-SUFFIX,runoob.com,🎯 全球直连
@@ -4015,6 +4207,7 @@ rules:
   - DOMAIN-SUFFIX,upyun.com,🎯 全球直连
   - DOMAIN-SUFFIX,uxengine.net,🎯 全球直连
   - DOMAIN-SUFFIX,videocc.net,🎯 全球直连
+  - DOMAIN-SUFFIX,vivo.com,🎯 全球直连
   - DOMAIN-SUFFIX,wandoujia.com,🎯 全球直连
   - DOMAIN-SUFFIX,weather.com,🎯 全球直连
   - DOMAIN-SUFFIX,weico.cc,🎯 全球直连
@@ -4051,15 +4244,9 @@ rules:
   - DOMAIN-SUFFIX,zhaopin.com,🎯 全球直连
   - DOMAIN-SUFFIX,zhihu.com,🎯 全球直连
   - DOMAIN-SUFFIX,zhimg.com,🎯 全球直连
+  - DOMAIN-SUFFIX,zhipin.com,🎯 全球直连
   - DOMAIN-SUFFIX,zhongsou.com,🎯 全球直连
   - DOMAIN-SUFFIX,zhuihd.com,🎯 全球直连
-# 中国云服务商ip端
-# 阿里
-# 腾讯 qq
-# 百度 Baidu
-# 华为 huwei
-# 网易 NetEase
-# 360
   - IP-CIDR,8.128.0.0/10,🎯 全球直连,no-resolve
   - IP-CIDR,8.208.0.0/12,🎯 全球直连,no-resolve
   - IP-CIDR,14.1.112.0/22,🎯 全球直连,no-resolve
