@@ -1,6 +1,5 @@
 # reject规则
-# 
-# 
-
-# > ps2024去弹窗
-DOMAIN-SUFFIX,adobe.io
+# reject规则
+# reject规则
+# > ps
+DOMAIN,lcs-cops.adobe.io
