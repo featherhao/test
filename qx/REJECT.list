@@ -2,5 +2,5 @@
 # 
 # 
 
-# > ps2024取弹窗（DOMAIN-SUFFIX,adobe.io,REJECT #DOMAIN,lcs-cops.adobe.io,DIRECT）
+# > ps2024去弹窗
 DOMAIN-SUFFIX,adobe.io
