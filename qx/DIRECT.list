@@ -3,3 +3,4 @@
 # DIRECT规则
 # > ps
 DOMAIN,lcs-cops.adobe.io
+DOMAIN-SUFFIX,cloudflare.com
