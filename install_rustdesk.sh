@@ -1,129 +1,91 @@
 #!/bin/bash
-set -e
+# =========================================
+#   RustDesk Server Pro Docker 管理脚本
+# =========================================
 
-# ======= 配置 =======
-DOCKER_SERVER_COMPOSE="/root/compose.yml"
-SERVER_STATUS_FILE="/root/.rustdesk_server_status"
-CONTAINER_NAME="hbbs"
-HOST_CONFIG_DIR="/root/.config/rustdesk-server"
+RUSTDESK_DIR="/root"
+COMPOSE_FILE="$RUSTDESK_DIR/compose.yml"
+KEY_FILE="$RUSTDESK_DIR/id_ed25519"
+PUB_KEY_FILE="$RUSTDESK_DIR/id_ed25519.pub"
 
-# ======= 状态检测 =======
-check_server_status() {
-    if [ -f "$SERVER_STATUS_FILE" ]; then
-        SERVER_STATUS=$(cat "$SERVER_STATUS_FILE")
+function check_docker() {
+    if ! command -v docker &>/dev/null; then
+        echo "Docker 未安装，请先安装 Docker."
+        exit 1
+    fi
+}
+
+function generate_key() {
+    if [ ! -f "$KEY_FILE" ]; then
+        echo "🗝 生成 Ed25519 Key..."
+        ssh-keygen -t ed25519 -f "$KEY_FILE" -N "" >/dev/null
+        chmod 600 "$KEY_FILE"
+        chmod 644 "$PUB_KEY_FILE"
+        echo "✅ Key 生成完成: $KEY_FILE"
     else
-        SERVER_STATUS="未安装 ❌"
+        echo "🔑 Key 已存在，跳过生成"
     fi
 }
 
-# ======= 显示连接信息 =======
-show_info() {
-    if [ "$SERVER_STATUS" != "未安装 ❌" ]; then
-        echo "🌐 RustDesk 服务端连接信息："
-
-        IP4=$(curl -s ipv4.icanhazip.com || true)
-        IP6=$(curl -s ipv6.icanhazip.com || true)
-
-        [ -n "$IP4" ] && echo -e "公网 IPv4: $IP4\nID Server : $IP4:21115\nRelay     : $IP4:21116\nAPI       : $IP4:21117"
-        [ -n "$IP6" ] && echo -e "公网 IPv6: [$IP6]:21115\nRelay     : [$IP6]:21116\nAPI       : [$IP6]:21117"
-
-        # 等待 Key 文件生成
-        echo
-        echo "⏳ 检查 Key 是否生成..."
-        while true; do
-            if [ -f "$HOST_CONFIG_DIR/id_ed25519.pub" ]; then
-                echo "🔑 RustDesk Key (客户端输入用):"
-                cat "$HOST_CONFIG_DIR/id_ed25519.pub"
-                break
-            fi
-            sleep 2
-        done
-
-        echo
-        echo "👉 在客户端设置 ID Server / Relay Server 和 Key 即可"
-    fi
+function install_server() {
+    echo "🐳 使用 Docker 部署 RustDesk Server Pro..."
+    check_docker
+    # 下载 compose 文件
+    wget -O "$COMPOSE_FILE" https://rustdesk.com/pro.yml
+    generate_key
+    docker compose -f "$COMPOSE_FILE" up -d
+    echo "✅ RustDesk Server 已安装（Docker）"
 }
 
-# ======= 菜单 =======
-show_menu() {
+function uninstall_server() {
+    echo "⚠️ 卸载 RustDesk Server..."
+    docker compose -f "$COMPOSE_FILE" down
+    rm -f "$COMPOSE_FILE"
+    echo "✅ 卸载完成"
+}
+
+function restart_server() {
+    echo "🔄 重启 RustDesk Server..."
+    docker compose -f "$COMPOSE_FILE" down
+    docker compose -f "$COMPOSE_FILE" up -d
+    echo "✅ 重启完成"
+}
+
+function show_info() {
+    echo "🌐 RustDesk 服务端连接信息："
+    # 这里可根据实际 IP 修改
+    PUB_IP=$(curl -s https://api.ip.sb/ip)
+    echo "公网 IPv4: $PUB_IP"
+    echo "ID Server : $PUB_IP:21115"
+    echo "Relay     : $PUB_IP:21116"
+    echo "API       : $PUB_IP:21117"
+}
+
+while true; do
     clear
-    check_server_status
     echo "============================"
     echo "     RustDesk 服务端管理     "
     echo "============================"
-    echo "服务端状态: $SERVER_STATUS"
+    
+    if [ ! -f "$COMPOSE_FILE" ]; then
+        echo "服务端状态: 未安装 ❌"
+    else
+        echo "服务端状态: Docker 已启动"
+    fi
+
     echo "1) 安装 RustDesk Server Pro (Docker)"
     echo "2) 卸载 RustDesk Server"
     echo "3) 重启 RustDesk Server"
     echo "4) 查看连接信息"
     echo "5) 退出"
-    echo -n "请选择操作 [1-5]: "
-}
+    read -rp "请选择操作 [1-5]: " choice
 
-# ======= 服务端操作 =======
-install_server() {
-    echo "🐳 使用 Docker 部署 RustDesk Server Pro..."
-
-    # 安装 Docker
-    if ! command -v docker >/dev/null 2>&1; then
-        echo "📥 未检测到 Docker，开始安装..."
-        apt-get update
-        apt-get install -y ca-certificates curl gnupg lsb-release
-        install -m 0755 -d /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-        chmod a+r /etc/apt/keyrings/docker.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
-        apt-get update
-        apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-        systemctl enable --now docker
-        echo "✅ Docker 安装完成"
-    else
-        echo "✅ 检测到 Docker 已安装，跳过安装步骤。"
-    fi
-
-    # 创建宿主机配置目录
-    mkdir -p "$HOST_CONFIG_DIR"
-
-    # 下载 Docker Compose 文件
-    wget -O "$DOCKER_SERVER_COMPOSE" https://rustdesk.com/pro.yml
-
-    # 修改 Compose 文件挂载卷
-    sed -i "/volumes:/a\      - $HOST_CONFIG_DIR:/root/.config/rustdesk-server" "$DOCKER_SERVER_COMPOSE"
-
-    # 启动容器
-    docker compose -f "$DOCKER_SERVER_COMPOSE" up -d
-
-    echo "Docker 已启动" > "$SERVER_STATUS_FILE"
-    echo "✅ RustDesk Server 已安装（Docker）"
-
-    show_info
-}
-
-uninstall_server() {
-    echo "🗑️ 卸载 RustDesk Server..."
-    docker compose -f "$DOCKER_SERVER_COMPOSE" down || true
-    rm -f "$DOCKER_SERVER_COMPOSE" "$SERVER_STATUS_FILE"
-    echo "✅ RustDesk Server 已卸载"
-}
-
-restart_server() {
-    echo "🔄 重启 RustDesk Server..."
-    docker compose -f "$DOCKER_SERVER_COMPOSE" restart
-    echo "✅ RustDesk Server 已重启"
-    show_info
-}
-
-# ======= 主循环 =======
-while true; do
-    show_menu
-    read -r choice
-    case $choice in
-        1) install_server ;;
-        2) uninstall_server ;;
-        3) restart_server ;;
-        4) show_info ;;
+    case "$choice" in
+        1) install_server; read -rp "按回车返回菜单..." ;;
+        2) uninstall_server; read -rp "按回车返回菜单..." ;;
+        3) restart_server; read -rp "按回车返回菜单..." ;;
+        4) show_info; read -rp "按回车返回菜单..." ;;
         5) exit 0 ;;
-        *) echo "无效选项" ;;
+        *) echo "❌ 选择无效，请重新输入"; sleep 1 ;;
     esac
-    read -rp "按回车返回菜单..."
 done
