@@ -185,7 +185,7 @@ moontv_menu() {
         CONFIG_DISPLAY+=" ❌ 配置文件不存在"
       fi
 
-      # 从 docker-compose.yml 安全获取宿主机端口，并去掉单引号
+      # 从 docker-compose.yml 获取宿主机端口，并去掉单引号
       HOST_PORT=$(grep -Po "(?<=- )\d+(?=:3000)" "$COMPOSE_FILE" | tr -d "'")
       HOST_PORT=${HOST_PORT:-8181}  # 默认端口
 
@@ -272,6 +272,7 @@ moontv_menu() {
     read -rp "按回车继续..."
   done
 }
+
 
 
 # =========================
