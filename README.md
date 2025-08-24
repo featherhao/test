@@ -24,3 +24,10 @@ https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh
   bash install.sh
   docker compose pull
   docker compose up -d
+
+
+  
+2： _rustdesk
+  bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh)
+
+  https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh
