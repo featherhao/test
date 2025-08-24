@@ -27,22 +27,31 @@ rustdesk_menu() {
   bash <(curl -fsSL "${RUSTDESK_SCRIPT}?t=$(date +%s)")
 }
 
-# ====== 设置快捷键 Q ======
+# ====== 设置快捷键 Q / q ======
 set_q_shortcut() {
-  SHELL_RC="$HOME/.bashrc"  # 默认 bash
-  if [ -n "$ZSH_VERSION" ]; then
-    SHELL_RC="$HOME/.zshrc"
-  fi
+  SHELL_RC="$HOME/.bashrc"
+  [ -n "$ZSH_VERSION" ] && SHELL_RC="$HOME/.zshrc"
 
-  # 检查是否已存在
-  if grep -q "alias Q=" "$SHELL_RC"; then
-    echo "⚠️ 快捷键 Q 已存在，将覆盖"
-    sed -i '/alias Q=/d' "$SHELL_RC"
-  fi
+  # 删除已有 alias
+  sed -i '/alias Q=/d' "$SHELL_RC"
+  sed -i '/alias q=/d' "$SHELL_RC"
 
   # 写入 alias
   echo "alias Q='bash <(curl -fsSL \"https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh?t=\$(date +%s)\")'" >> "$SHELL_RC"
-  echo "✅ 快捷键 Q 已设置，请执行 'source $SHELL_RC' 或重启终端生效"
+  echo "alias q='bash <(curl -fsSL \"https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh?t=\$(date +%s)\")'" >> "$SHELL_RC"
+
+  echo "✅ 快捷键 Q / q 已设置，请执行 'source $SHELL_RC' 或重启终端生效"
+  sleep 2
+}
+
+# ====== 更新 menu.sh 脚本 ======
+update_menu_script() {
+  SCRIPT_PATH="$HOME/menu.sh"
+  echo "🔄 正在更新 menu.sh..."
+  curl -fsSL "https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh?t=$(date +%s)" -o "$SCRIPT_PATH"
+  chmod +x "$SCRIPT_PATH"
+  echo "✅ menu.sh 已更新，保存路径：$SCRIPT_PATH"
+  echo "👉 执行：bash $SCRIPT_PATH 启动最新菜单"
   sleep 2
 }
 
@@ -55,7 +64,8 @@ while true; do
   echo "1) MoonTV 管理"
   echo "2) RustDesk 管理"
   echo "3) 其他服务 (预留)"
-  echo "9) 设置快捷键 Q（快速启动菜单）"
+  echo "9) 设置快捷键 Q / q"
+  echo "U) 更新菜单脚本 menu.sh"
   echo "0) 退出"
   echo "=============================="
   read -rp "请输入选项: " main_choice
@@ -65,6 +75,7 @@ while true; do
     2) rustdesk_menu ;;
     3) echo "⚠️ 其他服务还未实现"; sleep 1 ;;
     9) set_q_shortcut ;;
+    U) update_menu_script ;;
     0) exit 0 ;;
     *) echo "❌ 无效输入"; sleep 1 ;;
   esac
