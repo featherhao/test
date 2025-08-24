@@ -188,17 +188,58 @@ moontv_menu() {
       1) install_main ;;
       2) input_config ;;
       3) uninstall ;;
-      4) [ -d $WORKDIR ] && cd $WORKDIR && $DOCKER_COMPOSE start || echo "❌ MoonTV 未安装" ;;
-      5) [ -d $WORKDIR ] && cd $WORKDIR && $DOCKER_COMPOSE stop || echo "❌ MoonTV 未安装" ;;
-      6) [ -d $WORKDIR ] && cd $WORKDIR && $DOCKER_COMPOSE logs -f || echo "❌ MoonTV 未安装" ;;
+      4)
+        if [ -d "$WORKDIR" ] && [ -f "$COMPOSE_FILE" ]; then
+          cd "$WORKDIR"
+          if command -v docker-compose &>/dev/null; then
+            docker-compose start
+          elif docker compose version &>/dev/null 2>&1; then
+            docker compose start
+          else
+            echo "❌ Docker Compose 未安装"
+          fi
+        else
+          echo "❌ MoonTV 未安装"
+        fi
+        ;;
+      5)
+        if [ -d "$WORKDIR" ] && [ -f "$COMPOSE_FILE" ]; then
+          cd "$WORKDIR"
+          if command -v docker-compose &>/dev/null; then
+            docker-compose stop
+          elif docker compose version &>/dev/null 2>&1; then
+            docker compose stop
+          else
+            echo "❌ Docker Compose 未安装"
+          fi
+        else
+          echo "❌ MoonTV 未安装"
+        fi
+        ;;
+      6)
+        if [ -d "$WORKDIR" ] && [ -f "$COMPOSE_FILE" ]; then
+          cd "$WORKDIR"
+          if command -v docker-compose &>/dev/null; then
+            docker-compose logs -f
+          elif docker compose version &>/dev/null 2>&1; then
+            docker compose logs -f
+          else
+            echo "❌ Docker Compose 未安装，无法查看日志"
+          fi
+        else
+          echo "❌ MoonTV 未安装或 $WORKDIR 不存在"
+        fi
+        ;;
       7) update ;;
       b|B) break ;;
       0) exit 0 ;;
       *) echo "❌ 无效输入，请重新选择" ;;
     esac
+
     read -rp "按回车继续..."
   done
 }
+
 
 # =========================
 # 脚本入口
