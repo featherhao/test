@@ -185,15 +185,11 @@ moontv_menu() {
         CONFIG_DISPLAY+=" ❌ 配置文件不存在"
       fi
 
-      # 获取宿主机端口
-      HOST_PORT="未检测到端口"
-      CONTAINER_ID=$($DOCKER_COMPOSE -f "$COMPOSE_FILE" ps -q moontv-core)
-      if [ -n "$CONTAINER_ID" ]; then
-        HOST_PORT=$($DOCKER_COMPOSE -f "$COMPOSE_FILE" port moontv-core 3000 2>/dev/null | cut -d':' -f2)
-      fi
+      # 从 docker-compose.yml 获取宿主机端口
+      HOST_PORT=$(awk '/ports:/ {getline; print $2}' "$COMPOSE_FILE" | cut -d':' -f1)
       HOST_PORT=${HOST_PORT:-8181}  # 默认端口
 
-      # 获取公网IP
+      # 获取公网 IP
       IPV4=$(curl -4 -s ifconfig.me || hostname -I | awk '{print $1}')
       IPV6=$(curl -6 -s ifconfig.me || ip -6 addr show scope global | awk '{print $2}' | cut -d/ -f1 | head -n1)
 
