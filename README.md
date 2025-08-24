@@ -30,4 +30,6 @@ https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh
 2： _rustdesk
   bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh)
 
+   bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh?$(date +%s)")
+
   https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh
