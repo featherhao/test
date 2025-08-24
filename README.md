@@ -2,6 +2,12 @@
 菜单：
 bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh)
 
+bash <(curl -fsSL "https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh?$(date +%s)")
+
+
+MOONTV安装：
+bash <(curl -fsSL "https://raw.githubusercontent.com/featherhao/test/refs/heads/main/mootvinstall.sh?$(date +%s)")
+
 
 
 https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh
