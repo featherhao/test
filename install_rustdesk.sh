@@ -1,15 +1,16 @@
 #!/bin/bash
+set -e
 
-RUSTDESK_COMPOSE="/root/compose.yml"
+# RustDesk OSS 菜单脚本
+MENU_FILE="/root/menu.sh"
+COMPOSE_FILE="/root/compose.yml"
 
-check_and_kill_port() {
-    PORTS=(21115 21116 21117)
-    for PORT in "${PORTS[@]}"; do
-        PID=$(lsof -tiTCP:$PORT -sTCP:LISTEN)
-        if [ -n "$PID" ]; then
-            echo "⚠️ 端口 $PORT 被占用，杀掉 PID: $PID"
-            kill -9 "$PID"
-            sleep 1
+check_ports() {
+    for port in 21115 21116 21117; do
+        pid=$(lsof -tiTCP:$port -sTCP:LISTEN)
+        if [ -n "$pid" ]; then
+            echo "⚠️ 端口 $port 被占用，杀掉 PID: $pid"
+            kill -9 $pid
         fi
     done
 }
@@ -17,38 +18,31 @@ check_and_kill_port() {
 install_rustdesk_oss() {
     echo "🐳 安装 RustDesk Server OSS..."
     echo "⬇️  下载官方 compose 文件..."
-    curl -fsSL https://raw.githubusercontent.com/ynnie/rustdesk-server/master/docker-compose.yml -o $RUSTDESK_COMPOSE
-    if [ $? -ne 0 ]; then
-        echo "❌ 下载 compose 文件失败"
-        return 1
-    fi
+    curl -fsSL https://raw.githubusercontent.com/ynnie/rustdesk-server/master/docker-compose.yml -o "$COMPOSE_FILE"
     echo "✅ 下载完成"
 
-    check_and_kill_port
+    echo "⚠️ 检查并清理占用端口..."
+    check_ports
 
     echo "🚀 启动容器并显示安装输出..."
-    docker compose -f $RUSTDESK_COMPOSE up -d
+    docker compose -f "$COMPOSE_FILE" up -d
 
-    # 等待容器启动
-    sleep 3
+    echo "📜 hbbs 初始化日志（按 Ctrl+C 停止）..."
+    docker logs -f rust_desk_hbbs & LOG_PID=$!
 
-    HBBS_LOG_CONTAINER=$(docker ps --filter "name=hbbs" --format "{{.Names}}")
-    if [ -n "$HBBS_LOG_CONTAINER" ]; then
-        echo "📜 hbbs 初始化日志（按 Ctrl+C 停止）..."
-        docker logs -f "$HBBS_LOG_CONTAINER" &
-        LOG_PID=$!
-        # 等待 5 秒，尝试抓取 Key
-        sleep 5
-        CLIENT_KEY=$(docker logs "$HBBS_LOG_CONTAINER" 2>&1 | grep "Key:" | tail -n1 | awk '{print $2}')
-        kill $LOG_PID
-        if [ -n "$CLIENT_KEY" ]; then
-            echo "🔑 客户端可用 Key: $CLIENT_KEY"
-        else
-            echo "⚠️ 暂未获取到客户端 Key，请等待 hbbs 完全初始化"
-        fi
+    echo "⏳ 等待 hbbs 完全初始化生成 Key..."
+    sleep 5  # 等待一会儿让 Key 写入
+
+    # 尝试抓取客户端 Key
+    CLIENT_KEY=$(docker logs rust_desk_hbbs 2>&1 | grep -oP 'Key: \K\S+')
+    if [ -n "$CLIENT_KEY" ]; then
+        echo "🔑 客户端可用 Key: $CLIENT_KEY"
     else
-        echo "❌ hbbs 容器未启动成功"
+        echo "⚠️ 暂未获取到客户端 Key，请稍等 hbbs 完全初始化"
     fi
+
+    # 停止日志追踪
+    kill $LOG_PID 2>/dev/null || true
 
     echo "✅ 安装完成"
     echo "🌐 RustDesk 服务端连接信息："
@@ -57,21 +51,53 @@ install_rustdesk_oss() {
     echo "API       : 0.0.0.0:21117"
 }
 
-# 菜单调用示例
+uninstall_rustdesk() {
+    echo "🧹 卸载 RustDesk Server..."
+    docker compose -f "$COMPOSE_FILE" down || true
+    rm -f "$COMPOSE_FILE"
+    echo "✅ 卸载完成"
+}
+
+restart_rustdesk() {
+    echo "🔄 重启 RustDesk Server..."
+    docker compose -f "$COMPOSE_FILE" restart
+    echo "✅ 重启完成"
+}
+
+show_info() {
+    echo "🌐 RustDesk 服务端连接信息："
+    docker ps --filter "name=rust_desk" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+    CLIENT_KEY=$(docker logs rust_desk_hbbs 2>&1 | grep -oP 'Key: \K\S+')
+    if [ -n "$CLIENT_KEY" ]; then
+        echo "🔑 客户端可用 Key: $CLIENT_KEY"
+    else
+        echo "⚠️ 客户端 Key 暂未生成"
+    fi
+}
+
+# 主菜单
 while true; do
     echo "============================="
     echo "     RustDesk 服务端管理"
     echo "============================="
-    echo "服务端状态: 未安装 ❌"
+    STATUS=$(docker ps -q --filter "name=rust_desk_hbbs")
+    if [ -n "$STATUS" ]; then
+        echo "服务端状态: Docker 已启动 ✅"
+    else
+        echo "服务端状态: 未安装 ❌"
+    fi
     echo "1) 安装 RustDesk Server OSS (Docker)"
     echo "2) 卸载 RustDesk Server"
     echo "3) 重启 RustDesk Server"
     echo "4) 查看连接信息"
     echo "5) 退出"
-    read -p "请选择操作 [1-5]: " opt
-    case $opt in
+    read -rp "请选择操作 [1-5]: " opt
+    case "$opt" in
         1) install_rustdesk_oss ;;
+        2) uninstall_rustdesk ;;
+        3) restart_rustdesk ;;
+        4) show_info ;;
         5) exit 0 ;;
-        *) echo "暂未实现" ;;
+        *) echo "无效选项" ;;
     esac
 done
