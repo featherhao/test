@@ -185,8 +185,8 @@ moontv_menu() {
         CONFIG_DISPLAY+=" ❌ 配置文件不存在"
       fi
 
-      # 从 docker-compose.yml 获取宿主机端口
-      HOST_PORT=$(awk '/ports:/ {getline; print $2}' "$COMPOSE_FILE" | cut -d':' -f1)
+      # 从 docker-compose.yml 安全获取宿主机端口
+      HOST_PORT=$(grep -Po '(?<=- )\d+(?=:3000)' "$COMPOSE_FILE")
       HOST_PORT=${HOST_PORT:-8181}  # 默认端口
 
       # 获取公网 IP
