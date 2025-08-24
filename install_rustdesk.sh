@@ -1,85 +1,81 @@
 #!/bin/bash
-set -e
+# RustDesk Server OSS 管理脚本 (Docker)
+# Author: Featherhao
 
-COMPOSE_FILE="/opt/rustdesk/docker-compose.yml"
-DATA_DIR="/opt/rustdesk"
+COMPOSE_FILE=/opt/rustdesk/docker-compose.yml
+DATA_DIR=/opt/rustdesk
+STATUS="未安装 ❌"
 
-# 检查安装状态
+mkdir -p "$DATA_DIR"
+
+# 检测是否安装
 check_installed() {
-    if docker ps -a --format '{{.Names}}' | grep -q "rust_desk_hbbs"; then
-        echo "Docker 已启动 ✅"
-        return 0
+    if docker ps -a --format '{{.Names}}' | grep -q rust_desk_hbbs; then
+        STATUS="Docker 已启动 ✅"
     else
-        echo "未安装 ❌"
-        return 1
+        STATUS="未安装 ❌"
     fi
 }
 
-# 清理端口
-clear_ports() {
-    for PORT in 21115 21116 21117; do
-        while PID=$(lsof -tiTCP:$PORT -sTCP:LISTEN); do
-            echo "⚠️ 端口 $PORT 被占用，杀掉 PID: $PID"
-            kill -9 $PID 2>/dev/null || true
-            sleep 0.2
-        done
+# 获取公网 IP
+get_ip() {
+    curl -s https://api.ipify.org || echo "0.0.0.0"
+}
+
+# 安装 RustDesk
+install_rustdesk() {
+    echo "🐳 下载 RustDesk OSS 官方 compose 文件..."
+    mkdir -p "$DATA_DIR"
+    curl -fsSL -o "$COMPOSE_FILE" https://raw.githubusercontent.com/rustdesk/rustdesk-server/master/docker-compose.yml
+    echo "✅ 下载完成"
+
+    echo "⚠️ 检查并清理占用端口..."
+    for port in 21115 21116 21117; do
+        pid=$(lsof -tiTCP:$port -sTCP:LISTEN)
+        if [[ -n "$pid" ]]; then
+            echo "⚠️ 端口 $port 被占用，杀掉 PID: $pid"
+            kill -9 $pid
+        fi
     done
     echo "✅ 所有端口已释放"
-}
 
-# 安装
-install_rustdesk() {
-    echo "🐳 下载 RustDesk compose 文件..."
-    mkdir -p "$DATA_DIR"
-    curl -fsSL https://raw.githubusercontent.com/ynnie/rustdesk-server/master/docker-compose.yml -o $COMPOSE_FILE || echo "⚠️ 下载失败，请检查网络"
-
-    clear_ports
-
-    echo "🚀 启动容器..."
-    docker compose -f $COMPOSE_FILE up -d || echo "⚠️ 启动失败"
-
+    echo "🚀 启动 RustDesk OSS 容器..."
+    docker-compose -f "$COMPOSE_FILE" up -d
+    echo "⏳ 等待 hbbs 生成客户端 Key..."
+    sleep 5
     echo "✅ 安装完成"
-    echo "服务端状态: Docker 已启动 ✅"
-    echo "🌐 RustDesk 服务端连接信息："
-    echo "ID Server : <公网IP>:21115"
-    echo "Relay     : <公网IP>:21116"
-    echo "API       : <公网IP>:21117"
-    echo "🔑 客户端 Key：稍后生成"
-    read -p "按回车返回菜单" dummy
 }
 
-# 卸载
+# 卸载 RustDesk
 uninstall_rustdesk() {
-    echo "⚠️ 卸载 RustDesk..."
-    docker compose -f $COMPOSE_FILE down --volumes || true
+    echo "⚠️ 停止并删除容器..."
+    docker-compose -f "$COMPOSE_FILE" down
+    echo "⚠️ 删除数据卷..."
+    docker volume rm rust_desk_hbbs_data rust_desk_hbbr_data 2>/dev/null || true
     rm -rf "$DATA_DIR"
     echo "✅ RustDesk 已卸载"
-    read -p "按回车返回菜单" dummy
 }
 
-# 重启
+# 重启 RustDesk
 restart_rustdesk() {
-    echo "🔄 重启 RustDesk..."
-    docker compose -f $COMPOSE_FILE down || true
-    clear_ports
-    docker compose -f $COMPOSE_FILE up -d || true
+    docker-compose -f "$COMPOSE_FILE" restart
     echo "✅ RustDesk 已重启"
-    read -p "按回车返回菜单" dummy
 }
 
-# 查看信息
+# 查看连接信息
 show_info() {
+    ip=$(get_ip)
     echo "🌐 RustDesk 服务端连接信息："
-    echo "ID Server : <公网IP>:21115"
-    echo "Relay     : <公网IP>:21116"
-    echo "API       : <公网IP>:21117"
-    echo "🔑 客户端 Key：稍后生成"
-    read -p "按回车返回菜单" dummy
+    echo "ID Server : $ip:21115"
+    echo "Relay     : $ip:21116"
+    echo "API       : $ip:21117"
+    key=$(docker exec rust_desk_hbbs cat /root/.config/rustdesk/id || echo "稍后生成")
+    echo "🔑 客户端 Key：$key"
 }
 
 # 主菜单
 while true; do
-    STATUS=$(check_installed)
+    check_installed
     echo "============================="
     echo "     RustDesk 服务端管理"
     echo "============================="
@@ -89,13 +85,15 @@ while true; do
     echo "3) 重启 RustDesk Server"
     echo "4) 查看连接信息"
     echo "0) 退出"
-    read -p "请选择操作 [0-4]: " opt
-    case "$opt" in
+    read -rp "请选择操作 [0-4]: " choice
+
+    case $choice in
         1) install_rustdesk ;;
         2) uninstall_rustdesk ;;
         3) restart_rustdesk ;;
         4) show_info ;;
-        0) exit 0 ;;
-        *) echo "❌ 请输入有效选项 [0-4]" ;;
+        0) break ;;
+        *) echo "请输入有效选项 [0-4]" ;;
     esac
+    echo "============================="
 done
