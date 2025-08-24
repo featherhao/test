@@ -45,7 +45,7 @@ install_official() {
     fi
     echo "✅ 使用用户: $non_root_user"
 
-    # 设置环境变量，让官方脚本无人值守
+    # 设置环境变量跳过 GUI 提示
     export RUSTDESK_USER="$non_root_user"
     export DEBIAN_FRONTEND=noninteractive
 
