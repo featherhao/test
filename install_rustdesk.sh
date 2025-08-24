@@ -31,7 +31,6 @@ install_rustdesk() {
     cd $WORKDIR
 
     cat > $COMPOSE_FILE <<EOF
-version: "3"
 services:
   hbbs:
     image: rustdesk/rustdesk-server:latest
@@ -59,11 +58,11 @@ EOF
     release_ports
     docker compose -f $COMPOSE_FILE up -d
 
-    echo "⏳ 等待 hbbs 生成客户端 Key..."
+    echo "⏳ 等待生成客户端 Key..."
     for i in {1..30}; do
-        if [ -f "$DATA_DIR/id_ed25519/id_ed25519.pub" ]; then
-            KEY=$(cat "$DATA_DIR/id_ed25519/id_ed25519.pub")
-            echo "✅ 找到 Key: $KEY"
+        if [ -f "$DATA_DIR/id_ed25519" ]; then
+            KEY=$(cat $DATA_DIR/id_ed25519)
+            echo "✅ 客户端 Key 已生成：$KEY"
             break
         fi
         sleep 1
@@ -99,11 +98,11 @@ show_info() {
     echo "Relay     : $ip:21116"
     echo "API       : $ip:21117"
 
-    if [ -f "$DATA_DIR/id_ed25519/id_ed25519.pub" ]; then
-        key=$(cat "$DATA_DIR/id_ed25519/id_ed25519.pub")
-        echo "🔑 客户端 Key：$key"
+    if [ -f "$DATA_DIR/id_ed25519" ]; then
+        KEY=$(cat $DATA_DIR/id_ed25519)
+        echo "🔑 客户端 Key：$KEY"
     else
-        echo "🔑 客户端 Key：生成中，请稍等几秒后再查看"
+        echo "🔑 客户端 Key：尚未生成"
     fi
 }
 
