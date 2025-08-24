@@ -17,26 +17,6 @@ check_requirements() {
     command -v sudo >/dev/null 2>&1 || { echo "⚠️ 请先安装 sudo"; exit 1; }
 }
 
-check_build_status() {
-    if [ -f "$BUILD_PID_FILE" ]; then
-        PID=$(cat "$BUILD_PID_FILE")
-        if kill -0 "$PID" 2>/dev/null; then
-            echo "⏳ Docker 构建正在进行中，日志: $BUILD_LOG"
-            return 1
-        else
-            rm -f "$BUILD_PID_FILE"
-        fi
-    fi
-
-    if [ -f "$BUILD_DONE_FLAG" ]; then
-        echo "✅ Docker 构建已完成！"
-        echo "🚀 你可以运行 RustDesk 容器:"
-        echo "docker run --rm -it --network=host -v \$PWD:/home/user/rustdesk -v rustdesk-git-cache:/home/user/.cargo/git -v rustdesk-registry-cache:/home/user/.cargo/registry -e PUID=\$(id -u) -e PGID=\$(id -g) rustdesk-builder"
-        return 2
-    fi
-    return 0
-}
-
 install_rustdesk() {
     echo "📦 选择安装方式："
     echo "1) 官方安装脚本"
@@ -130,10 +110,25 @@ uninstall_rustdesk() {
 }
 
 show_menu() {
-    check_build_status
     echo "============================"
     echo "      RustDesk 管理脚本     "
     echo "============================"
+    
+    # 构建状态提示（不阻塞菜单）
+    if [ -f "$BUILD_PID_FILE" ]; then
+        PID=$(cat "$BUILD_PID_FILE")
+        if kill -0 "$PID" 2>/dev/null; then
+            echo "⏳ Docker 构建正在进行中，日志: $BUILD_LOG"
+        else
+            rm -f "$BUILD_PID_FILE"
+        fi
+    fi
+    if [ -f "$BUILD_DONE_FLAG" ]; then
+        echo "✅ Docker 构建已完成！"
+        echo "🚀 可运行 RustDesk 容器:"
+        echo "docker run --rm -it --network=host -v \$PWD:/home/user/rustdesk -v rustdesk-git-cache:/home/user/.cargo/git -v rustdesk-registry-cache:/home/user/.cargo/registry -e PUID=\$(id -u) -e PGID=\$(id -g) rustdesk-builder"
+    fi
+
     echo "1) 安装 RustDesk"
     echo "2) 更新 RustDesk"
     echo "3) 卸载 RustDesk"
