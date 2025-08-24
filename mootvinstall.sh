@@ -173,11 +173,23 @@ moontv_menu() {
     if [ -d "$WORKDIR" ] && [ -f "$COMPOSE_FILE" ]; then
       STATUS="已安装 ✅"
       CONFIG_DISPLAY="配置："
+
+      # 用户名、密码、AUTH_TOKEN
       if [ -f "$ENV_FILE" ]; then
         CONFIG_DISPLAY+=$'\n'"$(grep -E "USERNAME|PASSWORD|AUTH_TOKEN" "$ENV_FILE" | column -t -s '=')"
       else
         CONFIG_DISPLAY+=" ❌ 配置文件不存在"
       fi
+
+      # 获取容器端口和访问地址
+      HOST_PORT=$(docker-compose -f "$COMPOSE_FILE" port moontv-core 3000 | cut -d':' -f2 2>/dev/null || echo "未检测到端口")
+      IPV4=$(curl -4 -s ifconfig.me || hostname -I | awk '{print $1}')
+      IPV6=$(curl -6 -s ifconfig.me || ip -6 addr show scope global | awk '{print $2}' | cut -d/ -f1 | head -n1)
+
+      CONFIG_DISPLAY+=$'\n'"访问地址："
+      CONFIG_DISPLAY+=$'\n'"IPv4: http://$IPV4:$HOST_PORT"
+      [[ -n "$IPV6" ]] && CONFIG_DISPLAY+=$'\n'"IPv6: http://[$IPV6]:$HOST_PORT"
+
     else
       STATUS="未安装 ❌"
       CONFIG_DISPLAY=""
@@ -203,66 +215,4 @@ moontv_menu() {
     echo "b) 返回上一级"
     echo "0) 退出"
     echo "=============================="
-    read -rp "请输入选项: " choice
-
-    case "$choice" in
-      1) install_main ;;
-      2) input_config ;;
-      3) uninstall ;;
-      4)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          cd "$WORKDIR"
-          $DOCKER_COMPOSE start
-        else
-          echo "❌ MoonTV 未安装"
-        fi
-        ;;
-      5)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          cd "$WORKDIR"
-          $DOCKER_COMPOSE stop
-        else
-          echo "❌ MoonTV 未安装"
-        fi
-        ;;
-      6)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          cd "$WORKDIR"
-          read -rp "是否持续跟踪日志？(y/N): " LOG_FOLLOW
-          if [[ "$LOG_FOLLOW" =~ ^[Yy]$ ]]; then
-            $DOCKER_COMPOSE logs -f
-          else
-            $DOCKER_COMPOSE logs --tail 50
-          fi
-        else
-          echo "❌ MoonTV 未安装"
-        fi
-        ;;
-      7)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          update
-        else
-          echo "❌ MoonTV 未安装，无法更新"
-        fi
-        ;;
-      b|B) break ;;
-      0) exit 0 ;;
-      *) echo "❌ 无效输入，请重新选择" ;;
-    esac
-
-    read -rp "按回车继续..."
-  done
-}
-
-# =========================
-# 自动检查安装并启动菜单
-# =========================
-install_docker
-if [ -d "$WORKDIR" ] && [ -f "$COMPOSE_FILE" ]; then
-  echo "✅ MoonTV 已安装"
-else
-  echo "ℹ️ MoonTV 未安装，开始初始化安装..."
-  install_main
-fi
-
-moontv_menu
+    read -
