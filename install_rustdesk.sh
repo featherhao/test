@@ -5,21 +5,21 @@ WORKDIR=/opt/rustdesk
 COMPOSE_FILE=$WORKDIR/docker-compose.yml
 
 # -------------------------
-# 释放端口并清理残留容器
+# 检查并释放端口
 # -------------------------
-release_ports_and_cleanup() {
-    # 删除残留容器
-    docker rm -f hbbs hbbr 2>/dev/null || true
-
-    # 清理 Docker 网络
-    docker network prune -f
-
-    # 杀掉占用端口的进程
+release_ports() {
     for port in 21115 21116 21117 21118; do
-        PIDS=$(lsof -t -i TCP:$port 2>/dev/null || true)
-        if [ -n "$PIDS" ]; then
-            echo "⚠️ 端口 $port 被占用，杀掉进程 PID: $PIDS"
-            kill -9 $PIDS || true
+        # 杀掉占用该端口的 docker 容器
+        container=$(docker ps -q --filter "publish=$port")
+        if [ -n "$container" ]; then
+            echo "⚠️  端口 $port 被 Docker 容器占用，删除容器 $container"
+            docker rm -f $container || true
+        fi
+        # 杀掉占用该端口的其他进程
+        pid=$(lsof -t -i:$port 2>/dev/null || true)
+        if [ -n "$pid" ]; then
+            echo "⚠️  端口 $port 被进程 PID:$pid 占用，杀掉进程"
+            kill -9 $pid || true
         fi
     done
 }
@@ -37,39 +37,37 @@ services:
     image: rustdesk/rustdesk-server:latest
     container_name: hbbs
     command: hbbs -r 0.0.0.0:21116
-    ports:
-      - "21115:21115"
-      - "21116:21116"
-      - "21117:21117"
-      - "21118:21118"
+    network_mode: "host"
+    restart: unless-stopped
     volumes:
       - ./data:/root
-    restart: unless-stopped
 
   hbbr:
     image: rustdesk/rustdesk-server:latest
     container_name: hbbr
     command: hbbr
-    network_mode: service:hbbs
-    depends_on:
-      - hbbs
+    network_mode: "host"
     restart: unless-stopped
 EOF
 
-    release_ports_and_cleanup
+    release_ports
 
+    echo "⏳ 启动 RustDesk 容器..."
     docker compose -f $COMPOSE_FILE up -d
 
     echo "⏳ 等待 hbbs 生成客户端 Key..."
     for i in {1..30}; do
-        KEY=$(docker logs hbbs 2>&1 | grep "Key:" | tail -n1 | awk '{print $2}')
-        if [ -n "$KEY" ]; then
-            echo "✅ 找到 Key: $KEY"
-            echo "$KEY" > $WORKDIR/key.txt
+        key=$(docker logs hbbs 2>&1 | grep 'Key:' | tail -n1 | awk '{print $2}')
+        if [ -n "$key" ]; then
+            echo "✅ 找到 Key: $key"
+            echo "$key" > $WORKDIR/key.txt
             break
         fi
-        sleep 1
+        sleep 2
     done
+    if [ -z "$key" ]; then
+        echo "❌ 未能获取客户端 Key，请检查容器日志"
+    fi
 }
 
 # -------------------------
@@ -85,8 +83,8 @@ uninstall_rustdesk() {
 # 重启
 # -------------------------
 restart_rustdesk() {
+    release_ports
     docker compose -f $COMPOSE_FILE down || true
-    release_ports_and_cleanup
     docker compose -f $COMPOSE_FILE up -d
     echo "✅ RustDesk 已重启"
 }
@@ -95,7 +93,7 @@ restart_rustdesk() {
 # 显示连接信息
 # -------------------------
 show_info() {
-    local ip=$(curl -s ipv4.ip.sb || curl -s ifconfig.me)
+    ip=$(curl -s ipv4.ip.sb || curl -s ifconfig.me)
     echo "🌐 RustDesk 服务端连接信息："
     echo "ID Server : $ip:21115"
     echo "Relay     : $ip:21116"
