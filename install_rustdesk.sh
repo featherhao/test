@@ -3,14 +3,20 @@ set -e
 
 WORKDIR=/opt/rustdesk
 COMPOSE_FILE=$WORKDIR/docker-compose.yml
-PORTS=(21115 21116 21117 21118)
 
 # -------------------------
-# 检查端口并释放
+# 释放端口和删除残留容器
 # -------------------------
-release_ports() {
-    for port in "${PORTS[@]}"; do
-        PID=$(lsof -t -i:$port 2>/dev/null)
+release_ports_and_cleanup() {
+    # 删除残留容器
+    docker rm -f hbbs hbbr 2>/dev/null || true
+
+    # 清理 Docker 网络
+    docker network prune -f
+
+    # 杀掉占用端口的进程
+    for port in 21115 21116 21117 21118; do
+        PID=$(ss -tulnp | grep ":$port " | awk '{print $6}' | cut -d',' -f2)
         if [ -n "$PID" ]; then
             echo "⚠️ 端口 $port 被占用，杀掉进程 PID: $PID"
             kill -9 $PID || true
@@ -25,12 +31,7 @@ install_rustdesk() {
     mkdir -p $WORKDIR
     cd $WORKDIR
 
-    # 自动释放端口
-    release_ports
-
-    # 创建 docker-compose.yml
     cat > $COMPOSE_FILE <<EOF
-version: "3"
 services:
   hbbs:
     image: rustdesk/rustdesk-server:latest
@@ -55,6 +56,8 @@ services:
     restart: unless-stopped
 EOF
 
+    release_ports_and_cleanup
+
     docker compose -f $COMPOSE_FILE up -d
 
     echo "⏳ 等待 hbbs 生成客户端 Key..."
@@ -67,10 +70,14 @@ EOF
         fi
         sleep 1
     done
+
+    if [ -z "$KEY" ]; then
+        echo "❌ 未能生成 Key，请检查容器状态"
+    fi
 }
 
 # -------------------------
-# 卸载 RustDesk
+# 卸载
 # -------------------------
 uninstall_rustdesk() {
     docker compose -f $COMPOSE_FILE down || true
@@ -79,11 +86,10 @@ uninstall_rustdesk() {
 }
 
 # -------------------------
-# 重启 RustDesk
+# 重启
 # -------------------------
 restart_rustdesk() {
-    docker compose -f $COMPOSE_FILE down || true
-    release_ports
+    release_ports_and_cleanup
     docker compose -f $COMPOSE_FILE up -d
     echo "✅ RustDesk 已重启"
 }
