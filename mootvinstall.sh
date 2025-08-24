@@ -180,7 +180,7 @@ moontv_menu() {
 
       # 用户名、密码、AUTH_TOKEN
       if [ -f "$ENV_FILE" ]; then
-        CONFIG_DISPLAY+=$'\n'"$(grep -E "USERNAME|PASSWORD|AUTH_TOKEN" "$ENV_FILE" | column -t -s '=')"
+        CONFIG_DISPLAY+=$'\n'"$(grep -E "USERNAME|PASSWORD|AUTH_TOKEN" "$ENV_FILE")"
       else
         CONFIG_DISPLAY+=" ❌ 配置文件不存在"
       fi
