@@ -92,6 +92,9 @@ restart_rustdesk() {
 # -------------------------
 # 显示连接信息
 # -------------------------
+# -------------------------
+# 显示连接信息
+# -------------------------
 show_info() {
     ip=$(curl -s ipv4.ip.sb || curl -s ifconfig.me)
     echo "🌐 RustDesk 服务端连接信息："
@@ -99,15 +102,12 @@ show_info() {
     echo "Relay     : $ip:21116"
     echo "API       : $ip:21117"
 
-    if docker ps --format '{{.Names}}' | grep -q "hbbs"; then
-        key=$(docker logs hbbs 2>&1 | grep 'Key:' | tail -n1 | awk '{print $2}')
-        if [ -n "$key" ]; then
-            echo "🔑 客户端 Key：$key"
-        else
-            echo "🔑 客户端 Key：生成中，请稍等几秒后再查看"
-        fi
+    key_file="$WORKDIR/data/id_ed25519.pub"
+    if [ -f "$key_file" ]; then
+        key=$(cat "$key_file")
+        echo "🔑 客户端 Key：$key"
     else
-        echo "❌ hbbs 未运行，无法获取 Key"
+        echo "🔑 客户端 Key：未生成或找不到文件，请先安装 RustDesk 服务端"
     fi
 }
 
