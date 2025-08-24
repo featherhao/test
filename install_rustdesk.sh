@@ -1,26 +1,17 @@
 #!/bin/bash
+set -e
 
 RUSTDESK_DIR="/root/rustdesk"
-BUILD_LOG="$RUSTDESK_DIR/build.log"
-BUILD_DONE_FLAG="$RUSTDESK_DIR/.build_done"
+BUILD_LOG="/root/rustdesk/build.log"
+BUILD_DONE_FLAG="/root/rustdesk/build_done.flag"
+BUILD_PID_FILE="/root/rustdesk/build_pid.pid"
 
-# 检查 RustDesk 是否安装
 check_status() {
-    if command -v rustdesk &>/dev/null; then
+    if command -v rustdesk &>/dev/null || docker images | grep -q rustdesk-builder; then
         STATUS="已安装 ✅"
     else
         STATUS="未安装 ❌"
     fi
-}
-
-# 显示菜单
-show_menu() {
-    clear
-    echo "============================"
-    echo "      RustDesk 管理脚本     "
-    echo "============================"
-    check_status
-    echo "当前状态: $STATUS"
 
     if [[ -f "$BUILD_DONE_FLAG" ]]; then
         echo "✅ Docker 构建已完成！"
@@ -29,19 +20,18 @@ show_menu() {
         echo "  -v rustdesk-git-cache:/home/user/.cargo/git \\"
         echo "  -v rustdesk-registry-cache:/home/user/.cargo/registry \\"
         echo "  -e PUID=\$(id -u) -e PGID=\$(id -g) rustdesk-builder"
-    elif pgrep -f "docker build" >/dev/null; then
-        echo "⏳ Docker 构建正在进行中，日志: $BUILD_LOG"
+    elif [[ -f "$BUILD_PID_FILE" ]]; then
+        PID=$(cat "$BUILD_PID_FILE")
+        if ps -p "$PID" &>/dev/null; then
+            echo "⏳ Docker 构建正在进行中，日志: $BUILD_LOG"
+            STATUS="构建中 ⏳"
+        else
+            echo "⚠️ 构建进程异常终止，请重新构建"
+            rm -f "$BUILD_PID_FILE"
+        fi
     fi
-
-    echo "1) 安装 RustDesk"
-    echo "2) 更新 RustDesk"
-    echo "3) 卸载 RustDesk"
-    echo "4) 取消正在构建 Docker"
-    echo "5) 退出"
-    read -p "请选择操作 [1-5]: " CHOICE
 }
 
-# 安装 RustDesk
 install_rustdesk() {
     echo "📦 选择安装方式："
     echo "1) 官方安装脚本"
@@ -52,6 +42,8 @@ install_rustdesk() {
         1)
             echo "📥 执行官方安装脚本安装 RustDesk..."
             curl -fsSL https://raw.githubusercontent.com/rustdesk/rustdesk-server-pro/main/install.sh | bash
+            echo "✅ 官方安装脚本执行完成！"
+            read -p "👉 按回车返回主菜单..." dummy
             ;;
         2)
             echo "🐳 使用 Docker 构建 RustDesk..."
@@ -62,52 +54,83 @@ install_rustdesk() {
             else
                 git -C "$RUSTDESK_DIR" pull
             fi
-            nohup docker build -t rustdesk-builder "$RUSTDESK_DIR" >"$BUILD_LOG" 2>&1 && \
-                echo "done" > "$BUILD_DONE_FLAG" &
+            nohup docker build -t rustdesk-builder "$RUSTDESK_DIR" >"$BUILD_LOG" 2>&1 &
+            echo $! > "$BUILD_PID_FILE"
             echo "📌 Docker 构建已在后台运行，日志保存在 $BUILD_LOG"
             echo "⏳ 可用 'tail -f $BUILD_LOG' 查看进度"
+            read -p "👉 按回车返回主菜单..." dummy
             ;;
     esac
 }
 
-# 更新 RustDesk
 update_rustdesk() {
+    echo "🔄 更新 RustDesk..."
     if command -v rustdesk &>/dev/null; then
-        echo "🔄 更新 RustDesk..."
-        install_rustdesk
+        curl -fsSL https://raw.githubusercontent.com/rustdesk/rustdesk-server-pro/main/install.sh | bash
+    elif docker images | grep -q rustdesk-builder; then
+        cd "$RUSTDESK_DIR" || exit
+        git pull
+        docker build -t rustdesk-builder "$RUSTDESK_DIR"
     else
-        echo "⚠️ RustDesk 未安装，请先安装。"
+        echo "⚠️ RustDesk 未安装"
     fi
+    echo "✅ RustDesk 更新完成"
+    read -p "👉 按回车返回主菜单..." dummy
 }
 
-# 卸载 RustDesk
 uninstall_rustdesk() {
     echo "🗑️ 卸载 RustDesk..."
-    apt remove --purge -y rustdesk || true
-    rm -rf "$RUSTDESK_DIR" "$BUILD_LOG" "$BUILD_DONE_FLAG"
-    docker rm -f $(docker ps -aq --filter ancestor=rustdesk-builder) 2>/dev/null || true
-    docker rmi -f rustdesk-builder 2>/dev/null || true
+    apt remove -y rustdesk || true
+    rm -rf /usr/local/bin/rustdesk*
+
+    docker rm -f rustdesk-builder 2>/dev/null || true
+    docker rmi rustdesk-builder 2>/dev/null || true
     docker volume rm rustdesk-git-cache rustdesk-registry-cache 2>/dev/null || true
+
+    rm -rf "$RUSTDESK_DIR" "$BUILD_LOG" "$BUILD_DONE_FLAG" "$BUILD_PID_FILE"
+
     echo "✅ RustDesk 已卸载"
+    read -p "👉 按回车返回主菜单..." dummy
 }
 
-# 取消正在构建
 cancel_build() {
-    echo "🛑 取消 Docker 构建..."
-    pkill -f "docker build" && echo "✅ 已取消构建" || echo "⚠️ 没有正在运行的构建"
-    rm -f "$BUILD_LOG"
+    if [[ -f "$BUILD_PID_FILE" ]]; then
+        PID=$(cat "$BUILD_PID_FILE")
+        if ps -p "$PID" &>/dev/null; then
+            kill -9 "$PID"
+            echo "🛑 已取消 Docker 构建 (PID: $PID)"
+        fi
+        rm -f "$BUILD_PID_FILE"
+    else
+        echo "⚠️ 当前没有正在运行的 Docker 构建"
+    fi
+    read -p "👉 按回车返回主菜单..." dummy
 }
 
-# 主循环
-while true; do
-    show_menu
-    case $CHOICE in
+show_menu() {
+    clear
+    echo "============================"
+    echo "      RustDesk 管理脚本     "
+    echo "============================"
+    check_status
+    echo "当前状态: $STATUS"
+    echo "1) 安装 RustDesk"
+    echo "2) 更新 RustDesk"
+    echo "3) 卸载 RustDesk"
+    echo "4) 取消正在构建 Docker"
+    echo "5) 退出"
+    read -p "请选择操作 [1-5]: " choice
+
+    case $choice in
         1) install_rustdesk ;;
         2) update_rustdesk ;;
         3) uninstall_rustdesk ;;
         4) cancel_build ;;
         5) exit 0 ;;
-        *) echo "❌ 无效选项";;
+        *) echo "⚠️ 无效选择"; sleep 1 ;;
     esac
-    read -p "按回车键继续..." dummy
+}
+
+while true; do
+    show_menu
 done
