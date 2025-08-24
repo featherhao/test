@@ -1,110 +1,110 @@
 #!/bin/bash
-set -e
+# RustDesk 服务端管理脚本
+# 支持 Docker 安装、卸载、重启和查看连接信息
 
-# -----------------------------
-# 公共变量
-# -----------------------------
-PROJECT_NAME="rustdesk-oss"
-WORKDIR="/opt/rustdesk"
-COMPOSE_FILE="$WORKDIR/docker-compose.yml"
-CONTAINERS=("rust_desk_hbbs" "rust_desk_hbbr")
-VOLUMES=("rust_desk_hbbs_data" "rust_desk_hbbr_data")
+RUSTDESK_NET="rustdesk-oss_rust_desk_net"
+HBBS_CONTAINER="rust_desk_hbbs"
+HBBR_CONTAINER="rust_desk_hbbr"
+HBBS_DATA="rust_desk_hbbs_data"
+HBBR_DATA="rust_desk_hbbr_data"
+COMPOSE_FILE="/root/compose.yml"
 
-# -----------------------------
-# 工具函数
-# -----------------------------
-check_and_kill_port() {
-    local port=$1
-    local pid
-    pid=$(lsof -iTCP:$port -sTCP:LISTEN -t || true)
-    if [[ -n "$pid" ]]; then
-        echo "⚠️ 端口 $port 被占用，杀掉 PID: $pid"
-        kill -9 $pid
+check_status() {
+    if docker ps --format '{{.Names}}' | grep -q "$HBBS_CONTAINER"; then
+        echo "Docker 已启动 ✅"
+    else
+        echo "未安装 ❌"
     fi
 }
 
-get_ip() {
-    curl -s https://api.ipify.org || echo "127.0.0.1"
+clean_ports() {
+    for PORT in 21115 21116 21117; do
+        PID=$(lsof -iTCP:$PORT -sTCP:LISTEN -t)
+        if [ -n "$PID" ]; then
+            echo "⚠️ 端口 $PORT 被占用，杀掉 PID: $PID"
+            kill -9 $PID
+        fi
+    done
 }
 
-# -----------------------------
-# RustDesk 管理
-# -----------------------------
 install_rustdesk() {
     echo "🐳 下载 RustDesk OSS 官方 compose 文件..."
-    mkdir -p "$WORKDIR"
-    curl -fsSL https://raw.githubusercontent.com/ynnie/rustdesk-server/master/docker-compose.yml -o "$COMPOSE_FILE"
+    curl -fsSL https://raw.githubusercontent.com/ynnie/rustdesk-server/master/docker-compose.yml -o $COMPOSE_FILE
     echo "✅ 下载完成"
 
     echo "⚠️ 检查并清理占用端口..."
-    for port in 21115 21116 21117; do
-        check_and_kill_port $port
-    done
+    clean_ports
     echo "✅ 所有端口已释放"
 
+    # 删除旧容器和网络
+    docker rm -f $HBBS_CONTAINER $HBBR_CONTAINER 2>/dev/null
+    docker network rm $RUSTDESK_NET 2>/dev/null
+    docker volume rm $HBBS_DATA $HBBR_DATA 2>/dev/null
+
     echo "🚀 启动 RustDesk OSS 容器..."
-    docker compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" up -d
+    docker compose -f $COMPOSE_FILE up -d
 
     echo "⏳ 等待 hbbs 生成客户端 Key..."
-    sleep 5  # 可根据需要改成循环检测
+    sleep 5
 
-    local ip=$(get_ip)
     echo "✅ 安装完成"
-    echo "🌐 RustDesk 服务端连接信息："
-    echo "ID Server : $ip:21115"
-    echo "Relay     : $ip:21116"
-    echo "API       : $ip:21117"
-    echo "🔑 客户端 Key（稍后生成）"
+    show_info
 }
 
 uninstall_rustdesk() {
-    echo "🧹 卸载 RustDesk..."
-    docker compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" down --volumes 2>/dev/null || true
-    for container in "${CONTAINERS[@]}"; do
-        docker rm -f "$container" 2>/dev/null || true
-    done
-    for volume in "${VOLUMES[@]}"; do
-        docker volume rm "$volume" 2>/dev/null || true
-    done
+    echo "⚠️ 卸载 RustDesk..."
+    docker rm -f $HBBS_CONTAINER $HBBR_CONTAINER 2>/dev/null
+    docker network rm $RUSTDESK_NET 2>/dev/null
+    docker volume rm $HBBS_DATA $HBBR_DATA 2>/dev/null
     echo "✅ RustDesk 已卸载"
 }
 
 restart_rustdesk() {
     echo "🔄 重启 RustDesk..."
-    for container in "${CONTAINERS[@]}"; do
-        docker restart "$container" 2>/dev/null || true
-    done
-    echo "✅ RustDesk 已重启"
+    docker restart $HBBS_CONTAINER $HBBR_CONTAINER
+    echo "✅ 重启完成"
 }
 
 show_info() {
-    local ip=$(get_ip)
+    STATUS=$(check_status)
+    IP=$(curl -s https://api.ipify.org)
+    if docker ps --format '{{.Names}}' | grep -q "$HBBS_CONTAINER"; then
+        CLIENT_KEY=$(docker exec $HBBS_CONTAINER cat /root/.config/hbbs.key 2>/dev/null || echo "稍后生成")
+    else
+        CLIENT_KEY="未安装"
+    fi
+
+    echo "============================="
+    echo "服务端状态: $STATUS"
     echo "🌐 RustDesk 服务端连接信息："
-    echo "ID Server : $ip:21115"
-    echo "Relay     : $ip:21116"
-    echo "API       : $ip:21117"
-    echo "🔑 客户端 Key（稍后生成）"
+    echo "ID Server : $IP:21115"
+    echo "Relay     : $IP:21116"
+    echo "API       : $IP:21117"
+    echo "🔑 客户端 Key：$CLIENT_KEY"
+    echo "============================="
+    read -p "按回车返回菜单"
 }
 
-# -----------------------------
-# RustDesk 子菜单
-# -----------------------------
+# 主菜单
 while true; do
+    STATUS=$(check_status)
     echo "============================="
     echo "     RustDesk 服务端管理"
     echo "============================="
+    echo "服务端状态: $STATUS"
     echo "1) 安装 RustDesk Server OSS (Docker)"
     echo "2) 卸载 RustDesk Server"
     echo "3) 重启 RustDesk Server"
     echo "4) 查看连接信息"
     echo "0) 退出"
-    read -p "请选择操作 [0-4]: " choice
-    case "$choice" in
+    echo -n "请选择操作 [0-4]: "
+    read -r choice
+    case $choice in
         1) install_rustdesk ;;
         2) uninstall_rustdesk ;;
         3) restart_rustdesk ;;
         4) show_info ;;
-        0) break ;;
-        *) echo "⚠️ 请选择有效选项" ;;
+        0) exit 0 ;;
+        *) echo "❌ 无效选项" ;;
     esac
 done
