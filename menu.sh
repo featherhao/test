@@ -10,7 +10,6 @@ WORKDIR_RUSTDESK="/opt/rustdesk"
 RUSTDESK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh"
 UPDATE_RUSTDESK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/update_rustdesk.sh"
 
-
 # ====== 子菜单：MoonTV ======
 function moon_menu() {
   while true; do
@@ -29,8 +28,8 @@ function moon_menu() {
     read -rp "请输入选项: " choice
 
     case "$choice" in
-      1) echo "📦 正在安装 MoonTV..." && bash <(curl -fsSL "$MOONTV_SCRIPT") ;;
-      2) echo "🔄 正在更新 MoonTV..." && bash <(curl -fsSL "$UPDATE_MOONTV_SCRIPT") ;;
+      1) echo "📦 正在安装 MoonTV..." && bash <(curl -fsSL "${MOONTV_SCRIPT}?t=$(date +%s)") ;;
+      2) echo "🔄 正在更新 MoonTV..." && bash <(curl -fsSL "${UPDATE_MOONTV_SCRIPT}?t=$(date +%s)") ;;
       3) [ -d "$WORKDIR_MOONTV" ] && cd "$WORKDIR_MOONTV" && docker compose restart || echo "⚠️ 未安装 MoonTV" ;;
       4) [ -d "$WORKDIR_MOONTV" ] && cd "$WORKDIR_MOONTV" && docker compose down || echo "⚠️ 未安装 MoonTV" ;;
       5) [ -d "$WORKDIR_MOONTV" ] && cd "$WORKDIR_MOONTV" && docker compose logs -f || echo "⚠️ 未安装 MoonTV" ;;
@@ -61,8 +60,8 @@ function rustdesk_menu() {
     read -rp "请输入选项: " choice
 
     case "$choice" in
-      1) echo "📦 正在安装 RustDesk..." && bash <(curl -fsSL "$RUSTDESK_SCRIPT") ;;
-      2) echo "🔄 正在更新 RustDesk..." && bash <(curl -fsSL "$UPDATE_RUSTDESK_SCRIPT") ;;
+      1) echo "📦 正在安装 RustDesk..." && bash <(curl -fsSL "${RUSTDESK_SCRIPT}?t=$(date +%s)") ;;
+      2) echo "🔄 正在更新 RustDesk..." && bash <(curl -fsSL "${UPDATE_RUSTDESK_SCRIPT}?t=$(date +%s)") ;;
       3) [ -d "$WORKDIR_RUSTDESK" ] && cd "$WORKDIR_RUSTDESK" && docker compose restart || echo "⚠️ 未安装 RustDesk" ;;
       4) [ -d "$WORKDIR_RUSTDESK" ] && cd "$WORKDIR_RUSTDESK" && docker compose down || echo "⚠️ 未安装 RustDesk" ;;
       5) [ -d "$WORKDIR_RUSTDESK" ] && cd "$WORKDIR_RUSTDESK" && docker compose logs -f || echo "⚠️ 未安装 RustDesk" ;;
@@ -74,7 +73,6 @@ function rustdesk_menu() {
     read -rp "按回车继续..."
   done
 }
-
 
 # ====== 主菜单 ======
 while true; do
