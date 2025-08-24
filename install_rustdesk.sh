@@ -93,20 +93,21 @@ restart_rustdesk() {
 # 显示连接信息
 # -------------------------
 show_info() {
+    local ip=$(curl -s ipv4.ip.sb || curl -s ifconfig.me)
     echo "🌐 RustDesk 服务端连接信息："
-    echo "ID Server : $(curl -s ifconfig.me):21115"
-    echo "Relay     : $(curl -s ifconfig.me):21116"
-    echo "API       : $(curl -s ifconfig.me):21117"
+    echo "ID Server : $ip:21115"
+    echo "Relay     : $ip:21116"
+    echo "API       : $ip:21117"
 
-    if [ -f "$WORKDIR/key.txt" ]; then
-        echo "🔑 客户端 Key：$(cat $WORKDIR/key.txt)"
-    else
-        KEY=$(docker logs hbbs 2>&1 | grep "Key:" | tail -n1 | awk '{print $2}')
-        if [ -n "$KEY" ]; then
-            echo "🔑 客户端 Key：$KEY"
+    if docker ps --format '{{.Names}}' | grep -q "hbbs"; then
+        key=$(docker exec hbbs cat /root/.local/share/rustdesk/id_ed25519.pub 2>/dev/null || true)
+        if [ -n "$key" ]; then
+            echo "🔑 客户端 Key：$key"
         else
-            echo "⚠️  未找到 Key，请检查容器是否运行正常"
+            echo "🔑 客户端 Key：生成中，请稍等几秒后再查看"
         fi
+    else
+        echo "❌ hbbs 未运行，无法获取 Key"
     fi
 }
 
