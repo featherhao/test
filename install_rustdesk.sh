@@ -4,6 +4,7 @@ set -e
 # 配置
 RUSTDESK_DOCKER_REPO="https://github.com/rustdesk/rustdesk"
 RUSTDESK_SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh"
+RUSTDESK_DIR="$HOME/rustdesk"
 
 check_requirements() {
     command -v curl >/dev/null 2>&1 || { echo "⚠️ 请先安装 curl"; exit 1; }
@@ -24,10 +25,22 @@ install_rustdesk() {
             ;;
         2)
             echo "🐳 使用 Docker 构建 RustDesk..."
-            git clone "$RUSTDESK_DOCKER_REPO"
-            cd rustdesk || return
+            if [ ! -d "$RUSTDESK_DIR" ]; then
+                echo "📥 克隆 RustDesk 仓库..."
+                git clone "$RUSTDESK_DOCKER_REPO" "$RUSTDESK_DIR"
+            else
+                echo "🔄 更新 RustDesk 仓库..."
+                cd "$RUSTDESK_DIR"
+                git fetch --all
+                git reset --hard origin/master
+            fi
+            cd "$RUSTDESK_DIR"
             git submodule update --init --recursive
+
+            echo "🔧 构建 Docker 镜像..."
             docker build -t rustdesk-builder .
+
+            echo "🚀 运行 Docker 构建..."
             docker run --rm -it \
                 -v "$PWD":/home/user/rustdesk \
                 -v rustdesk-git-cache:/home/user/.cargo/git \
@@ -36,7 +49,6 @@ install_rustdesk() {
                 -e PGID="$(id -g)" \
                 rustdesk-builder
             echo "✅ RustDesk Docker 构建完成"
-            cd ..
             ;;
         *)
             echo "⚠️ 无效选项"
