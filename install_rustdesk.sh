@@ -16,7 +16,7 @@ check_requirements() {
 install_rustdesk() {
     echo "📦 选择安装方式："
     echo "1) 官方安装脚本"
-    echo "2) Docker 构建"
+    echo "2) Docker 构建（后台运行，防止 SSH 中断）"
     read -rp "请选择 [1-2]: " method
     case $method in
         1)
@@ -38,18 +38,15 @@ install_rustdesk() {
             cd "$RUSTDESK_DIR"
             git submodule update --init --recursive
 
-            echo "🔧 构建 Docker 镜像..."
-            docker build --network=host -t rustdesk-builder .
-
-            echo "🚀 运行 Docker 构建..."
-            docker run --rm -it --network=host \
-                -v "$PWD":/home/user/rustdesk \
-                -v rustdesk-git-cache:/home/user/.cargo/git \
-                -v rustdesk-registry-cache:/home/user/.cargo/registry \
-                -e PUID="$(id -u)" \
-                -e PGID="$(id -g)" \
-                rustdesk-builder
-            echo "✅ RustDesk Docker 构建完成"
+            echo "🔧 后台构建 Docker 镜像..."
+            nohup bash -c "
+                docker build --network=host -t rustdesk-builder . &&
+                echo '✅ Docker 镜像构建完成' &&
+                echo '🚀 你可以运行以下命令启动 RustDesk 构建容器:' &&
+                echo 'docker run --rm -it --network=host -v \$PWD:/home/user/rustdesk -v rustdesk-git-cache:/home/user/.cargo/git -v rustdesk-registry-cache:/home/user/.cargo/registry -e PUID=\$(id -u) -e PGID=\$(id -g) rustdesk-builder'
+            " > build.log 2>&1 &
+            echo "📌 Docker 构建已在后台运行，日志保存在 $RUSTDESK_DIR/build.log"
+            echo "⏳ 可以用 'tail -f $RUSTDESK_DIR/build.log' 查看进度"
             ;;
         *)
             echo "⚠️ 无效选项"
