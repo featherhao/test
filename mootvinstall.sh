@@ -186,8 +186,12 @@ moontv_menu() {
       fi
 
       # 获取宿主机端口
-      HOST_PORT=$($DOCKER_COMPOSE -f "$COMPOSE_FILE" port moontv-core 3000 2>/dev/null | cut -d':' -f2)
-      HOST_PORT=${HOST_PORT:-3000}
+      HOST_PORT="未检测到端口"
+      CONTAINER_ID=$($DOCKER_COMPOSE -f "$COMPOSE_FILE" ps -q moontv-core)
+      if [ -n "$CONTAINER_ID" ]; then
+        HOST_PORT=$($DOCKER_COMPOSE -f "$COMPOSE_FILE" port moontv-core 3000 2>/dev/null | cut -d':' -f2)
+      fi
+      HOST_PORT=${HOST_PORT:-8181}  # 默认端口
 
       # 获取公网IP
       IPV4=$(curl -4 -s ifconfig.me || hostname -I | awk '{print $1}')
@@ -272,6 +276,7 @@ moontv_menu() {
     read -rp "按回车继续..."
   done
 }
+
 
 # =========================
 # 自动检查安装并启动菜单
