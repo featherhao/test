@@ -102,6 +102,21 @@ fi
     esac
 }
 
+cancel_docker_build() {
+    if [ -f "$BUILD_PID_FILE" ]; then
+        PID=$(cat "$BUILD_PID_FILE")
+        if kill -0 "$PID" 2>/dev/null; then
+            kill -9 "$PID"
+            echo "🛑 Docker 构建已取消"
+        else
+            echo "⚠️ Docker 构建进程不存在"
+        fi
+        rm -f "$BUILD_PID_FILE" "$BUILD_DONE_FLAG" "$BUILD_LOG"
+    else
+        echo "⚠️ 没有正在进行的 Docker 构建"
+    fi
+}
+
 update_rustdesk() {
     echo "🔄 更新 RustDesk（官方安装脚本）..."
     bash <(curl -fsSL "$RUSTDESK_SCRIPT_URL")
@@ -122,8 +137,9 @@ show_menu() {
     echo "1) 安装 RustDesk"
     echo "2) 更新 RustDesk"
     echo "3) 卸载 RustDesk"
-    echo "4) 退出"
-    echo -n "请选择操作 [1-4]: "
+    echo "4) 取消正在构建 Docker"
+    echo "5) 退出"
+    echo -n "请选择操作 [1-5]: "
 }
 
 check_requirements
@@ -135,7 +151,8 @@ while true; do
         1) install_rustdesk ;;
         2) update_rustdesk ;;
         3) uninstall_rustdesk ;;
-        4) echo "退出"; exit 0 ;;
-        *) echo "⚠️ 无效选项，请输入 1-4" ;;
+        4) cancel_docker_build ;;
+        5) echo "退出"; exit 0 ;;
+        *) echo "⚠️ 无效选项，请输入 1-5" ;;
     esac
 done
