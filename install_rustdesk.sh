@@ -3,7 +3,6 @@ set -e
 
 # 配置
 RUSTDESK_SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh"
-RUSTDESK_BIN="/usr/local/bin/rustdesk"
 RUSTDESK_DIR="$HOME/rustdesk"
 BUILD_LOG="$RUSTDESK_DIR/build.log"
 BUILD_PID_FILE="$RUSTDESK_DIR/build.pid"
@@ -17,8 +16,12 @@ check_requirements() {
     command -v sudo >/dev/null 2>&1 || { echo "⚠️ 请先安装 sudo"; exit 1; }
 }
 
+# 改进后的安装状态检测
 get_rustdesk_status() {
-    if command -v rustdesk >/dev/null 2>&1 || [ -f "$RUSTDESK_BIN" ]; then
+    if command -v rustdesk >/dev/null 2>&1 || \
+       [ -f "/usr/local/bin/rustdesk" ] || \
+       [ -f "/usr/bin/rustdesk" ] || \
+       [ -f "$HOME/.local/bin/rustdesk" ]; then
         echo "已安装 ✅"
     else
         echo "未安装 ❌"
@@ -70,7 +73,7 @@ install_rustdesk() {
 docker build --network=host -t rustdesk-builder . > $BUILD_LOG 2>&1 &&
 touch $BUILD_DONE_FLAG &&
 echo '✅ Docker 构建完成！' | tee -a $BUILD_LOG &&
-echo '🚀 你可以运行 RustDesk 容器:' | tee -a $BUILD_LOG &&
+echo '🚀 可运行 RustDesk 容器:' | tee -a $BUILD_LOG &&
 echo 'docker run --rm -it --network=host -v \$PWD:/home/user/rustdesk -v rustdesk-git-cache:/home/user/.cargo/git -v rustdesk-registry-cache:/home/user/.cargo/registry -e PUID=\$(id -u) -e PGID=\$(id -g) rustdesk-builder' | tee -a $BUILD_LOG &&
 if command -v notify-send >/dev/null 2>&1; then
     notify-send 'RustDesk Docker 构建完成' '可以运行 RustDesk 容器了'
@@ -109,7 +112,8 @@ update_rustdesk() {
 
 uninstall_rustdesk() {
     echo "🗑️ 卸载 RustDesk..."
-    sudo rm -f "$RUSTDESK_BIN"
+    # 删除所有可能安装位置
+    sudo rm -f "/usr/local/bin/rustdesk" "/usr/bin/rustdesk" "$HOME/.local/bin/rustdesk"
     echo "✅ RustDesk 已卸载"
 }
 
