@@ -2,21 +2,22 @@
 set -e
 
 # 配置
+RUSTDESK_SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh"
+RUSTDESK_BIN="/usr/local/bin/rustdesk"
 RUSTDESK_DIR="$HOME/rustdesk"
 BUILD_LOG="$RUSTDESK_DIR/build.log"
 BUILD_PID_FILE="$RUSTDESK_DIR/build.pid"
 BUILD_DONE_FLAG="$RUSTDESK_DIR/build_done.flag"
-RUSTDESK_SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh"
 RUSTDESK_DOCKER_REPO="https://github.com/rustdesk/rustdesk"
 
 check_requirements() {
     command -v curl >/dev/null 2>&1 || { echo "⚠️ 请先安装 curl"; exit 1; }
     command -v git >/dev/null 2>&1 || { echo "⚠️ 请先安装 git"; exit 1; }
     command -v docker >/dev/null 2>&1 || { echo "⚠️ 请先安装 docker"; exit 1; }
+    command -v sudo >/dev/null 2>&1 || { echo "⚠️ 请先安装 sudo"; exit 1; }
 }
 
 check_build_status() {
-    # 检查后台构建状态
     if [ -f "$BUILD_PID_FILE" ]; then
         PID=$(cat "$BUILD_PID_FILE")
         if kill -0 "$PID" 2>/dev/null; then
@@ -27,7 +28,6 @@ check_build_status() {
         fi
     fi
 
-    # 构建完成提示
     if [ -f "$BUILD_DONE_FLAG" ]; then
         echo "✅ Docker 构建已完成！"
         echo "🚀 你可以运行 RustDesk 容器:"
@@ -44,9 +44,13 @@ install_rustdesk() {
     read -rp "请选择 [1-2]: " method
     case $method in
         1)
-            echo "📥 执行官方安装脚本..."
+            echo "📥 执行官方安装脚本安装 RustDesk..."
             bash <(curl -fsSL "$RUSTDESK_SCRIPT_URL")
-            echo "✅ RustDesk 安装完成"
+            if [ -f "$RUSTDESK_BIN" ] || command -v rustdesk >/dev/null 2>&1; then
+                echo "✅ RustDesk 安装完成"
+            else
+                echo "⚠️ RustDesk 安装失败，请检查脚本输出"
+            fi
             ;;
         2)
             mkdir -p "$RUSTDESK_DIR"
@@ -99,14 +103,14 @@ fi
 }
 
 update_rustdesk() {
-    echo "🔄 更新 RustDesk（执行官方脚本）..."
+    echo "🔄 更新 RustDesk（官方安装脚本）..."
     bash <(curl -fsSL "$RUSTDESK_SCRIPT_URL")
     echo "✅ RustDesk 更新完成"
 }
 
 uninstall_rustdesk() {
     echo "🗑️ 卸载 RustDesk..."
-    sudo rm -f /usr/local/bin/rustdesk /usr/bin/rustdesk
+    sudo rm -f "$RUSTDESK_BIN"
     echo "✅ RustDesk 已卸载"
 }
 
