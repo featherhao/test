@@ -38,6 +38,8 @@ install_rustdesk() {
             echo "📥 执行官方安装脚本安装 RustDesk..."
             bash <(curl -fsSL "$RUSTDESK_SCRIPT_URL")
             echo "✅ RustDesk 安装完成"
+            # 等待用户确认再返回菜单
+            read -rp "按回车键返回主菜单..." _
             ;;
         2)
             mkdir -p "$RUSTDESK_DIR"
