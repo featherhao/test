@@ -1,115 +1,119 @@
 #!/bin/bash
 set -e
 
-WORKDIR="/root"
-COMPOSE_FILE="$WORKDIR/compose.yml"
-KEY_FILE="$WORKDIR/id_ed25519"
-PUB_KEY_FILE="$WORKDIR/id_ed25519.pub"
+MENU_FILE="/root/menu.sh"
+COMPOSE_FILE="/root/compose.yml"
+HBBR_CONTAINER="rust_desk_hbbr"
+HBBS_CONTAINER="rust_desk_hbbs"
 
-# 函数：安装 RustDesk Server OSS
-install_rustdesk() {
+function rustdesk_menu() {
+    while true; do
+        echo "============================"
+        echo "     RustDesk 服务端管理"
+        echo "============================"
+
+        # 检查容器状态
+        if docker ps --format "{{.Names}}" | grep -q "$HBBR_CONTAINER"; then
+            STATUS="Docker 已启动"
+        else
+            STATUS="未安装 ❌"
+        fi
+
+        echo "服务端状态: $STATUS"
+        echo "1) 安装 RustDesk Server OSS (Docker)"
+        echo "2) 卸载 RustDesk Server"
+        echo "3) 重启 RustDesk Server"
+        echo "4) 查看连接信息"
+        echo "5) 退出"
+        read -p "请选择操作 [1-5]: " choice
+
+        case $choice in
+            1)
+                install_rustdesk_oss
+                ;;
+            2)
+                uninstall_rustdesk
+                ;;
+            3)
+                restart_rustdesk
+                ;;
+            4)
+                show_info
+                ;;
+            5)
+                break
+                ;;
+            *)
+                echo "无效选项，请重新选择"
+                ;;
+        esac
+    done
+}
+
+function install_rustdesk_oss() {
     echo "🐳 安装 RustDesk Server OSS..."
-    
-    # 下载官方或社区 compose 文件
     echo "⬇️  下载官方 compose 文件..."
-    if ! wget -O "$COMPOSE_FILE" "https://raw.githubusercontent.com/ynnie/rustdesk-server/master/docker-compose.yml"; then
-        echo "❌ 下载 compose 文件失败，请检查 URL"
-        return 1
-    fi
+    curl -fsSL -o $COMPOSE_FILE https://raw.githubusercontent.com/ynnie/rustdesk-server/master/docker-compose.yml
+    echo "✅ 下载完成"
 
-    # 停止并清理旧容器
     echo "⚠️ 停止并清理旧容器..."
-    docker compose -f "$COMPOSE_FILE" down || true
-    rm -f "$KEY_FILE" "$PUB_KEY_FILE"
+    docker ps -a --format "{{.Names}}" | grep -E "${HBBR_CONTAINER}|${HBBS_CONTAINER}" &> /dev/null && \
+        docker stop $HBBR_CONTAINER $HBBS_CONTAINER &> /dev/null
+    docker rm $HBBR_CONTAINER $HBBS_CONTAINER &> /dev/null || true
 
-    # 启动容器
-    echo "🚀 启动容器并显示安装输出..."
-    docker compose -f "$COMPOSE_FILE" up -d
-    sleep 2
+    # 检查端口占用
+    for port in 21115 21116 21117; do
+        if lsof -iTCP:$port -sTCP:LISTEN -t &> /dev/null; then
+            echo "⚠️ 端口 $port 已被占用，请先释放端口或修改 compose 文件"
+            return
+        fi
+    done
 
-    # 生成密钥（如果不存在）
-    if [ ! -f "$KEY_FILE" ]; then
-        ssh-keygen -t ed25519 -f "$KEY_FILE" -N ""
-    fi
+    echo "🚀 启动容器..."
+    docker compose -f $COMPOSE_FILE up -d
 
-    # 提示客户端 key
-    CLIENT_KEY=$(ssh-keygen -yf "$KEY_FILE" | tr -d '\n')
-    echo
-    echo "✅ 安装完成"
-    echo "🌐 RustDesk 服务端连接信息："
-    echo "ID Server : <服务器IP>:21115"
-    echo "Relay     : <服务器IP>:21116"
-    echo "API       : <服务器IP>:21114"
-    echo
-    echo "🔑 客户端可用 Key: $CLIENT_KEY"
-    echo "🔑 私钥路径: $KEY_FILE"
-    echo "🔑 公钥路径: $PUB_KEY_FILE"
-    echo "按回车返回菜单..."
-    read
+    echo "📜 hbbs 初始化日志（按 Ctrl+C 停止）..."
+    docker logs -f $HBBS_CONTAINER | while read line; do
+        echo "$line"
+        if [[ $line == *"Key:"* ]]; then
+            CLIENT_KEY=$(echo $line | awk -F'Key: ' '{print $2}')
+            echo -e "\n🔑 客户端可用 Key: $CLIENT_KEY\n"
+        fi
+    done
 }
 
-# 函数：卸载 RustDesk Server
-uninstall_rustdesk() {
-    echo "⚠️ 卸载 RustDesk Server..."
-    docker compose -f "$COMPOSE_FILE" down || true
-    rm -f "$KEY_FILE" "$PUB_KEY_FILE" "$COMPOSE_FILE"
-    echo "✅ 卸载完成，按回车返回菜单..."
-    read
+function uninstall_rustdesk() {
+    echo "⚠️ 停止并卸载 RustDesk Server..."
+    docker stop $HBBR_CONTAINER $HBBS_CONTAINER &> /dev/null || true
+    docker rm $HBBR_CONTAINER $HBBS_CONTAINER &> /dev/null || true
+    rm -f /root/id_ed25519 /root/id_ed25519.pub
+    echo "✅ 卸载完成"
 }
 
-# 函数：重启 RustDesk Server
-restart_rustdesk() {
+function restart_rustdesk() {
     echo "🔄 重启 RustDesk Server..."
-    docker compose -f "$COMPOSE_FILE" down || true
-    docker compose -f "$COMPOSE_FILE" up -d
-    echo "✅ 重启完成，按回车返回菜单..."
-    read
+    docker restart $HBBR_CONTAINER $HBBS_CONTAINER
+    echo "✅ 重启完成"
 }
 
-# 函数：查看连接信息
-show_info() {
-    echo "🌐 RustDesk 服务端连接信息："
-    echo "ID Server : <服务器IP>:21115"
-    echo "Relay     : <服务器IP>:21116"
-    echo "API       : <服务器IP>:21114"
-    if [ -f "$KEY_FILE" ]; then
-        CLIENT_KEY=$(ssh-keygen -yf "$KEY_FILE" | tr -d '\n')
-        echo "🔑 客户端可用 Key: $CLIENT_KEY"
-        echo "🔑 私钥路径: $KEY_FILE"
-        echo "🔑 公钥路径: $PUB_KEY_FILE"
+function show_info() {
+    if docker ps --format "{{.Names}}" | grep -q "$HBBR_CONTAINER"; then
+        IP=$(curl -s https://api.ip.sb/ip)
+        echo "🌐 RustDesk 服务端连接信息："
+        echo "公网 IPv4: $IP"
+        echo "ID Server : $IP:21115"
+        echo "Relay     : $IP:21116"
+        echo "API       : $IP:21117"
+        if [[ -f /root/id_ed25519 ]]; then
+            echo "🔑 私钥路径: /root/id_ed25519"
+            echo "🔑 公钥路径: /root/id_ed25519.pub"
+        else
+            echo "⚠️ 还未生成客户端 Key，请确保 hbbs 容器已启动并完成初始化"
+        fi
     else
-        echo "⚠️ 密钥尚未生成，请先安装或生成密钥"
+        echo "⚠️ RustDesk Server 未安装"
     fi
-    echo "按回车返回菜单..."
-    read
 }
 
-# 菜单
-while true; do
-    clear
-    echo "============================"
-    echo "     RustDesk 服务端管理"
-    echo "============================"
-    STATUS=$(docker ps --filter "name=hbbs" --format "{{.Names}}")
-    if [ -n "$STATUS" ]; then
-        echo "服务端状态: Docker 已启动"
-    else
-        echo "服务端状态: 未安装 ❌"
-    fi
-    echo "1) 安装 RustDesk Server OSS (Docker)"
-    echo "2) 卸载 RustDesk Server"
-    echo "3) 重启 RustDesk Server"
-    echo "4) 查看连接信息"
-    echo "5) 退出"
-    echo -n "请选择操作 [1-5]: "
-    read CHOICE
-
-    case "$CHOICE" in
-        1) install_rustdesk ;;
-        2) uninstall_rustdesk ;;
-        3) restart_rustdesk ;;
-        4) show_info ;;
-        5) exit 0 ;;
-        *) echo "❌ 无效选项"; sleep 1 ;;
-    esac
-done
+# 启动 RustDesk 菜单
+rustdesk_menu
