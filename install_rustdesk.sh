@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-# RustDesk Server 管理脚本
-
 COMPOSE_FILE="/root/compose.yml"
 
 function check_docker() {
@@ -15,9 +13,18 @@ function check_docker() {
 function generate_key_if_missing() {
     if [ ! -f /root/id_ed25519 ]; then
         echo "🔑 Key 不存在，正在生成..."
-        ssh-keygen -t ed25519 -f /root/id_ed25519 -N ""
+        ssh-keygen -t ed25519 -f /root/id_ed25519 -N "" >/dev/null
         echo "✅ Key 生成完成"
     fi
+}
+
+function show_client_key() {
+    generate_key_if_missing
+    echo ""
+    echo "🔑 你的 RustDesk 客户端可用私钥（直接复制到客户端）:"
+    echo "----------------------------------------"
+    cat /root/id_ed25519
+    echo "----------------------------------------"
 }
 
 function get_public_ip() {
@@ -66,6 +73,7 @@ function show_info() {
     echo ""
     echo "🔑 私钥路径: /root/id_ed25519"
     echo "🔑 公钥路径: /root/id_ed25519.pub"
+    show_client_key
 }
 
 function check_status() {
