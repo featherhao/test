@@ -48,15 +48,16 @@ install_official_binary() {
         echo "✅ 系统已有非 root 用户: $non_root_user"
     fi
 
-    # 用户确认
     read -p "按回车确认，开始下载并安装 RustDesk..." dummy
 
-    # 下载最新 release 二进制
+    # 使用 GitHub API 获取最新 release URL
     RELEASE_URL=$(curl -s https://api.github.com/repos/rustdesk/rustdesk/releases/latest \
-        | grep "rustdesk-server-linux-amd64.tar.gz" \
+        | grep "browser_download_url" \
+        | grep "rustdesk-server-linux-amd64.*\.tar\.gz" \
         | cut -d '"' -f 4)
+
     if [ -z "$RELEASE_URL" ]; then
-        echo "❌ 获取最新 release URL 失败"
+        echo "❌ 获取最新 release URL 失败，请检查网络或 GitHub API"
         read -p "按回车返回主菜单..." dummy
         return
     fi
@@ -66,11 +67,10 @@ install_official_binary() {
     mkdir -p "$BIN_DIR"
     cd "$BIN_DIR" || exit
     curl -L -O "$RELEASE_URL"
-    tar -xzf rustdesk-server-linux-amd64.tar.gz
+    tar -xzf rustdesk-server-linux-amd64*.tar.gz
     chmod +x rustdesk
     ln -sf "$BIN_DIR/rustdesk" /usr/local/bin/rustdesk
 
-    # 安装完成后显示信息
     clear
     echo "============================"
     echo "      RustDesk 安装完成      "
