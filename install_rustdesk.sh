@@ -4,6 +4,7 @@ set -e
 # ======= 配置 =======
 DOCKER_SERVER_COMPOSE="/root/compose.yml"
 SERVER_STATUS_FILE="/root/.rustdesk_server_status"
+CONTAINER_NAME="hbbs"  # RustDesk Server 容器名
 
 # ======= 状态检测 =======
 check_server_status() {
@@ -37,15 +38,23 @@ show_info() {
             echo "API       : [$IP6]:21117"
         fi
 
-        # 显示 Key
+        # 尝试从宿主机读取 Key
         PUB_KEY_FILE="/root/.config/rustdesk-server/id_ed25519.pub"
         if [ -f "$PUB_KEY_FILE" ]; then
             echo
             echo "🔑 RustDesk Key (客户端输入用):"
             cat "$PUB_KEY_FILE"
         else
-            echo
-            echo "⚠️ 公钥文件不存在，请确认服务器是否已启动一次"
+            # 如果宿主机没有找到，尝试从容器里读取
+            KEY_IN_CONTAINER=$(docker exec "$CONTAINER_NAME" cat /root/.config/rustdesk-server/id_ed25519.pub 2>/dev/null || true)
+            if [ -n "$KEY_IN_CONTAINER" ]; then
+                echo
+                echo "🔑 RustDesk Key (从 Docker 容器获取，客户端输入用):"
+                echo "$KEY_IN_CONTAINER"
+            else
+                echo
+                echo "⚠️ 公钥文件不存在，请确认容器已启动一次并生成 Key"
+            fi
         fi
 
         if [ -z "$IP4" ] && [ -z "$IP6" ]; then
