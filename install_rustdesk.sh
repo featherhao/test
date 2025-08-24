@@ -1,113 +1,64 @@
 #!/bin/bash
 set -e
 
-DATA_DIR=/opt/rustdesk
-COMPOSE_FILE=$DATA_DIR/docker-compose.yml
+WORKDIR=/opt/rustdesk
+COMPOSE_FILE=$WORKDIR/docker-compose.yml
 
-# 检查是否安装
-check_installed() {
-    if docker ps -a --format '{{.Names}}' | grep -q hbbs; then
-        echo "已安装 ✅"
-        return 0
-    else
-        echo "未安装 ❌"
-        return 1
+# -------------------------
+# 检查并释放端口
+# -------------------------
+check_port() {
+    PORT=$1
+    PID=$(lsof -t -i:$PORT 2>/dev/null || netstat -tulnp 2>/dev/null | grep ":$PORT " | awk '{print $7}' | cut -d'/' -f1)
+    if [ -n "$PID" ]; then
+        echo "⚠️  端口 $PORT 被占用，杀掉进程 PID: $PID"
+        kill -9 $PID || true
     fi
 }
 
-show_menu() {
-    clear
-    echo "============================="
-    echo "     RustDesk 服务端管理"
-    echo "============================="
-    echo -n "服务端状态: "
-    STATUS=$(check_installed || true)
-    echo "$STATUS"
-    echo "1) 安装 RustDesk Server OSS (Docker)"
-    echo "2) 卸载 RustDesk Server"
-    echo "3) 重启 RustDesk Server"
-    echo "4) 查看连接信息"
-    echo "0) 退出"
-    read -rp "请选择操作 [0-4]: " choice
+release_ports() {
+    for port in 21115 21116 21117 21118; do
+        check_port $port
+    done
 }
 
-install_rustdesk() {
-    mkdir -p "$DATA_DIR"
-    echo "🐳 下载 RustDesk OSS 官方 compose 文件..."
-    cat > "$COMPOSE_FILE" <<EOF
-version: "3"
-services:
-  hbbs:
-    image: rustdesk/rustdesk-server:latest
-    container_name: hbbs
-    restart: unless-stopped
-    network_mode: host
-    command: hbbs -r 0.0.0.0:21116
-    volumes:
-      - $DATA_DIR:/root
-
-  hbbr:
-    image: rustdesk/rustdesk-server:latest
-    container_name: hbbr
-    restart: unless-stopped
-    network_mode: host
-    command: hbbr
-    volumes:
-      - $DATA_DIR:/root
-EOF
-
-    echo "🚀 启动 RustDesk OSS 容器..."
-    docker compose -f "$COMPOSE_FILE" up -d
+# -------------------------
+# 启动 RustDesk
+# -------------------------
+start_rustdesk() {
+    echo "🚀 启动 RustDesk OSS..."
+    release_ports
+    docker compose -f $COMPOSE_FILE up -d
 
     echo "⏳ 等待 hbbs 生成客户端 Key..."
-    sleep 5
-    echo "✅ 安装完成"
+    for i in {1..30}; do
+        KEY=$(docker logs hbbs 2>&1 | grep "Key:" | tail -n1 | awk '{print $2}')
+        if [ -n "$KEY" ]; then
+            echo "✅ 找到 Key: $KEY"
+            echo "$KEY" > $WORKDIR/key.txt
+            break
+        fi
+        sleep 1
+    done
 }
 
-uninstall_rustdesk() {
-    if [ -f "$COMPOSE_FILE" ]; then
-        docker compose -f "$COMPOSE_FILE" down -v
-        rm -rf "$DATA_DIR"
-        echo "🗑️ 已卸载 RustDesk Server"
-    else
-        echo "⚠️ 未找到安装目录 $DATA_DIR"
-    fi
-}
-
-restart_rustdesk() {
-    if [ -f "$COMPOSE_FILE" ]; then
-        docker compose -f "$COMPOSE_FILE" restart
-        echo "🔄 已重启 RustDesk Server"
-    else
-        echo "⚠️ RustDesk 未安装"
-    fi
-}
-
+# -------------------------
+# 显示连接信息
+# -------------------------
 show_info() {
-    IP=$(curl -s ifconfig.me || echo "获取失败")
     echo "🌐 RustDesk 服务端连接信息："
-    echo "ID Server : ${IP}:21115"
-    echo "Relay     : ${IP}:21116"
-    echo "API       : ${IP}:21117"
+    echo "ID Server : $(curl -s ifconfig.me):21115"
+    echo "Relay     : $(curl -s ifconfig.me):21116"
+    echo "API       : $(curl -s ifconfig.me):21117"
 
-    if docker ps --format '{{.Names}}' | grep -q hbbs; then
-        KEY=$(docker exec hbbs cat /root/id_ed25519.pub 2>/dev/null || echo "稍后生成")
-        echo "🔑 客户端 Key：$KEY"
+    if [ -f "$WORKDIR/key.txt" ]; then
+        echo "🔑 客户端 Key：$(cat $WORKDIR/key.txt)"
     else
-        echo "🔑 客户端 Key：服务未运行"
+        KEY=$(docker logs hbbs 2>&1 | grep "Key:" | tail -n1 | awk '{print $2}')
+        if [ -n "$KEY" ]; then
+            echo "🔑 客户端 Key：$KEY"
+        else
+            echo "⚠️  未找到 Key，请检查容器是否运行正常"
+        fi
     fi
 }
-
-# 主循环
-while true; do
-    show_menu
-    case $choice in
-        1) install_rustdesk ;;
-        2) uninstall_rustdesk ;;
-        3) restart_rustdesk ;;
-        4) show_info ;;
-        0) exit 0 ;;
-        *) echo "无效选项" ;;
-    esac
-    read -rp "按回车继续..." enter
-done
