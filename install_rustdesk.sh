@@ -17,6 +17,14 @@ check_requirements() {
     command -v sudo >/dev/null 2>&1 || { echo "⚠️ 请先安装 sudo"; exit 1; }
 }
 
+get_rustdesk_status() {
+    if command -v rustdesk >/dev/null 2>&1 || [ -f "$RUSTDESK_BIN" ]; then
+        echo "已安装 ✅"
+    else
+        echo "未安装 ❌"
+    fi
+}
+
 install_rustdesk() {
     echo "📦 选择安装方式："
     echo "1) 官方安装脚本"
@@ -26,11 +34,7 @@ install_rustdesk() {
         1)
             echo "📥 执行官方安装脚本安装 RustDesk..."
             bash <(curl -fsSL "$RUSTDESK_SCRIPT_URL")
-            if [ -f "$RUSTDESK_BIN" ] || command -v rustdesk >/dev/null 2>&1; then
-                echo "✅ RustDesk 安装完成"
-            else
-                echo "⚠️ RustDesk 安装失败，请检查脚本输出"
-            fi
+            echo "✅ RustDesk 安装完成"
             ;;
         2)
             mkdir -p "$RUSTDESK_DIR"
@@ -113,7 +117,10 @@ show_menu() {
     echo "============================"
     echo "      RustDesk 管理脚本     "
     echo "============================"
-    
+
+    # RustDesk 安装状态
+    echo "当前状态: $(get_rustdesk_status)"
+
     # 构建状态提示（不阻塞菜单）
     if [ -f "$BUILD_PID_FILE" ]; then
         PID=$(cat "$BUILD_PID_FILE")
