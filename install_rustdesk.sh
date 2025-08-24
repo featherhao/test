@@ -3,6 +3,7 @@ set -e
 
 WORKDIR=/opt/rustdesk
 COMPOSE_FILE=$WORKDIR/docker-compose.yml
+DATA_DIR=$WORKDIR/data
 
 # -------------------------
 # 检查并释放端口
@@ -26,7 +27,7 @@ release_ports() {
 # 安装 RustDesk
 # -------------------------
 install_rustdesk() {
-    mkdir -p $WORKDIR
+    mkdir -p $DATA_DIR
     cd $WORKDIR
 
     cat > $COMPOSE_FILE <<EOF
@@ -60,10 +61,9 @@ EOF
 
     echo "⏳ 等待 hbbs 生成客户端 Key..."
     for i in {1..30}; do
-        KEY=$(docker logs hbbs 2>&1 | grep "Key:" | tail -n1 | awk '{print $2}')
-        if [ -n "$KEY" ]; then
+        if [ -f "$DATA_DIR/id_ed25519/id_ed25519.pub" ]; then
+            KEY=$(cat "$DATA_DIR/id_ed25519/id_ed25519.pub")
             echo "✅ 找到 Key: $KEY"
-            echo "$KEY" > $WORKDIR/key.txt
             break
         fi
         sleep 1
@@ -99,18 +99,13 @@ show_info() {
     echo "Relay     : $ip:21116"
     echo "API       : $ip:21117"
 
-    if docker ps --format '{{.Names}}' | grep -q "hbbs"; then
-        key=$(docker logs hbbs 2>&1 | grep 'Key:' | tail -n1 | awk '{print $2}')
-        if [ -n "$key" ]; then
-            echo "🔑 客户端 Key：$key"
-        else
-            echo "🔑 客户端 Key：生成中，请稍等几秒后再查看"
-        fi
+    if [ -f "$DATA_DIR/id_ed25519/id_ed25519.pub" ]; then
+        key=$(cat "$DATA_DIR/id_ed25519/id_ed25519.pub")
+        echo "🔑 客户端 Key：$key"
     else
-        echo "❌ hbbs 未运行，无法获取 Key"
+        echo "🔑 客户端 Key：生成中，请稍等几秒后再查看"
     fi
 }
-
 
 # -------------------------
 # 主菜单
