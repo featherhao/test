@@ -20,14 +20,10 @@ install_docker() {
       yum install -y docker-compose-plugin || yum install -y docker-compose
     fi
   fi
-
   if command -v docker-compose &>/dev/null; then
     DOCKER_COMPOSE="docker-compose"
-  elif docker compose version &>/dev/null 2>&1; then
-    DOCKER_COMPOSE="docker compose"
   else
-    echo "❌ 未检测到 docker-compose 或 docker compose"
-    exit 1
+    DOCKER_COMPOSE="docker compose"
   fi
 }
 
@@ -84,7 +80,7 @@ services:
     container_name: moontv-core
     restart: unless-stopped
     ports:
-      - '${HOST_PORT}:3000'
+      - '$HOST_PORT:3000'
     env_file:
       - .env
     environment:
@@ -124,10 +120,12 @@ install_main() {
 
   IPV4=$(curl -4 -s ifconfig.me || hostname -I | awk '{print $1}')
   IPV6=$(curl -6 -s ifconfig.me || ip -6 addr show scope global | awk '{print $2}' | cut -d/ -f1 | head -n1)
+  HOST_PORT=$(grep -Po "(?<=- )\d+(?=:3000)" "$COMPOSE_FILE" | tr -d "'")
+  HOST_PORT=${HOST_PORT:-8181}
 
   echo "✅ MoonTV 已启动"
-  echo "👉 IPv4 访问地址: http://$IPV4:${HOST_PORT}"
-  [[ -n "$IPV6" ]] && echo "👉 IPv6 访问地址: http://[$IPV6]:${HOST_PORT}"
+  echo "👉 IPv4 访问地址: http://$IPV4:$HOST_PORT"
+  [[ -n "$IPV6" ]] && echo "👉 IPv6 访问地址: http://[$IPV6]:$HOST_PORT"
   echo "👉 用户名: $(grep USERNAME $ENV_FILE | cut -d '=' -f2)"
   echo "👉 密码: $(grep PASSWORD $ENV_FILE | cut -d '=' -f2)"
 }
@@ -185,7 +183,7 @@ moontv_menu() {
         CONFIG_DISPLAY+=" ❌ 配置文件不存在"
       fi
 
-      # 从 docker-compose.yml 获取宿主机端口，并去掉单引号
+      # 从 docker-compose.yml 获取宿主机端口
       HOST_PORT=$(grep -Po "(?<=- )\d+(?=:3000)" "$COMPOSE_FILE" | tr -d "'")
       HOST_PORT=${HOST_PORT:-8181}  # 默认端口
 
@@ -272,8 +270,6 @@ moontv_menu() {
     read -rp "按回车继续..."
   done
 }
-
-
 
 # =========================
 # 自动检查安装并启动菜单
