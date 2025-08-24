@@ -5,7 +5,7 @@ WORKDIR=/opt/rustdesk
 COMPOSE_FILE=$WORKDIR/docker-compose.yml
 
 # -------------------------
-# 释放端口和删除残留容器
+# 释放端口并清理残留容器
 # -------------------------
 release_ports_and_cleanup() {
     # 删除残留容器
@@ -16,10 +16,10 @@ release_ports_and_cleanup() {
 
     # 杀掉占用端口的进程
     for port in 21115 21116 21117 21118; do
-        PID=$(ss -tulnp | grep ":$port " | awk '{print $6}' | cut -d',' -f2)
-        if [ -n "$PID" ]; then
-            echo "⚠️ 端口 $port 被占用，杀掉进程 PID: $PID"
-            kill -9 $PID || true
+        PIDS=$(lsof -t -i TCP:$port 2>/dev/null || true)
+        if [ -n "$PIDS" ]; then
+            echo "⚠️ 端口 $port 被占用，杀掉进程 PID: $PIDS"
+            kill -9 $PIDS || true
         fi
     done
 }
@@ -70,10 +70,6 @@ EOF
         fi
         sleep 1
     done
-
-    if [ -z "$KEY" ]; then
-        echo "❌ 未能生成 Key，请检查容器状态"
-    fi
 }
 
 # -------------------------
@@ -89,6 +85,7 @@ uninstall_rustdesk() {
 # 重启
 # -------------------------
 restart_rustdesk() {
+    docker compose -f $COMPOSE_FILE down || true
     release_ports_and_cleanup
     docker compose -f $COMPOSE_FILE up -d
     echo "✅ RustDesk 已重启"
