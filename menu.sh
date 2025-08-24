@@ -4,11 +4,12 @@ set -e
 # ====== 配置路径 ======
 WORKDIR_MOONTV="/opt/moontv"
 MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/mootvinstall.sh"
-UPDATE_MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/updatemtv.sh"
 
 WORKDIR_RUSTDESK="/opt/rustdesk"
 RUSTDESK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh"
-UPDATE_RUSTDESK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/update_rustdesk.sh"
+
+WORKDIR_LIBRETV="/opt/libretv"
+LIBRETV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_libretv.sh"
 
 # ====== docker compose 兼容 ======
 if command -v docker-compose &>/dev/null; then
@@ -27,16 +28,19 @@ rustdesk_menu() {
   bash <(curl -fsSL "${RUSTDESK_SCRIPT}?t=$(date +%s)")
 }
 
+# ====== 调用 LibreTV 安装脚本 ======
+libretv_menu() {
+  bash <(curl -fsSL "${LIBRETV_SCRIPT}?t=$(date +%s)")
+}
+
 # ====== 设置快捷键 Q / q ======
 set_q_shortcut() {
   SHELL_RC="$HOME/.bashrc"
   [ -n "$ZSH_VERSION" ] && SHELL_RC="$HOME/.zshrc"
 
-  # 删除已有 alias
   sed -i '/alias Q=/d' "$SHELL_RC"
   sed -i '/alias q=/d' "$SHELL_RC"
 
-  # 写入 alias
   echo "alias Q='bash <(curl -fsSL \"https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh?t=\$(date +%s)\")'" >> "$SHELL_RC"
   echo "alias q='bash <(curl -fsSL \"https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh?t=\$(date +%s)\")'" >> "$SHELL_RC"
 
@@ -63,7 +67,8 @@ while true; do
   echo "=============================="
   echo "1) MoonTV 管理"
   echo "2) RustDesk 管理"
-  echo "3) 其他服务 (预留)"
+  echo "3) LibreTV 安装"
+  echo "4) 其他服务 (预留)"
   echo "9) 设置快捷键 Q / q"
   echo "U) 更新菜单脚本 menu.sh"
   echo "0) 退出"
@@ -73,7 +78,8 @@ while true; do
   case "${main_choice^^}" in
     1) moon_menu ;;
     2) rustdesk_menu ;;
-    3) echo "⚠️ 其他服务还未实现"; sleep 1 ;;
+    3) libretv_menu ;;
+    4) echo "⚠️ 其他服务还未实现"; sleep 1 ;;
     9) set_q_shortcut ;;
     U) update_menu_script ;;
     0) exit 0 ;;
