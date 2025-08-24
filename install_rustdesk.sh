@@ -5,6 +5,7 @@ set -e
 RUSTDESK_DOCKER_REPO="https://github.com/rustdesk/rustdesk"
 RUSTDESK_SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh"
 RUSTDESK_DIR="$HOME/rustdesk"
+DOCKER_DNS="8.8.8.8"  # Google 公共 DNS，可修改为你自己的 DNS
 
 check_requirements() {
     command -v curl >/dev/null 2>&1 || { echo "⚠️ 请先安装 curl"; exit 1; }
@@ -38,10 +39,10 @@ install_rustdesk() {
             git submodule update --init --recursive
 
             echo "🔧 构建 Docker 镜像..."
-            docker build -t rustdesk-builder .
+            docker build --network=host -t rustdesk-builder .
 
             echo "🚀 运行 Docker 构建..."
-            docker run --rm -it \
+            docker run --rm -it --network=host \
                 -v "$PWD":/home/user/rustdesk \
                 -v rustdesk-git-cache:/home/user/.cargo/git \
                 -v rustdesk-registry-cache:/home/user/.cargo/registry \
