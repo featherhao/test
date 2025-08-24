@@ -34,23 +34,19 @@ check_status() {
 }
 
 install_official() {
-    echo "📥 执行官方安装脚本（无人值守）..."
+    echo "📥 执行官方安装脚本..."
 
-    # 检查非 root 用户
+    # 检查系统是否有非 root 用户
     non_root_user=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1; exit}' /etc/passwd)
     if [ -z "$non_root_user" ]; then
-        echo "⚠️ 没有找到非 root 用户，正在创建 $DEFAULT_USER 用户..."
+        echo "⚠️ 没有找到非 root 用户，正在创建默认用户 $DEFAULT_USER..."
         adduser --disabled-password --gecos "" "$DEFAULT_USER"
-        non_root_user="$DEFAULT_USER"
+    else
+        echo "✅ 系统已有非 root 用户: $non_root_user"
     fi
-    echo "✅ 使用用户: $non_root_user"
 
-    # 设置环境变量跳过 GUI 提示
-    export RUSTDESK_USER="$non_root_user"
-    export DEBIAN_FRONTEND=noninteractive
-
-    # 执行官方安装脚本
-    curl -fsSL https://raw.githubusercontent.com/rustdesk/rustdesk-server-pro/main/install.sh | bash
+    # 执行官方安装脚本，后续在界面中自行输入用户名
+    bash <(curl -fsSL https://raw.githubusercontent.com/rustdesk/rustdesk-server-pro/main/install.sh)
 
     echo "✅ 官方安装脚本执行完成！"
     read -p "👉 按回车返回主菜单..." dummy
@@ -74,7 +70,7 @@ install_docker() {
 
 install_rustdesk() {
     echo "📦 选择安装方式："
-    echo "1) 官方安装脚本（无人值守）"
+    echo "1) 官方安装脚本（交互安装，需输入用户）"
     echo "2) Docker 构建（后台运行，支持 SSH 中断恢复）"
     read -p "请选择 [1-2]: " METHOD
 
