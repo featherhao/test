@@ -10,11 +10,16 @@ function info() { echo -e "\e[34m[*]\e[0m $1"; }
 function success() { echo -e "\e[32m[✓]\e[0m $1"; }
 function error() { echo -e "\e[31m[✗]\e[0m $1"; }
 
+# 显示状态函数
 function show_status() {
     info "检查 LibreTV 当前状态..."
 
-    # 获取端口
-    PORT=$(grep -Po '(?<=- ")[0-9]+(?=:8080")' "$DOCKER_COMPOSE_FILE" 2>/dev/null || echo "8899")
+    # 获取端口，如果 docker-compose.yml 不存在，使用默认 8899
+    if [ -f "$DOCKER_COMPOSE_FILE" ]; then
+        PORT=$(grep -Po '(?<=- ")[0-9]+(?=:8080")' "$DOCKER_COMPOSE_FILE" 2>/dev/null || echo "8899")
+    else
+        PORT=8899
+    fi
 
     # 容器状态
     if docker ps --filter "name=${CONTAINER_NAME}" --filter "status=running" -q | grep -q .; then
@@ -49,13 +54,11 @@ function show_status() {
     echo "----------------------------------"
 }
 
+# 安装 LibreTV
 function install_libretv() {
     echo "=== LibreTV 安装开始 ==="
-
-    # 交互式配置
     read -p "请输入 LibreTV 访问端口（默认 8899）: " PORT
     PORT=${PORT:-8899}
-
     read -p "请输入 LibreTV 密码（默认 111111）: " PASSWORD
     PASSWORD=${PASSWORD:-111111}
 
@@ -84,13 +87,12 @@ function install_libretv() {
         success "Docker 已安装"
     fi
 
-    # 创建安装目录
+    # 创建目录并生成 docker-compose.yml
     info "创建安装目录..."
     mkdir -p "$INSTALL_DIR"
     cd "$INSTALL_DIR"
     success "安装目录创建完成"
 
-    # 生成 docker-compose.yml
     info "生成 docker-compose.yml 文件..."
     cat > docker-compose.yml <<EOF
 version: "3.9"
@@ -106,7 +108,6 @@ services:
 EOF
     success "docker-compose.yml 生成完成"
 
-    # 启动 LibreTV
     info "启动 LibreTV 容器..."
     docker compose up -d
     success "LibreTV 容器启动完成"
@@ -115,6 +116,7 @@ EOF
     show_status
 }
 
+# 卸载 LibreTV
 function uninstall_libretv() {
     echo "=== LibreTV 卸载开始 ==="
     if [ -f "$DOCKER_COMPOSE_FILE" ]; then
@@ -132,15 +134,20 @@ function uninstall_libretv() {
 
 # -------- 脚本入口 --------
 echo "=== LibreTV 管理脚本 ==="
+
+# **进入脚本就显示当前状态**
+show_status
+
+# 提示操作
 echo "请选择操作："
 echo "1) 安装 LibreTV"
 echo "2) 卸载 LibreTV"
-echo "3) 显示运行状态"
+echo "3) 退出"
 read -p "请输入数字 [1-3]: " CHOICE
 
 case "$CHOICE" in
     1) install_libretv ;;
     2) uninstall_libretv ;;
-    3) show_status ;;
+    3) exit 0 ;;
     *) error "无效选择"; exit 1 ;;
 esac
