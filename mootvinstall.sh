@@ -20,10 +20,14 @@ install_docker() {
       yum install -y docker-compose-plugin || yum install -y docker-compose
     fi
   fi
+
   if command -v docker-compose &>/dev/null; then
     DOCKER_COMPOSE="docker-compose"
-  else
+  elif docker compose version &>/dev/null 2>&1; then
     DOCKER_COMPOSE="docker compose"
+  else
+    echo "❌ 未检测到 docker-compose 或 docker compose"
+    exit 1
   fi
 }
 
@@ -165,9 +169,6 @@ uninstall() {
 # =========================
 # 管理菜单
 # =========================
-# =========================
-# 管理菜单
-# =========================
 moontv_menu() {
   while true; do
     clear
@@ -184,8 +185,11 @@ moontv_menu() {
         CONFIG_DISPLAY+=" ❌ 配置文件不存在"
       fi
 
-      # 获取容器端口和访问地址
-      HOST_PORT=$(docker-compose -f "$COMPOSE_FILE" port moontv-core 3000 | cut -d':' -f2 2>/dev/null || echo "未检测到端口")
+      # 获取宿主机端口
+      HOST_PORT=$($DOCKER_COMPOSE -f "$COMPOSE_FILE" port moontv-core 3000 2>/dev/null | cut -d':' -f2)
+      HOST_PORT=${HOST_PORT:-3000}
+
+      # 获取公网IP
       IPV4=$(curl -4 -s ifconfig.me || hostname -I | awk '{print $1}')
       IPV6=$(curl -6 -s ifconfig.me || ip -6 addr show scope global | awk '{print $2}' | cut -d/ -f1 | head -n1)
 
@@ -281,4 +285,3 @@ else
 fi
 
 moontv_menu
-
