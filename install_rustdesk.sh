@@ -4,7 +4,8 @@ set -e
 # ======= 配置 =======
 DOCKER_SERVER_COMPOSE="/root/compose.yml"
 SERVER_STATUS_FILE="/root/.rustdesk_server_status"
-CONTAINER_NAME="hbbs"  # RustDesk Server 容器名
+CONTAINER_NAME="hbbs"
+HOST_CONFIG_DIR="/root/.config/rustdesk-server"
 
 # ======= 状态检测 =======
 check_server_status() {
@@ -15,55 +16,31 @@ check_server_status() {
     fi
 }
 
-# ======= 显示连接信息（IPv4/IPv6 + Key） =======
+# ======= 显示连接信息 =======
 show_info() {
     if [ "$SERVER_STATUS" != "未安装 ❌" ]; then
         echo "🌐 RustDesk 服务端连接信息："
 
-        # 检测 IPv4 / IPv6
         IP4=$(curl -s ipv4.icanhazip.com || true)
         IP6=$(curl -s ipv6.icanhazip.com || true)
 
-        if [ -n "$IP4" ]; then
-            echo "公网 IPv4: $IP4"
-            echo "ID Server : $IP4:21115"
-            echo "Relay     : $IP4:21116"
-            echo "API       : $IP4:21117"
-        fi
+        [ -n "$IP4" ] && echo -e "公网 IPv4: $IP4\nID Server : $IP4:21115\nRelay     : $IP4:21116\nAPI       : $IP4:21117"
+        [ -n "$IP6" ] && echo -e "公网 IPv6: [$IP6]:21115\nRelay     : [$IP6]:21116\nAPI       : [$IP6]:21117"
 
-        if [ -n "$IP6" ]; then
-            echo "公网 IPv6: $IP6"
-            echo "ID Server : [$IP6]:21115"
-            echo "Relay     : [$IP6]:21116"
-            echo "API       : [$IP6]:21117"
-        fi
-
-        # 尝试从宿主机读取 Key
-        PUB_KEY_FILE="/root/.config/rustdesk-server/id_ed25519.pub"
-        if [ -f "$PUB_KEY_FILE" ]; then
-            echo
-            echo "🔑 RustDesk Key (客户端输入用):"
-            cat "$PUB_KEY_FILE"
-        else
-            # 如果宿主机没有找到，尝试从容器里读取
-            KEY_IN_CONTAINER=$(docker exec "$CONTAINER_NAME" cat /root/.config/rustdesk-server/id_ed25519.pub 2>/dev/null || true)
-            if [ -n "$KEY_IN_CONTAINER" ]; then
-                echo
-                echo "🔑 RustDesk Key (从 Docker 容器获取，客户端输入用):"
-                echo "$KEY_IN_CONTAINER"
-            else
-                echo
-                echo "⚠️ 公钥文件不存在，请确认容器已启动一次并生成 Key"
+        # 等待 Key 文件生成
+        echo
+        echo "⏳ 检查 Key 是否生成..."
+        while true; do
+            if [ -f "$HOST_CONFIG_DIR/id_ed25519.pub" ]; then
+                echo "🔑 RustDesk Key (客户端输入用):"
+                cat "$HOST_CONFIG_DIR/id_ed25519.pub"
+                break
             fi
-        fi
+            sleep 2
+        done
 
-        if [ -z "$IP4" ] && [ -z "$IP6" ]; then
-            echo
-            echo "⚠️ 无法检测到公网 IP，请手动配置域名或检查网络。"
-        else
-            echo
-            echo "👉 在客户端设置 ID Server / Relay Server 和 Key 即可"
-        fi
+        echo
+        echo "👉 在客户端设置 ID Server / Relay Server 和 Key 即可"
     fi
 }
 
@@ -87,37 +64,33 @@ show_menu() {
 install_server() {
     echo "🐳 使用 Docker 部署 RustDesk Server Pro..."
 
-    # 检测是否已安装 docker
+    # 安装 Docker
     if ! command -v docker >/dev/null 2>&1; then
         echo "📥 未检测到 Docker，开始安装..."
-
-        # 安装依赖
         apt-get update
         apt-get install -y ca-certificates curl gnupg lsb-release
-
-        # 添加 Docker 官方 GPG key
         install -m 0755 -d /etc/apt/keyrings
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
         chmod a+r /etc/apt/keyrings/docker.gpg
-
-        # 添加 Docker 仓库
-        echo \
-          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-          https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-          > /etc/apt/sources.list.d/docker.list
-
-        # 安装 Docker CE 和 compose 插件
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
         apt-get update
         apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-
         systemctl enable --now docker
         echo "✅ Docker 安装完成"
     else
         echo "✅ 检测到 Docker 已安装，跳过安装步骤。"
     fi
 
-    # 部署 RustDesk Server Pro
+    # 创建宿主机配置目录
+    mkdir -p "$HOST_CONFIG_DIR"
+
+    # 下载 Docker Compose 文件
     wget -O "$DOCKER_SERVER_COMPOSE" https://rustdesk.com/pro.yml
+
+    # 修改 Compose 文件挂载卷
+    sed -i "/volumes:/a\      - $HOST_CONFIG_DIR:/root/.config/rustdesk-server" "$DOCKER_SERVER_COMPOSE"
+
+    # 启动容器
     docker compose -f "$DOCKER_SERVER_COMPOSE" up -d
 
     echo "Docker 已启动" > "$SERVER_STATUS_FILE"
