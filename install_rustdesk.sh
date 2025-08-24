@@ -1,109 +1,84 @@
 #!/bin/bash
-set -e
 
-COMPOSE_FILE="/root/compose.yml"
+RUSTDESK_DIR="/root"
+COMPOSE_FILE="$RUSTDESK_DIR/compose.yml"
+PRIVATE_KEY="$RUSTDESK_DIR/id_ed25519"
+PUBLIC_KEY="$RUSTDESK_DIR/id_ed25519.pub"
 
 function check_docker() {
-    if ! command -v docker >/dev/null 2>&1; then
-        echo "❌ Docker 未安装，请先安装 Docker"
+    if ! command -v docker &>/dev/null; then
+        echo "Docker 未安装，请先安装 Docker"
         exit 1
     fi
 }
 
-function generate_key_if_missing() {
-    if [ ! -f /root/id_ed25519 ]; then
-        echo "🔑 Key 不存在，正在生成..."
-        ssh-keygen -t ed25519 -f /root/id_ed25519 -N "" >/dev/null
-        echo "✅ Key 生成完成"
-    fi
-}
-
-function show_client_key() {
-    generate_key_if_missing
-    echo ""
-    echo "🔑 你的 RustDesk 客户端可用私钥（直接复制到客户端）:"
-    echo "----------------------------------------"
-    cat /root/id_ed25519
-    echo "----------------------------------------"
-}
-
-function get_public_ip() {
-    PUB_IP=$(curl -s https://icanhazip.com || curl -s https://ifconfig.me || echo "无法获取公网 IP")
-}
-
 function install_rustdesk() {
-    check_docker
-
     echo "🐳 使用 Docker 部署 RustDesk Server Pro..."
-    curl -fsSL https://rustdesk.com/pro.yml -o $COMPOSE_FILE
-
+    check_docker
+    wget -O $COMPOSE_FILE https://rustdesk.com/pro.yml
     docker compose -f $COMPOSE_FILE up -d
     echo "✅ RustDesk Server 已安装（Docker）"
 }
 
 function uninstall_rustdesk() {
-    if [ -f "$COMPOSE_FILE" ]; then
-        docker compose -f $COMPOSE_FILE down
-        rm -f $COMPOSE_FILE
-        echo "✅ RustDesk Server 已卸载"
-    else
-        echo "⚠️ RustDesk Server 未安装"
-    fi
+    docker compose -f $COMPOSE_FILE down
+    rm -f $COMPOSE_FILE
+    echo "✅ RustDesk Server 已卸载"
 }
 
 function restart_rustdesk() {
-    if [ -f "$COMPOSE_FILE" ]; then
-        docker compose -f $COMPOSE_FILE down
-        docker compose -f $COMPOSE_FILE up -d
-        echo "✅ RustDesk Server 已重启"
-    else
-        echo "⚠️ RustDesk Server 未安装"
-    fi
+    docker compose -f $COMPOSE_FILE down
+    docker compose -f $COMPOSE_FILE up -d
+    echo "✅ RustDesk Server 已重启"
 }
 
 function show_info() {
-    generate_key_if_missing
-    get_public_ip
+    # 获取公网 IP
+    IPV4=$(curl -s4 ifconfig.me || echo "无法获取公网 IP")
+    echo -e "\n🌐 RustDesk 服务端连接信息："
+    echo "公网 IPv4: $IPV4"
+    echo "ID Server : $IPV4:21115"
+    echo "Relay     : $IPV4:21116"
+    echo "API       : $IPV4:21117"
 
-    echo "🌐 RustDesk 服务端连接信息："
-    echo "公网 IPv4: $PUB_IP"
-    echo "ID Server : $PUB_IP:21115"
-    echo "Relay     : $PUB_IP:21116"
-    echo "API       : $PUB_IP:21117"
-    echo ""
-    echo "🔑 私钥路径: /root/id_ed25519"
-    echo "🔑 公钥路径: /root/id_ed25519.pub"
-    show_client_key
-}
-
-function check_status() {
-    if [ -f "$COMPOSE_FILE" ] && docker compose -f $COMPOSE_FILE ps | grep hbbs >/dev/null 2>&1; then
-        echo "Docker 已启动"
+    # 检查 key
+    if [[ -f $PRIVATE_KEY && -f $PUBLIC_KEY ]]; then
+        echo -e "\n🔑 私钥 (/root/id_ed25519) 内容:"
+        cat $PRIVATE_KEY
+        echo -e "\n🔑 公钥 (/root/id_ed25519.pub) 内容:"
+        cat $PUBLIC_KEY
     else
-        echo "未安装 ❌"
+        echo -e "\n⚠ Key 不存在，建议先生成或重启服务端自动生成 Key。"
     fi
 }
 
-# 菜单
 while true; do
     echo "============================"
     echo "     RustDesk 服务端管理     "
     echo "============================"
-    echo "服务端状态: $(check_status)"
+    
+    # 检查 Docker 容器状态
+    if docker ps --format '{{.Names}}' | grep -q hbbs; then
+        echo "服务端状态: Docker 已启动"
+    else
+        echo "服务端状态: 未安装 ❌"
+    fi
+
     echo "1) 安装 RustDesk Server Pro (Docker)"
     echo "2) 卸载 RustDesk Server"
     echo "3) 重启 RustDesk Server"
     echo "4) 查看连接信息"
     echo "5) 退出"
     read -rp "请选择操作 [1-5]: " choice
+
     case $choice in
         1) install_rustdesk ;;
         2) uninstall_rustdesk ;;
         3) restart_rustdesk ;;
         4) show_info ;;
         5) exit 0 ;;
-        *) echo "⚠️ 无效选项" ;;
+        *) echo "无效选项，请输入 1-5" ;;
     esac
-    echo ""
-    read -rp "按回车返回菜单..."
+    echo -e "\n按回车返回菜单..."
+    read
 done
