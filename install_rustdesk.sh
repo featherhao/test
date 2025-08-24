@@ -1,33 +1,20 @@
 #!/bin/bash
+set -e
 
-# ==============================
-# RustDesk Server Pro 管理脚本
-# ==============================
-
-RUSTDESK_COMPOSE="/root/compose.yml"
-ID_KEY="/root/id_ed25519"
-PUB_KEY="/root/id_ed25519.pub"
-
-check_docker() {
-    if ! command -v docker &>/dev/null; then
-        echo "❌ Docker 未安装，请先安装 Docker"
-        exit 1
-    fi
-}
+WORKDIR=/root
+COMPOSE_FILE=$WORKDIR/compose.yml
 
 show_menu() {
     clear
-    echo "============================="
-    echo "     RustDesk 服务端管理     "
-    echo "============================="
-    
-    if docker ps -q --filter name=hbbs | grep -q .; then
-        STATUS="Docker 已启动"
+    echo "============================"
+    echo "     RustDesk 服务端管理"
+    echo "============================"
+    STATUS=$(docker ps -q -f name=hbbs)
+    if [ -n "$STATUS" ]; then
+        echo "服务端状态: Docker 已启动"
     else
-        STATUS="未安装 ❌"
+        echo "服务端状态: 未安装 ❌"
     fi
-    echo "服务端状态: $STATUS"
-    
     echo "1) 安装 RustDesk Server Pro (Docker)"
     echo "2) 卸载 RustDesk Server"
     echo "3) 重启 RustDesk Server"
@@ -46,90 +33,75 @@ show_menu() {
 
 install_rustdesk() {
     echo "🐳 安装 RustDesk Server Pro..."
-
-    check_docker
-
-    # 停掉旧容器
-    docker compose -f "$RUSTDESK_COMPOSE" down 2>/dev/null || true
-    # 删除旧 Key
-    rm -f "$ID_KEY" "$PUB_KEY"
-
-    # 拉取官方 compose 文件
+    mkdir -p $WORKDIR
     echo "⬇️  下载官方 compose 文件..."
-    curl -fsSL -o "$RUSTDESK_COMPOSE" https://rustdesk.com/pro.yml
+    curl -fsSL https://rustdesk.com/pro.yml -o $COMPOSE_FILE
 
-    # 创建容器但不后台
+    echo "⚠️ 停止并清理旧容器..."
+    docker compose -f $COMPOSE_FILE down 2>/dev/null || true
+
     echo "🚀 启动容器并显示安装输出..."
-    docker compose -f "$RUSTDESK_COMPOSE" up --no-start
-    docker compose -f "$RUSTDESK_COMPOSE" start
+    docker compose -f $COMPOSE_FILE up -d
 
-    # 实时显示 hbbs 日志
     echo "📜 hbbs 初始化日志（按 Ctrl+C 停止）..."
-    docker logs -f hbbs
+    docker logs -f hbbs & PID=$!
+    # 等待 10 秒后提取 Key
+    sleep 10
+    CLIENT_KEY=$(docker logs hbbs 2>&1 | grep -oP '(?<=Key: ).*' | head -1)
+    kill $PID 2>/dev/null || true
 
+    echo
     echo "✅ 安装完成"
-
-    # 尝试获取客户端 Key
-    CLIENT_KEY=$(docker logs hbbs 2>&1 | grep -oP '(?<=Client key: ).*')
-    if [[ -n "$CLIENT_KEY" ]]; then
-        echo "🔑 客户端可用 Key: $CLIENT_KEY"
-    else
-        echo "⚠️ 客户端 Key 尚未生成，请稍等 hbbs 容器初始化完成后再查看"
-    fi
-
-    read -rp "按回车返回菜单..." 
+    echo "🌐 RustDesk 服务端连接信息："
+    IP=$(curl -s https://api.ipify.org)
+    echo "公网 IPv4: $IP"
+    echo "ID Server : $IP:21115"
+    echo "Relay     : $IP:21116"
+    echo "API       : $IP:21117"
+    echo
+    echo "🔑 客户端可用 Key: $CLIENT_KEY"
+    echo "🔑 私钥路径: $WORKDIR/id_ed25519"
+    echo "🔑 公钥路径: $WORKDIR/id_ed25519.pub"
+    read -rp "按回车返回菜单..."
     show_menu
 }
 
 uninstall_rustdesk() {
     echo "🗑️ 卸载 RustDesk Server..."
-    docker compose -f "$RUSTDESK_COMPOSE" down 2>/dev/null || true
-    rm -f "$RUSTDESK_COMPOSE" "$ID_KEY" "$PUB_KEY"
-    echo "✅ 卸载完成"
-    read -rp "按回车返回菜单..." 
+    docker compose -f $COMPOSE_FILE down 2>/dev/null || true
+    rm -f $WORKDIR/id_ed25519 $WORKDIR/id_ed25519.pub $COMPOSE_FILE
+    echo "✅ 已卸载"
+    read -rp "按回车返回菜单..."
     show_menu
 }
 
 restart_rustdesk() {
     echo "🔄 重启 RustDesk Server..."
-    docker compose -f "$RUSTDESK_COMPOSE" restart
-    echo "✅ 重启完成"
-    read -rp "按回车返回菜单..." 
+    docker compose -f $COMPOSE_FILE restart
+    echo "✅ 已重启"
+    read -rp "按回车返回菜单..."
     show_menu
 }
 
 show_info() {
-    if docker ps -q --filter name=hbbs | grep -q .; then
-        PUB_IP=$(curl -s ifconfig.me || echo "获取失败")
-        echo "🌐 RustDesk 服务端连接信息："
-        echo "公网 IPv4: $PUB_IP"
-        echo "ID Server : $PUB_IP:21115"
-        echo "Relay     : $PUB_IP:21116"
-        echo "API       : $PUB_IP:21117"
-
-        if [[ -f "$ID_KEY" && -f "$PUB_KEY" ]]; then
-            echo ""
-            echo "🔑 私钥路径: $ID_KEY"
-            echo "🔑 公钥路径: $PUB_KEY"
-
-            CLIENT_KEY=$(docker logs hbbs 2>&1 | grep -oP '(?<=Client key: ).*')
-            if [[ -n "$CLIENT_KEY" ]]; then
-                echo "🔑 客户端可用 Key: $CLIENT_KEY"
-            else
-                echo "⚠️ 客户端 Key 尚未生成，请确保 hbbs 容器已启动并完成初始化"
-            fi
-        else
-            echo "⚠️ Key 文件不存在"
-        fi
+    IP=$(curl -s https://api.ipify.org)
+    echo "🌐 RustDesk 服务端连接信息："
+    echo "公网 IPv4: $IP"
+    echo "ID Server : $IP:21115"
+    echo "Relay     : $IP:21116"
+    echo "API       : $IP:21117"
+    if [ -f $WORKDIR/id_ed25519 ]; then
+        CLIENT_KEY=$(docker logs hbbs 2>&1 | grep -oP '(?<=Key: ).*' | head -1)
+        echo
+        echo "🔑 客户端可用 Key: $CLIENT_KEY"
+        echo "🔑 私钥路径: $WORKDIR/id_ed25519"
+        echo "🔑 公钥路径: $WORKDIR/id_ed25519.pub"
     else
-        echo "❌ RustDesk 服务未启动"
+        echo "⚠️  还未生成客户端 Key，请确保 hbbs 容器已启动并完成初始化"
     fi
-
-    read -rp "按回车返回菜单..." 
+    read -rp "按回车返回菜单..."
     show_menu
 }
 
-# 主循环
-while true; do
-    show_menu
-done
+# 启动菜单
+show_menu
