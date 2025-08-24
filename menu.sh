@@ -3,7 +3,7 @@ set -e
 
 # ====== 配置路径 ======
 WORKDIR_MOONTV="/opt/moontv"
-MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install.sh"
+MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/mootvinstall.sh"
 UPDATE_MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/updatemtv.sh"
 
 WORKDIR_RUSTDESK="/opt/rustdesk"
