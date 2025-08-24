@@ -100,7 +100,7 @@ show_info() {
     echo "API       : $ip:21117"
 
     if docker ps --format '{{.Names}}' | grep -q "hbbs"; then
-        key=$(docker exec hbbs cat /root/.local/share/rustdesk/id_ed25519.pub 2>/dev/null || true)
+        key=$(docker logs hbbs 2>&1 | grep 'Key:' | tail -n1 | awk '{print $2}')
         if [ -n "$key" ]; then
             echo "🔑 客户端 Key：$key"
         else
@@ -110,6 +110,7 @@ show_info() {
         echo "❌ hbbs 未运行，无法获取 Key"
     fi
 }
+
 
 # -------------------------
 # 主菜单
