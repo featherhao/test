@@ -10,6 +10,7 @@ WORKDIR_RUSTDESK="/opt/rustdesk"
 RUSTDESK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh"
 UPDATE_RUSTDESK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/update_rustdesk.sh"
 
+
 # ====== 子菜单：MoonTV ======
 function moon_menu() {
   while true; do
@@ -73,6 +74,7 @@ function rustdesk_menu() {
     read -rp "按回车继续..."
   done
 }
+
 
 # ====== 主菜单 ======
 while true; do
