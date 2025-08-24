@@ -9,10 +9,11 @@ BUILD_PID_FILE="$RUSTDESK_DIR/build_pid.pid"
 DEFAULT_USER="rustdesk"
 
 check_status() {
-    if command -v rustdesk &>/dev/null || docker images | grep -q rustdesk-builder; then
+    STATUS="未安装 ❌"
+    if command -v rustdesk &>/dev/null; then
         STATUS="已安装 ✅"
-    else
-        STATUS="未安装 ❌"
+    elif docker images | grep -q rustdesk-builder; then
+        STATUS="已安装 Docker 镜像 ✅"
     fi
 
     if [[ -f "$BUILD_DONE_FLAG" ]]; then
@@ -37,7 +38,6 @@ check_status() {
 install_official_binary() {
     echo "📥 安装官方 RustDesk 二进制（无交互）..."
 
-    # 检查非 root 用户
     non_root_user=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1; exit}' /etc/passwd)
     if [ -z "$non_root_user" ]; then
         echo "⚠️ 没有找到非 root 用户，正在创建默认用户 $DEFAULT_USER..."
@@ -50,11 +50,10 @@ install_official_binary() {
 
     read -p "按回车确认，开始下载并安装 RustDesk..." dummy
 
-    # 获取最新 release URL
     RELEASE_URL=$(curl -s -H "User-Agent: RustDesk-Installer" \
         https://api.github.com/repos/rustdesk/rustdesk/releases/latest \
         | grep "browser_download_url" \
-        | grep ".tar.gz" \
+        | grep "linux.*x86_64.*\.tar\.gz" \
         | cut -d '"' -f 4 | head -n1)
 
     if [ -z "$RELEASE_URL" ]; then
@@ -68,7 +67,8 @@ install_official_binary() {
     mkdir -p "$BIN_DIR"
     cd "$BIN_DIR" || exit
     curl -L -O "$RELEASE_URL"
-    tar -xzf *.tar.gz
+    TAR_FILE=$(basename "$RELEASE_URL")
+    tar -xzf "$TAR_FILE"
     chmod +x rustdesk
     ln -sf "$BIN_DIR/rustdesk" /usr/local/bin/rustdesk
 
