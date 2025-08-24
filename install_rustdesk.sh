@@ -1,29 +1,58 @@
 #!/bin/bash
 set -e
 
-RUSTDESK_SCRIPT_URL="https://github.com/rustdesk/rustdesk/releases/latest/download/rustdesk-remote.sh"
+# 配置
+RUSTDESK_DOCKER_REPO="https://github.com/rustdesk/rustdesk"
+RUSTDESK_SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh"
 
-check_curl() {
+check_requirements() {
     command -v curl >/dev/null 2>&1 || { echo "⚠️ 请先安装 curl"; exit 1; }
+    command -v git >/dev/null 2>&1 || { echo "⚠️ 请先安装 git"; exit 1; }
+    command -v docker >/dev/null 2>&1 || { echo "⚠️ 请先安装 docker"; exit 1; }
 }
 
 install_rustdesk() {
-    echo "📦 正在安装 RustDesk..."
-    bash <(curl -fsSL "$RUSTDESK_SCRIPT_URL")
-    echo "✅ RustDesk 安装完成"
+    echo "📦 选择安装方式："
+    echo "1) 官方安装脚本"
+    echo "2) Docker 构建"
+    read -rp "请选择 [1-2]: " method
+    case $method in
+        1)
+            echo "📥 下载并执行官方安装脚本..."
+            bash <(curl -fsSL "$RUSTDESK_SCRIPT_URL")
+            echo "✅ RustDesk 安装完成"
+            ;;
+        2)
+            echo "🐳 使用 Docker 构建 RustDesk..."
+            git clone "$RUSTDESK_DOCKER_REPO"
+            cd rustdesk || return
+            git submodule update --init --recursive
+            docker build -t rustdesk-builder .
+            docker run --rm -it \
+                -v "$PWD":/home/user/rustdesk \
+                -v rustdesk-git-cache:/home/user/.cargo/git \
+                -v rustdesk-registry-cache:/home/user/.cargo/registry \
+                -e PUID="$(id -u)" \
+                -e PGID="$(id -g)" \
+                rustdesk-builder
+            echo "✅ RustDesk Docker 构建完成"
+            cd ..
+            ;;
+        *)
+            echo "⚠️ 无效选项"
+            ;;
+    esac
 }
 
 update_rustdesk() {
-    echo "🔄 正在更新 RustDesk..."
+    echo "🔄 更新 RustDesk（执行官方脚本即可）..."
     bash <(curl -fsSL "$RUSTDESK_SCRIPT_URL")
     echo "✅ RustDesk 更新完成"
 }
 
 uninstall_rustdesk() {
-    echo "🗑️ 正在卸载 RustDesk..."
-    if [ -f /usr/local/bin/rustdesk ] || [ -f /usr/bin/rustdesk ]; then
-        sudo rm -f /usr/local/bin/rustdesk /usr/bin/rustdesk
-    fi
+    echo "🗑️ 卸载 RustDesk..."
+    sudo rm -f /usr/local/bin/rustdesk /usr/bin/rustdesk
     echo "✅ RustDesk 已卸载"
 }
 
@@ -38,7 +67,7 @@ show_menu() {
     echo -n "请选择操作 [1-4]: "
 }
 
-check_curl
+check_requirements
 
 while true; do
     show_menu
