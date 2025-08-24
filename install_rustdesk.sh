@@ -2,6 +2,7 @@
 set -e
 
 RUSTDESK_DIR="/root/rustdesk"
+BIN_DIR="/opt/rustdesk"
 BUILD_LOG="$RUSTDESK_DIR/build.log"
 BUILD_DONE_FLAG="$RUSTDESK_DIR/.build_done"
 BUILD_PID_FILE="$RUSTDESK_DIR/build_pid.pid"
@@ -33,8 +34,8 @@ check_status() {
     fi
 }
 
-install_official() {
-    echo "📥 执行官方安装脚本..."
+install_official_binary() {
+    echo "📥 下载官方 RustDesk 二进制..."
 
     # 检查系统是否有非 root 用户
     non_root_user=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1; exit}' /etc/passwd)
@@ -46,10 +47,17 @@ install_official() {
     else
         echo "✅ 系统已有非 root 用户: $non_root_user"
     fi
-    read -p "按回车确认，继续下一步安装官方脚本..." dummy
+    read -p "按回车确认，继续下一步安装..." dummy
 
-    # 执行官方安装脚本
-    bash <(curl -fsSL https://raw.githubusercontent.com/rustdesk/rustdesk-server-pro/main/install.sh)
+    mkdir -p "$BIN_DIR"
+    cd "$BIN_DIR" || exit
+    curl -LO https://github.com/rustdesk/rustdesk/releases/latest/download/rustdesk-server-linux-amd64.tar.gz
+    tar -xzf rustdesk-server-linux-amd64.tar.gz
+    chmod +x rustdesk
+    ln -sf "$BIN_DIR/rustdesk" /usr/local/bin/rustdesk
+
+    echo "✅ 官方二进制安装完成！可使用 'rustdesk' 命令运行"
+    read -p "👉 按回车返回主菜单..." dummy
 }
 
 install_docker() {
@@ -70,12 +78,12 @@ install_docker() {
 
 install_rustdesk() {
     echo "📦 选择安装方式："
-    echo "1) 官方安装脚本（交互安装，需输入用户）"
+    echo "1) 官方二进制安装（无需 GUI 输入）"
     echo "2) Docker 构建（后台运行，支持 SSH 中断恢复）"
     read -p "请选择 [1-2]: " METHOD
 
     case $METHOD in
-        1) install_official ;;
+        1) install_official_binary ;;
         2) install_docker ;;
         *) echo "⚠️ 无效选择"; sleep 1 ;;
     esac
@@ -84,7 +92,7 @@ install_rustdesk() {
 update_rustdesk() {
     echo "🔄 更新 RustDesk..."
     if command -v rustdesk &>/dev/null; then
-        install_official
+        install_official_binary
     elif docker images | grep -q rustdesk-builder; then
         cd "$RUSTDESK_DIR" || exit
         git pull
@@ -98,13 +106,12 @@ update_rustdesk() {
 
 uninstall_rustdesk() {
     echo "🗑️ 卸载 RustDesk..."
-    apt remove -y rustdesk || true
-    rm -rf /usr/local/bin/rustdesk*
+    rm -f /usr/local/bin/rustdesk
+    rm -rf "$BIN_DIR"
 
     docker rm -f rustdesk-builder 2>/dev/null || true
     docker rmi rustdesk-builder 2>/dev/null || true
     docker volume rm rustdesk-git-cache rustdesk-registry-cache 2>/dev/null || true
-
     rm -rf "$RUSTDESK_DIR" "$BUILD_LOG" "$BUILD_DONE_FLAG" "$BUILD_PID_FILE"
 
     echo "✅ RustDesk 已卸载"
