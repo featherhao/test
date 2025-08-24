@@ -16,7 +16,6 @@ install_docker() {
     apt update && apt install -y docker-compose-plugin || apt install -y docker-compose
   fi
 
-  # 兼容 docker compose 命令
   if command -v docker-compose &>/dev/null; then
     DOCKER_COMPOSE="docker-compose"
   else
@@ -60,7 +59,7 @@ EOF
   echo "✅ 配置已写入 $ENV_FILE"
 }
 
-# === 检查可用端口 ===
+# === 检查端口并写 docker-compose.yml ===
 choose_port_and_write_compose() {
   POSSIBLE_PORTS=(8181 9090 10080 18080 28080)
   for p in "${POSSIBLE_PORTS[@]}"; do
@@ -136,10 +135,37 @@ install_main() {
   echo "👉 密码: $(grep PASSWORD $ENV_FILE | cut -d '=' -f2)"
 }
 
+# === 卸载逻辑 ===
+uninstall() {
+  echo "⚠️ 即将卸载 MoonTV，包含容器、网络和数据卷！"
+  read -rp "是否确认卸载？(y/N): " CONFIRM
+  if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+    echo "❌ 已取消卸载"
+    exit 1
+  fi
+
+  install_docker  # 保证 $DOCKER_COMPOSE 可用
+  if [ -f "$COMPOSE_FILE" ]; then
+    $DOCKER_COMPOSE -f $COMPOSE_FILE down -v
+    echo "✅ 容器和卷已删除"
+  fi
+
+  read -rp "是否删除 $WORKDIR 目录？(y/N): " DEL_DIR
+  if [[ "$DEL_DIR" =~ ^[Yy]$ ]]; then
+    rm -rf "$WORKDIR"
+    echo "✅ $WORKDIR 已删除"
+  fi
+
+  echo "✅ MoonTV 已完全卸载"
+}
+
 # === 根据参数执行 ===
 case "$1" in
   config)
     input_config
+    ;;
+  uninstall)
+    uninstall
     ;;
   *)
     install_main
