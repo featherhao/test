@@ -5,6 +5,7 @@ RUSTDESK_DIR="/root/rustdesk"
 BUILD_LOG="$RUSTDESK_DIR/build.log"
 BUILD_DONE_FLAG="$RUSTDESK_DIR/.build_done"
 BUILD_PID_FILE="$RUSTDESK_DIR/build_pid.pid"
+DEFAULT_USER="rustdesk"
 
 check_status() {
     if command -v rustdesk &>/dev/null || docker images | grep -q rustdesk-builder; then
@@ -33,20 +34,23 @@ check_status() {
 }
 
 install_official() {
-    echo "📥 执行官方安装脚本安装 RustDesk..."
+    echo "📥 执行官方安装脚本（无人值守）..."
 
     # 检查非 root 用户
     non_root_user=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1; exit}' /etc/passwd)
     if [ -z "$non_root_user" ]; then
-        echo "⚠️ 没有找到非 root 用户，正在创建 rustdesk 用户..."
-        adduser --disabled-password --gecos "" rustdesk
-        non_root_user="rustdesk"
+        echo "⚠️ 没有找到非 root 用户，正在创建 $DEFAULT_USER 用户..."
+        adduser --disabled-password --gecos "" "$DEFAULT_USER"
+        non_root_user="$DEFAULT_USER"
     fi
     echo "✅ 使用用户: $non_root_user"
 
-    # 自动填用户名执行官方脚本
-    curl -fsSL https://raw.githubusercontent.com/rustdesk/rustdesk-server-pro/main/install.sh | \
-    sed "s/read username/username=$non_root_user/" | bash
+    # 设置环境变量，让官方脚本无人值守
+    export RUSTDESK_USER="$non_root_user"
+    export DEBIAN_FRONTEND=noninteractive
+
+    # 执行官方安装脚本
+    curl -fsSL https://raw.githubusercontent.com/rustdesk/rustdesk-server-pro/main/install.sh | bash
 
     echo "✅ 官方安装脚本执行完成！"
     read -p "👉 按回车返回主菜单..." dummy
@@ -70,7 +74,7 @@ install_docker() {
 
 install_rustdesk() {
     echo "📦 选择安装方式："
-    echo "1) 官方安装脚本"
+    echo "1) 官方安装脚本（无人值守）"
     echo "2) Docker 构建（后台运行，支持 SSH 中断恢复）"
     read -p "请选择 [1-2]: " METHOD
 
