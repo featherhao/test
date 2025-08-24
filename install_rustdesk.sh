@@ -37,7 +37,7 @@ check_status() {
 install_official_binary() {
     echo "📥 下载官方 RustDesk 二进制..."
 
-    # 检查系统是否有非 root 用户
+    # 检查非 root 用户
     non_root_user=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1; exit}' /etc/passwd)
     if [ -z "$non_root_user" ]; then
         echo "⚠️ 没有找到非 root 用户，正在创建默认用户 $DEFAULT_USER..."
@@ -49,9 +49,19 @@ install_official_binary() {
     fi
     read -p "按回车确认，继续下一步安装..." dummy
 
+    # 获取最新 release URL
+    RELEASE_URL=$(curl -s https://api.github.com/repos/rustdesk/rustdesk/releases/latest \
+        | grep "rustdesk-server-linux-amd64.tar.gz" \
+        | cut -d '"' -f 4)
+    if [ -z "$RELEASE_URL" ]; then
+        echo "❌ 获取最新 release URL 失败"
+        return
+    fi
+    echo "⬇️ 下载最新版本: $RELEASE_URL"
+
     mkdir -p "$BIN_DIR"
     cd "$BIN_DIR" || exit
-    curl -LO https://github.com/rustdesk/rustdesk/releases/latest/download/rustdesk-server-linux-amd64.tar.gz
+    curl -L -O "$RELEASE_URL"
     tar -xzf rustdesk-server-linux-amd64.tar.gz
     chmod +x rustdesk
     ln -sf "$BIN_DIR/rustdesk" /usr/local/bin/rustdesk
