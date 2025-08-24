@@ -41,15 +41,15 @@ install_official() {
     if [ -z "$non_root_user" ]; then
         echo "⚠️ 没有找到非 root 用户，正在创建默认用户 $DEFAULT_USER..."
         adduser --disabled-password --gecos "" "$DEFAULT_USER"
+        non_root_user="$DEFAULT_USER"
+        echo "✅ 已创建用户: $non_root_user"
     else
         echo "✅ 系统已有非 root 用户: $non_root_user"
     fi
+    read -p "按回车确认，继续下一步安装官方脚本..." dummy
 
-    # 执行官方安装脚本，后续在界面中自行输入用户名
+    # 执行官方安装脚本
     bash <(curl -fsSL https://raw.githubusercontent.com/rustdesk/rustdesk-server-pro/main/install.sh)
-
-    echo "✅ 官方安装脚本执行完成！"
-    read -p "👉 按回车返回主菜单..." dummy
 }
 
 install_docker() {
