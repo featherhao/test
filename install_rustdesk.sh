@@ -2,9 +2,9 @@
 set -e
 
 RUSTDESK_DIR="/root/rustdesk"
-BUILD_LOG="/root/rustdesk/build.log"
-BUILD_DONE_FLAG="/root/rustdesk/build_done.flag"
-BUILD_PID_FILE="/root/rustdesk/build_pid.pid"
+BUILD_LOG="$RUSTDESK_DIR/build.log"
+BUILD_DONE_FLAG="$RUSTDESK_DIR/.build_done"
+BUILD_PID_FILE="$RUSTDESK_DIR/build_pid.pid"
 
 check_status() {
     if command -v rustdesk &>/dev/null || docker images | grep -q rustdesk-builder; then
@@ -32,6 +32,42 @@ check_status() {
     fi
 }
 
+install_official() {
+    echo "📥 执行官方安装脚本安装 RustDesk..."
+
+    # 检查非 root 用户
+    non_root_user=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1; exit}' /etc/passwd)
+    if [ -z "$non_root_user" ]; then
+        echo "⚠️ 没有找到非 root 用户，正在创建 rustdesk 用户..."
+        adduser --disabled-password --gecos "" rustdesk
+        non_root_user="rustdesk"
+    fi
+    echo "✅ 使用用户: $non_root_user"
+
+    # 自动填用户名执行官方脚本
+    curl -fsSL https://raw.githubusercontent.com/rustdesk/rustdesk-server-pro/main/install.sh | \
+    sed "s/read username/username=$non_root_user/" | bash
+
+    echo "✅ 官方安装脚本执行完成！"
+    read -p "👉 按回车返回主菜单..." dummy
+}
+
+install_docker() {
+    echo "🐳 使用 Docker 构建 RustDesk..."
+    mkdir -p "$RUSTDESK_DIR"
+    cd "$RUSTDESK_DIR" || exit
+    if [[ ! -d "$RUSTDESK_DIR/.git" ]]; then
+        git clone https://github.com/rustdesk/rustdesk.git "$RUSTDESK_DIR"
+    else
+        git -C "$RUSTDESK_DIR" pull
+    fi
+    nohup docker build -t rustdesk-builder "$RUSTDESK_DIR" >"$BUILD_LOG" 2>&1 &
+    echo $! > "$BUILD_PID_FILE"
+    echo "📌 Docker 构建已在后台运行，日志保存在 $BUILD_LOG"
+    echo "⏳ 可用 'tail -f $BUILD_LOG' 查看进度"
+    read -p "👉 按回车返回主菜单..." dummy
+}
+
 install_rustdesk() {
     echo "📦 选择安装方式："
     echo "1) 官方安装脚本"
@@ -39,34 +75,16 @@ install_rustdesk() {
     read -p "请选择 [1-2]: " METHOD
 
     case $METHOD in
-        1)
-            echo "📥 执行官方安装脚本安装 RustDesk..."
-            curl -fsSL https://raw.githubusercontent.com/rustdesk/rustdesk-server-pro/main/install.sh | bash
-            echo "✅ 官方安装脚本执行完成！"
-            read -p "👉 按回车返回主菜单..." dummy
-            ;;
-        2)
-            echo "🐳 使用 Docker 构建 RustDesk..."
-            mkdir -p "$RUSTDESK_DIR"
-            cd "$RUSTDESK_DIR" || exit
-            if [[ ! -d "$RUSTDESK_DIR/.git" ]]; then
-                git clone https://github.com/rustdesk/rustdesk.git "$RUSTDESK_DIR"
-            else
-                git -C "$RUSTDESK_DIR" pull
-            fi
-            nohup docker build -t rustdesk-builder "$RUSTDESK_DIR" >"$BUILD_LOG" 2>&1 &
-            echo $! > "$BUILD_PID_FILE"
-            echo "📌 Docker 构建已在后台运行，日志保存在 $BUILD_LOG"
-            echo "⏳ 可用 'tail -f $BUILD_LOG' 查看进度"
-            read -p "👉 按回车返回主菜单..." dummy
-            ;;
+        1) install_official ;;
+        2) install_docker ;;
+        *) echo "⚠️ 无效选择"; sleep 1 ;;
     esac
 }
 
 update_rustdesk() {
     echo "🔄 更新 RustDesk..."
     if command -v rustdesk &>/dev/null; then
-        curl -fsSL https://raw.githubusercontent.com/rustdesk/rustdesk-server-pro/main/install.sh | bash
+        install_official
     elif docker images | grep -q rustdesk-builder; then
         cd "$RUSTDESK_DIR" || exit
         git pull
