@@ -10,7 +10,7 @@ mkdir -p "$DATA_DIR"
 
 # 检测是否安装
 check_installed() {
-    if docker ps -a --format '{{.Names}}' | grep -q rust_desk_hbbs; then
+    if docker ps -a --format '{{.Names}}' | grep -q hbbs; then
         STATUS="Docker 已启动 ✅"
     else
         STATUS="未安装 ❌"
@@ -42,7 +42,7 @@ install_rustdesk() {
     echo "🚀 启动 RustDesk OSS 容器..."
     docker-compose -f "$COMPOSE_FILE" up -d
     echo "⏳ 等待 hbbs 生成客户端 Key..."
-    sleep 5
+    sleep 8
     echo "✅ 安装完成"
 }
 
@@ -51,7 +51,7 @@ uninstall_rustdesk() {
     echo "⚠️ 停止并删除容器..."
     docker-compose -f "$COMPOSE_FILE" down
     echo "⚠️ 删除数据卷..."
-    docker volume rm rust_desk_hbbs_data rust_desk_hbbr_data 2>/dev/null || true
+    docker volume rm rustdesk_hbbs_data rustdesk_hbbr_data 2>/dev/null || true
     rm -rf "$DATA_DIR"
     echo "✅ RustDesk 已卸载"
 }
@@ -69,7 +69,12 @@ show_info() {
     echo "ID Server : $ip:21115"
     echo "Relay     : $ip:21116"
     echo "API       : $ip:21117"
-    key=$(docker exec rust_desk_hbbs cat /root/.config/rustdesk/id || echo "稍后生成")
+    
+    if docker ps --format '{{.Names}}' | grep -q hbbs; then
+        key=$(docker exec hbbs cat /root/.config/rustdesk/id 2>/dev/null || echo "稍后生成")
+    else
+        key="未运行"
+    fi
     echo "🔑 客户端 Key：$key"
 }
 
