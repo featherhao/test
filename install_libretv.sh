@@ -1,16 +1,19 @@
 #!/bin/bash
 set -e
 
-# -------- 配置 --------
-PASSWORD="103997250"       # 修改为你想要的密码
-PORT="8899"             # 修改为你想用的端口
-COMPOSE_FILE="/opt/libretv/docker-compose.yml"
+# -------- 交互式配置 --------
+read -p "请输入 LibreTV 访问端口（默认 8899）: " PORT
+PORT=${PORT:-8899}
 
-# -------- 检查 Docker 是否安装 --------
+read -p "请输入 LibreTV 密码（默认 111111）: " PASSWORD
+PASSWORD=${PASSWORD:-111111}
+
+INSTALL_DIR="/opt/libretv"
+
+# -------- 安装 Docker --------
 if ! command -v docker &>/dev/null; then
     echo "Docker 未安装，开始安装..."
     if [ -f /etc/debian_version ]; then
-        # Debian / Ubuntu
         apt update
         apt install -y apt-transport-https ca-certificates curl gnupg lsb-release
         curl -fsSL https://download.docker.com/linux/$(. /etc/os-release; echo "$ID")/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
@@ -18,7 +21,6 @@ if ! command -v docker &>/dev/null; then
         apt update
         apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
     elif [ -f /etc/redhat-release ]; then
-        # CentOS / RHEL
         yum install -y yum-utils
         yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
         yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
@@ -30,10 +32,12 @@ if ! command -v docker &>/dev/null; then
     systemctl start docker
 fi
 
-# -------- 创建 Docker Compose 文件 --------
-mkdir -p "$(dirname "$COMPOSE_FILE")"
+# -------- 创建安装目录 --------
+mkdir -p "$INSTALL_DIR"
+cd "$INSTALL_DIR"
 
-cat > "$COMPOSE_FILE" <<EOF
+# -------- 生成 docker-compose.yml --------
+cat > docker-compose.yml <<EOF
 version: "3.9"
 services:
   libretv:
@@ -41,4 +45,18 @@ services:
     container_name: libretv
     ports:
       - "${PORT}:8080"
-    environment
+    environment:
+      - PASSWORD=${PASSWORD}
+    restart: unless-stopped
+EOF
+
+# -------- 启动 LibreTV --------
+docker compose up -d
+
+# -------- 输出信息 --------
+IP=$(curl -s ifconfig.me || echo "localhost")
+echo "----------------------------------"
+echo "LibreTV 已启动！"
+echo "访问地址: http://${IP}:${PORT}"
+echo "访问密码: ${PASSWORD}"
+echo "----------------------------------"
