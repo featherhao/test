@@ -57,8 +57,10 @@ install_official_binary() {
         | cut -d '"' -f 4)
     if [ -z "$RELEASE_URL" ]; then
         echo "❌ 获取最新 release URL 失败"
+        read -p "按回车返回主菜单..." dummy
         return
     fi
+
     echo "⬇️ 下载最新版本: $RELEASE_URL"
 
     mkdir -p "$BIN_DIR"
@@ -68,7 +70,7 @@ install_official_binary() {
     chmod +x rustdesk
     ln -sf "$BIN_DIR/rustdesk" /usr/local/bin/rustdesk
 
-    # 安装完成提示
+    # 安装完成后显示信息
     clear
     echo "============================"
     echo "      RustDesk 安装完成      "
