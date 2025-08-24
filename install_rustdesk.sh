@@ -50,12 +50,12 @@ install_official_binary() {
 
     read -p "按回车确认，开始下载并安装 RustDesk..." dummy
 
-    # 使用 GitHub API 获取最新 release URL，带 User-Agent
+    # 获取最新 release URL
     RELEASE_URL=$(curl -s -H "User-Agent: RustDesk-Installer" \
         https://api.github.com/repos/rustdesk/rustdesk/releases/latest \
         | grep "browser_download_url" \
-        | grep "linux-amd64.*\.tar\.gz" \
-        | cut -d '"' -f 4)
+        | grep ".tar.gz" \
+        | cut -d '"' -f 4 | head -n1)
 
     if [ -z "$RELEASE_URL" ]; then
         echo "❌ 获取最新 release URL 失败，请检查网络或 GitHub API"
