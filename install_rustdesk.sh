@@ -66,7 +66,16 @@ install_official_binary() {
     chmod +x rustdesk
     ln -sf "$BIN_DIR/rustdesk" /usr/local/bin/rustdesk
 
-    echo "✅ 官方二进制安装完成！可使用 'rustdesk' 命令运行"
+    # 安装完成提示，不自动返回菜单
+    clear
+    echo "============================"
+    echo "      RustDesk 安装完成      "
+    echo "============================"
+    echo "✅ 官方二进制已安装完成！"
+    echo "📌 可执行文件: $BIN_DIR/rustdesk"
+    echo "📌 符号链接: /usr/local/bin/rustdesk"
+    echo "🚀 运行命令: rustdesk"
+    echo
     read -p "👉 按回车返回主菜单..." dummy
 }
 
@@ -116,56 +125,4 @@ update_rustdesk() {
 
 uninstall_rustdesk() {
     echo "🗑️ 卸载 RustDesk..."
-    rm -f /usr/local/bin/rustdesk
-    rm -rf "$BIN_DIR"
-
-    docker rm -f rustdesk-builder 2>/dev/null || true
-    docker rmi rustdesk-builder 2>/dev/null || true
-    docker volume rm rustdesk-git-cache rustdesk-registry-cache 2>/dev/null || true
-    rm -rf "$RUSTDESK_DIR" "$BUILD_LOG" "$BUILD_DONE_FLAG" "$BUILD_PID_FILE"
-
-    echo "✅ RustDesk 已卸载"
-    read -p "👉 按回车返回主菜单..." dummy
-}
-
-cancel_build() {
-    if [[ -f "$BUILD_PID_FILE" ]]; then
-        PID=$(cat "$BUILD_PID_FILE")
-        if ps -p "$PID" &>/dev/null; then
-            kill -9 "$PID"
-            echo "🛑 已取消 Docker 构建 (PID: $PID)"
-        fi
-        rm -f "$BUILD_PID_FILE"
-    else
-        echo "⚠️ 当前没有正在运行的 Docker 构建"
-    fi
-    read -p "👉 按回车返回主菜单..." dummy
-}
-
-show_menu() {
-    clear
-    echo "============================"
-    echo "      RustDesk 管理脚本     "
-    echo "============================"
-    check_status
-    echo "当前状态: $STATUS"
-    echo "1) 安装 RustDesk"
-    echo "2) 更新 RustDesk"
-    echo "3) 卸载 RustDesk"
-    echo "4) 取消正在构建 Docker"
-    echo "5) 退出"
-    read -p "请选择操作 [1-5]: " choice
-
-    case $choice in
-        1) install_rustdesk ;;
-        2) update_rustdesk ;;
-        3) uninstall_rustdesk ;;
-        4) cancel_build ;;
-        5) exit 0 ;;
-        *) echo "⚠️ 无效选择"; sleep 1 ;;
-    esac
-}
-
-while true; do
-    show_menu
-done
+    rm -f /usr/loc
