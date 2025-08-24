@@ -35,7 +35,7 @@ check_status() {
 }
 
 install_official_binary() {
-    echo "📥 下载官方 RustDesk 二进制..."
+    echo "📥 安装官方 RustDesk 二进制（无交互）..."
 
     # 检查非 root 用户
     non_root_user=$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1; exit}' /etc/passwd)
@@ -48,9 +48,10 @@ install_official_binary() {
         echo "✅ 系统已有非 root 用户: $non_root_user"
     fi
 
-    # 用户确认后再开始安装
+    # 用户确认
     read -p "按回车确认，开始下载并安装 RustDesk..." dummy
 
+    # 下载最新 release 二进制
     RELEASE_URL=$(curl -s https://api.github.com/repos/rustdesk/rustdesk/releases/latest \
         | grep "rustdesk-server-linux-amd64.tar.gz" \
         | cut -d '"' -f 4)
