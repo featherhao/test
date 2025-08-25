@@ -136,8 +136,17 @@ while true; do
   [[ -d /opt/moontv ]] && moon_status="✅ 已安装" || moon_status="❌ 未安装"
   [[ -d /opt/rustdesk ]] && rustdesk_status="✅ 已安装" || rustdesk_status="❌ 未安装"
   [[ -d /opt/libretv ]] && libretv_status="✅ 已安装" || libretv_status="❌ 未安装"
-  command -v sing-box &>/dev/null && singbox_status="✅ 已安装" || singbox_status="❌ 未安装"
-  command -v agsb &>/dev/null && argosb_status="✅ 已安装" || argosb_status="❌ 未安装"
+  if command -v sing-box &>/dev/null || command -v sb &>/dev/null; then
+    singbox_status="✅ 已安装"
+  else
+    singbox_status="❌ 未安装"
+  fi
+  if command -v agsb &>/dev/null || [[ -f /etc/opt/ArgoSB/config.json ]]; then
+    argosb_status="✅ 已安装"
+  else
+    argosb_status="❌ 未安装"
+  fi
+  kejilion_status="⚡ 远程调用"
 
   clear
   echo "=============================="
@@ -148,7 +157,7 @@ while true; do
   echo "3) LibreTV 安装  $libretv_status"
   echo "4) 甬哥Sing-box-yg管理  $singbox_status"
   echo "5) 勇哥ArgoSB脚本  $argosb_status"
-  echo "6) Kejilion.sh 一键脚本工具箱"
+  echo "6) Kejilion.sh 一键脚本工具箱  $kejilion_status"
   echo "9) 设置快捷键 Q / q"
   echo "U) 更新菜单脚本 menu.sh"
   echo "8) 其他服务 (预留)"
