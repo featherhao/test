@@ -38,23 +38,8 @@ rustdesk_menu() { bash <(curl -fsSL "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
 libretv_menu() { bash <(curl -fsSL "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
 singbox_menu() { bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh); }
 
-# ================== 勇哥ArgoSB菜单（增量协议） ==================
+# ================== 勇哥ArgoSB菜单（多协议一次安装） ==================
 argosb_menu() {
-  get_existing_protos() {
-    local installed=""
-    if command -v agsb &>/dev/null; then
-      [[ $(agsb list | grep -q "Vless-Reality-Vision") ]] && installed="$installed vlpt=\"\""
-      [[ $(agsb list | grep -q "Vless-Xhttp-Reality") ]] && installed="$installed xhpt=\"\""
-      [[ $(agsb list | grep -q "Shadowsocks-2022") ]] && installed="$installed sspt=\"\""
-      [[ $(agsb list | grep -q "AnyTLS") ]] && installed="$installed anpt=\"\""
-      [[ $(agsb list | grep -q "Any-Reality") ]] && installed="$installed arpt=\"\""
-      [[ $(agsb list | grep -q "Vmess-ws") ]] && installed="$installed vmpt=\"\""
-      [[ $(agsb list | grep -q "Hysteria2") ]] && installed="$installed hypt=\"\""
-      [[ $(agsb list | grep -q "Tuic") ]] && installed="$installed tupt=\"\""
-    fi
-    echo "$installed"
-  }
-
   run_argosb() {
     local proto_vars="$1"
     eval "$proto_vars bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh)"
@@ -63,9 +48,9 @@ argosb_menu() {
   while true; do
     clear
     echo "=============================="
-    echo "  🚀 勇哥ArgoSB增量协议管理"
+    echo "  🚀 勇哥ArgoSB多协议安装管理"
     echo "=============================="
-    echo "1) 安装/运行协议节点"
+    echo "1) 安装/运行协议节点 (可多选)"
     echo "2) 查看节点信息 (agsb list)"
     echo "3) 更换代理协议变量组 (agsb rep)"
     echo "4) 更新脚本 (建议卸载重装)"
@@ -78,44 +63,45 @@ argosb_menu() {
 
     case "$main_choice" in
       1)
-        while true; do
-          clear
-          echo "请选择协议（增量添加）："
-          echo "1) Vless-Reality-Vision (vlpt)"
-          echo "2) Vless-Xhttp-Reality (xhpt)"
-          echo "3) Shadowsocks-2022 (sspt)"
-          echo "4) AnyTLS (anpt)"
-          echo "5) Any-Reality (arpt)"
-          echo "6) Vmess-ws (vmpt)"
-          echo "7) Hysteria2 (hypt)"
-          echo "8) Tuic (tupt)"
-          echo "9) Argo临时隧道CDN优选节点 (vmpt+argo=y)"
-          echo "0) 返回上级菜单"
-          read -rp "请输入选项: " proto_choice
+        clear
+        echo "请选择要安装的协议（可多选，用空格分隔，例如 1 3 5）:"
+        echo "1) Vless-Reality-Vision (vlpt)"
+        echo "2) Vless-Xhttp-Reality (xhpt)"
+        echo "3) Shadowsocks-2022 (sspt)"
+        echo "4) AnyTLS (anpt)"
+        echo "5) Any-Reality (arpt)"
+        echo "6) Vmess-ws (vmpt)"
+        echo "7) Hysteria2 (hypt)"
+        echo "8) Tuic (tupt)"
+        echo "9) Argo临时隧道CDN优选节点 (vmpt+argo=y)"
+        read -rp "输入序号: " choices
 
-          EXISTING_PROTOS=$(get_existing_protos)
-
-          case "$proto_choice" in
-            1) NEW_PROTO='vlpt=""' ;;
-            2) NEW_PROTO='xhpt=""' ;;
-            3) NEW_PROTO='sspt=""' ;;
-            4) NEW_PROTO='anpt=""' ;;
-            5) NEW_PROTO='arpt=""' ;;
-            6) NEW_PROTO='vmpt=""' ;;
-            7) NEW_PROTO='hypt=""' ;;
-            8) NEW_PROTO='tupt=""' ;;
-            9) NEW_PROTO='vmpt="" argo="y"' ;;
-            0) break ;;
-            *) echo "❌ 无效输入"; sleep 1; continue ;;
+        proto_vars=""
+        for c in $choices; do
+          case $c in
+            1) proto_vars="$proto_vars vlpt=\"\"" ;;
+            2) proto_vars="$proto_vars xhpt=\"\"" ;;
+            3) proto_vars="$proto_vars sspt=\"\"" ;;
+            4) proto_vars="$proto_vars anpt=\"\"" ;;
+            5) proto_vars="$proto_vars arpt=\"\"" ;;
+            6) proto_vars="$proto_vars vmpt=\"\"" ;;
+            7) proto_vars="$proto_vars hypt=\"\"" ;;
+            8) proto_vars="$proto_vars tupt=\"\"" ;;
+            9) proto_vars="$proto_vars vmpt=\"\" argo=\"y\"" ;;
+            *) echo "❌ 序号 $c 无效，已忽略" ;;
           esac
-
-          ALL_PROTOS="$EXISTING_PROTOS $NEW_PROTO"
-          echo "🔹 正在增量添加协议..."
-          run_argosb "$ALL_PROTOS"
-
-          read -rp "按回车返回协议选择菜单..." dummy
         done
+
+        if [[ -n "$proto_vars" ]]; then
+          echo "🔹 正在安装所选协议..."
+          run_argosb "$proto_vars"
+        else
+          echo "⚠️ 未选择有效协议"
+        fi
+
+        read -rp "按回车返回协议菜单..." dummy
         ;;
+
       2)
         agsb list || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list
         read -rp "按回车返回菜单..." dummy
@@ -200,7 +186,7 @@ while true; do
   echo "2) RustDesk 管理"
   echo "3) LibreTV 安装"
   echo "4) 甬哥Sing-box-yg管理"
-  echo "5) 勇哥ArgoSB一键无交互小钢炮"
+  echo "5) 勇哥ArgoSB多协议安装"
   echo "6) Kejilion.sh 一键脚本工具箱"
   echo "9) 设置快捷键 Q / q"
   echo "U) 更新菜单脚本 menu.sh"
