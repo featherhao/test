@@ -124,7 +124,14 @@ EOF
     TASKS["$TASK_NUM-MODE"]="$MODE"
     [ "$MODE" = "1" ] && TASKS["$TASK_NUM-TOKEN"]="$TOKEN"
 
-    echo "✅ 任务 $TASK_NUM 添加完成, 脚本: $SCRIPT"
+    # 自动执行一次同步
+    echo "⏳ 正在执行任务一次同步..."
+    if bash "$SCRIPT" >> "${LOG_DIR}/zjsync-${NAME}.log" 2>&1; then
+        echo "✅ 文件已生成: ${DEST}/${NAME}"
+    else
+        echo "❌ 同步失败，请检查日志: ${LOG_DIR}/zjsync-${NAME}.log"
+    fi
+
     read -n1 -rsp "按任意键返回主菜单..."
     ;;
 2)
