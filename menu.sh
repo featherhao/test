@@ -47,7 +47,7 @@ argosb_menu() {
     echo "=============================="
     echo "  🚀 勇哥ArgoSB协议管理 $argosb_status"
     echo "=============================="
-    echo "1) 增量添加协议节点 "
+    echo "1) 增量添加协议节点"
     echo "2) 查看节点信息 (agsb list)"
     echo "3) 手动更换协议变量组 (自定义变量 → agsb rep)"
     echo "4) 更新脚本 (建议卸载重装)"
@@ -103,16 +103,61 @@ argosb_menu() {
         fi
         read -rp "按回车返回菜单..." dummy
         ;;
-      2) agsb list || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list ;;
-      3) echo "👉 请输入自定义变量，例如：vlpt=\"\" sspt=\"\"" ; read -rp "变量: " custom_vars ; [[ -n "$custom_vars" ]] && eval "$custom_vars bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep" ;;
-      4) agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep ;;
-      5) agsb res || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) res ;;
-      6) agsb del || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) del ;;
-      7) echo "1) 显示 IPv4 节点配置" ; echo "2) 显示 IPv6 节点配置" ; read -rp "请输入选项: " ip_choice ; [[ "$ip_choice" == "1" ]] && ippz=4 agsb list ; [[ "$ip_choice" == "2" ]] && ippz=6 agsb list ;;
+
+      2)
+        echo "🔹 正在显示节点信息..."
+        if command -v agsb &>/dev/null; then
+          eval "agsb list"
+        else
+          eval "bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list"
+        fi
+        read -rp "按回车返回菜单..." dummy
+        ;;
+
+      3)
+        echo "👉 请输入自定义变量，例如：vlpt=\"\" sspt=\"\""
+        read -rp "变量: " custom_vars
+        if [[ -n "$custom_vars" ]]; then
+          eval "$custom_vars bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep"
+        else
+          echo "⚠️ 没有输入变量"
+        fi
+        read -rp "按回车返回菜单..." dummy
+        ;;
+
+      4)
+        eval "agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep"
+        read -rp "按回车返回菜单..." dummy
+        ;;
+
+      5)
+        eval "agsb res || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) res"
+        read -rp "按回车返回菜单..." dummy
+        ;;
+
+      6)
+        eval "agsb del || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) del"
+        read -rp "按回车返回菜单..." dummy
+        ;;
+
+      7)
+        echo "1) 显示 IPv4 节点配置"
+        echo "2) 显示 IPv6 节点配置"
+        read -rp "请输入选项: " ip_choice
+        [[ "$ip_choice" == "1" ]] && eval "ippz=4 agsb list"
+        [[ "$ip_choice" == "2" ]] && eval "ippz=6 agsb list"
+        read -rp "按回车返回菜单..." dummy
+        ;;
+
       0) break ;;
+      *)
+        echo "❌ 无效输入"
+        sleep 1
+        ;;
     esac
   done
 }
+
 
 
 # ================== 更新菜单脚本 ==================
