@@ -43,11 +43,11 @@ argosb_menu() {
   while true; do
     clear
     echo "=============================="
-    echo "  🚀 勇哥ArgoSB增量添加协议"
+    echo "  🚀 勇哥ArgoSB协议管理"
     echo "=============================="
-    echo "1) 增量添加协议节点"
+    echo "1) 增量添加协议节点 (自动带上已有协议变量)"
     echo "2) 查看节点信息 (agsb list)"
-    echo "3) 更换代理协议变量组 (agsb rep)"
+    echo "3) 手动更换协议变量组 (自定义变量 → agsb rep)"
     echo "4) 更新脚本 (建议卸载重装)"
     echo "5) 重启脚本 (agsb res)"
     echo "6) 卸载脚本 (agsb del)"
@@ -66,7 +66,6 @@ argosb_menu() {
           fi
         done
 
-        # 用户选择新增协议
         echo "请选择要新增的协议（可多选，用空格分隔，例如 1 3 5）:"
         echo "1) Vless-Reality-Vision (vlpt)"
         echo "2) Vless-Xhttp-Reality (xhpt)"
@@ -94,7 +93,6 @@ argosb_menu() {
           esac
         done
 
-        # 合并已有变量 + 新增变量，并执行 rep
         ALL_VARS="$EXISTING_VARS $NEW_VARS"
         if [[ -n "$ALL_VARS" ]]; then
           echo "🔹 正在增量更新节点..."
@@ -109,29 +107,28 @@ argosb_menu() {
         agsb list || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list
         read -rp "按回车返回菜单..." dummy
         ;;
+
       3)
-        agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep
+        echo "👉 请输入自定义变量，例如：vlpt=\"\" sspt=\"\""
+        read -rp "变量: " custom_vars
+        if [[ -n "$custom_vars" ]]; then
+          eval "$custom_vars bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep"
+        else
+          echo "⚠️ 没有输入变量"
+        fi
         read -rp "按回车返回菜单..." dummy
         ;;
-      4)
-        agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep
-        read -rp "按回车返回菜单..." dummy
-        ;;
-      5)
-        agsb res || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) res
-        read -rp "按回车返回菜单..." dummy
-        ;;
-      6)
-        agsb del || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) del
-        read -rp "按回车返回菜单..." dummy
-        ;;
+
+      4) agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep ;;
+      5) agsb res || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) res ;;
+      6) agsb del || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) del ;;
       7)
         echo "1) 显示 IPv4 节点配置"
         echo "2) 显示 IPv6 节点配置"
         read -rp "请输入选项: " ip_choice
         case "$ip_choice" in
-          1) ippz=4 bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list ;;
-          2) ippz=6 bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list ;;
+          1) ippz=4 agsb list ;;
+          2) ippz=6 agsb list ;;
         esac
         read -rp "按回车返回菜单..." dummy
         ;;
