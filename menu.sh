@@ -33,6 +33,11 @@ libretv_menu() {
   bash <(curl -fsSL "${LIBRETV_SCRIPT}?t=$(date +%s)")
 }
 
+# ====== 调用 甬哥Sing-box-yg 脚本 ======
+singbox_menu() {
+  bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh)
+}
+
 # ====== 设置快捷键 Q / q ======
 set_q_shortcut() {
   SHELL_RC="$HOME/.bashrc"
@@ -68,7 +73,8 @@ while true; do
   echo "1) MoonTV 管理"
   echo "2) RustDesk 管理"
   echo "3) LibreTV 安装"
-  echo "4) 其他服务 (预留)"
+  echo "4) 甬哥Sing-box-yg管理"
+  echo "5) 其他服务 (预留)"
   echo "9) 设置快捷键 Q / q"
   echo "U) 更新菜单脚本 menu.sh"
   echo "0) 退出"
@@ -79,7 +85,8 @@ while true; do
     1) moon_menu ;;
     2) rustdesk_menu ;;
     3) libretv_menu ;;
-    4) echo "⚠️ 其他服务还未实现"; sleep 1 ;;
+    4) singbox_menu ;;
+    5) echo "⚠️ 其他服务还未实现"; sleep 1 ;;
     9) set_q_shortcut ;;
     U) update_menu_script ;;
     0) exit 0 ;;
