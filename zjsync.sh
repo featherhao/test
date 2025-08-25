@@ -73,11 +73,21 @@ case "$CHOICE" in
         read -p "请输入 GitHub Token: " TOKEN
 
         # ===== Token 验证 =====
-        echo "🔍 正在验证 Token 是否有效..."
-        API_URL="https://api.github.com/repos/${URL#*github.com/}"
-        API_URL="${API_URL/blob\//contents/}"
-        API_URL="${API_URL%%\?*}"  # 去掉 ?ref=xxx
-        STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github.v3.raw" "$API_URL")
+        if [[ "$URL" =~ github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+) ]]; then
+            USER="${BASH_REMATCH[1]}"
+            REPO="${BASH_REMATCH[2]}"
+            BRANCH="${BASH_REMATCH[3]}"
+            FILE_PATH="${BASH_REMATCH[4]}"
+        else
+            echo "❌ URL 格式错误"
+            continue
+        fi
+
+        API_URL="https://api.github.com/repos/$USER/$REPO/contents/$FILE_PATH?ref=$BRANCH"
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token $TOKEN" \
+            -H "Accept: application/vnd.github.v3.raw" \
+            "$API_URL")
         if [ "$STATUS" -ne 200 ]; then
             echo "❌ Token 无效或无权限访问仓库，HTTP 状态码: $STATUS"
             continue
@@ -92,19 +102,19 @@ case "$CHOICE" in
     if [ "$MODE" = "1" ]; then
 cat > "$SCRIPT" <<EOF
 #!/bin/bash
-curl -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github.v3.raw" -fsSL "$URL" -o "${DEST}/${NAME}"
+curl -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github.v3.raw" -fsSL "$API_URL" -o "${DEST}/${NAME}"
 EOF
     else
 cat > "$SCRIPT" <<EOF
 #!/bin/bash
 cd "$DEST"
 if [ ! -d ".git" ]; then
-    git clone git@github.com:${URL#*github.com/}.git .
+    git clone git@github.com:$USER/$REPO.git .
 fi
 git fetch --all
-git checkout main
-git reset --hard origin/main
-cp "$FILE" "$NAME"
+git checkout $BRANCH
+git reset --hard origin/$BRANCH
+cp "$FILE_PATH" "$NAME"
 EOF
     fi
     chmod +x "$SCRIPT"
@@ -125,6 +135,7 @@ EOF
     } >> "$CONFIG_FILE"
 
     echo "✅ 任务 $TASK_NUM 添加完成, 脚本: $SCRIPT"
+    read -n1 -rsp "按任意键返回主菜单..."
     ;;
 2)
     # 查看任务
@@ -132,11 +143,11 @@ EOF
     grep "^\[task" "$CONFIG_FILE" | while read -r line; do
         num=${line#*[task}
         num=${num%]*}
-        name=$(grep -A4 "\[task${num}\]" "$CONFIG_FILE" | grep "^NAME=" | awk -F= '{print $2}')
-        url=$(grep -A4 "\[task${num}\]" "$CONFIG_FILE" | grep "^URL=" | awk -F= '{print $2}')
+        name=$(grep -A5 "\[task${num}\]" "$CONFIG_FILE" | grep "^NAME=" | awk -F= '{print $2}')
+        url=$(grep -A5 "\[task${num}\]" "$CONFIG_FILE" | grep "^URL=" | awk -F= '{print $2}')
         echo "$num) $name   URL: $url"
     done
-    read -p "按回车返回菜单..."
+    read -n1 -rsp "按任意键返回主菜单..."
     ;;
 3)
     # 删除任务
@@ -144,35 +155,37 @@ EOF
     grep "^\[task" "$CONFIG_FILE" | while read -r line; do
         num=${line#*[task}
         num=${num%]*}
-        name=$(grep -A4 "\[task${num}\]" "$CONFIG_FILE" | grep "^NAME=" | awk -F= '{print $2}')
+        name=$(grep -A5 "\[task${num}\]" "$CONFIG_FILE" | grep "^NAME=" | awk -F= '{print $2}')
         echo "$num) $name"
     done
     read -p "请输入要删除的任务编号: " DEL
-    sed -i "/\[task${DEL}\]/,+5d" "$CONFIG_FILE"
+    sed -i "/\[task${DEL}\]/,+6d" "$CONFIG_FILE"
     echo "✅ 任务 $DEL 已删除"
-    read -p "按回车返回菜单..."
+    read -n1 -rsp "按任意键返回主菜单..."
     ;;
 4)
     # 执行所有任务
     grep "^\[task" "$CONFIG_FILE" | while read -r line; do
         num=${line#*[task}
         num=${num%]*}
-        name=$(grep -A4 "\[task${num}\]" "$CONFIG_FILE" | grep "^NAME=" | awk -F= '{print $2}')
+        name=$(grep -A5 "\[task${num}\]" "$CONFIG_FILE" | grep "^NAME=" | awk -F= '{print $2}')
         SCRIPT="/usr/local/bin/zjsync-${name}.sh"
         LOG_FILE="${LOG_DIR}/zjsync-${name}.log"
         if [ -f "$SCRIPT" ]; then
             echo "📌 执行 $SCRIPT"
-            $SCRIPT >> "$LOG_FILE" 2>&1
+            if $SCRIPT >> "$LOG_FILE" 2>&1; then
+                echo "✅ 执行成功"
+            else
+                echo "❌ 执行失败，请检查日志: $LOG_FILE"
+            fi
             if [ -f "$LOG_FILE" ]; then
                 echo "最近日志（最后 10 行）："
                 tail -n 10 "$LOG_FILE"
-            else
-                echo "📄 日志文件不存在，可能是首次同步，已生成日志目录"
             fi
             echo
         fi
     done
-    read -p "按回车返回菜单..."
+    read -n1 -rsp "按任意键返回主菜单..."
     ;;
 5)
     exit 0
