@@ -38,12 +38,14 @@ rustdesk_menu() { bash <(curl -fsSL "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
 libretv_menu() { bash <(curl -fsSL "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
 singbox_menu() { bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh); }
 
-# ================== 勇哥ArgoSB菜单（增量添加协议） ==================
+# ================== 勇哥ArgoSB菜单 ==================
 argosb_menu() {
+  [[ -f /etc/opt/ArgoSB/config.json ]] && argosb_status="✅ 已安装" || argosb_status="❌ 未安装"
+
   while true; do
     clear
     echo "=============================="
-    echo "  🚀 勇哥ArgoSB协议管理"
+    echo "  🚀 勇哥ArgoSB协议管理 $argosb_status"
     echo "=============================="
     echo "1) 增量添加协议节点 "
     echo "2) 查看节点信息 (agsb list)"
@@ -58,14 +60,6 @@ argosb_menu() {
 
     case "$main_choice" in
       1)
-        # 自动读取已有变量
-        EXISTING_VARS=""
-        for var in vlpt xhpt sspt anpt arpt vmpt hypt tupt; do
-          if [[ -n "${!var}" ]]; then
-            EXISTING_VARS="$EXISTING_VARS $var=\"\""
-          fi
-        done
-
         echo "请选择要新增的协议（可多选，用空格分隔，例如 1 3 5）:"
         echo "1) Vless-Reality-Vision (vlpt)"
         echo "2) Vless-Xhttp-Reality (xhpt)"
@@ -93,47 +87,21 @@ argosb_menu() {
           esac
         done
 
-        ALL_VARS="$EXISTING_VARS $NEW_VARS"
-        if [[ -n "$ALL_VARS" ]]; then
+        if [[ -n "$NEW_VARS" ]]; then
           echo "🔹 正在增量更新节点..."
-          eval "$ALL_VARS bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep"
+          eval "$NEW_VARS bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep"
         else
           echo "⚠️ 未选择有效协议"
         fi
         read -rp "按回车返回菜单..." dummy
         ;;
-
-      2)
-        agsb list || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list
-        read -rp "按回车返回菜单..." dummy
-        ;;
-
-      3)
-        echo "👉 请输入自定义变量，例如：vlpt=\"\" sspt=\"\""
-        read -rp "变量: " custom_vars
-        if [[ -n "$custom_vars" ]]; then
-          eval "$custom_vars bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep"
-        else
-          echo "⚠️ 没有输入变量"
-        fi
-        read -rp "按回车返回菜单..." dummy
-        ;;
-
+      2) agsb list || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list ;;
+      3) echo "👉 请输入自定义变量，例如：vlpt=\"\" sspt=\"\"" ; read -rp "变量: " custom_vars ; [[ -n "$custom_vars" ]] && eval "$custom_vars bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep" ;;
       4) agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep ;;
       5) agsb res || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) res ;;
       6) agsb del || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) del ;;
-      7)
-        echo "1) 显示 IPv4 节点配置"
-        echo "2) 显示 IPv6 节点配置"
-        read -rp "请输入选项: " ip_choice
-        case "$ip_choice" in
-          1) ippz=4 agsb list ;;
-          2) ippz=6 agsb list ;;
-        esac
-        read -rp "按回车返回菜单..." dummy
-        ;;
+      7) echo "1) 显示 IPv4 节点配置" ; echo "2) 显示 IPv6 节点配置" ; read -rp "请输入选项: " ip_choice ; [[ "$ip_choice" == "1" ]] && ippz=4 agsb list ; [[ "$ip_choice" == "2" ]] && ippz=6 agsb list ;;
       0) break ;;
-      *) echo "❌ 无效输入"; sleep 1 ;;
     esac
   done
 }
@@ -164,15 +132,22 @@ set_q_shortcut() {
 
 # ================== 主菜单 ==================
 while true; do
+  # 动态检测安装状态
+  [[ -d /opt/moontv ]] && moon_status="✅ 已安装" || moon_status="❌ 未安装"
+  [[ -d /opt/rustdesk ]] && rustdesk_status="✅ 已安装" || rustdesk_status="❌ 未安装"
+  [[ -d /opt/libretv ]] && libretv_status="✅ 已安装" || libretv_status="❌ 未安装"
+  command -v sing-box &>/dev/null && singbox_status="✅ 已安装" || singbox_status="❌ 未安装"
+  command -v agsb &>/dev/null && argosb_status="✅ 已安装" || argosb_status="❌ 未安装"
+
   clear
   echo "=============================="
   echo "       🚀 服务管理中心"
   echo "=============================="
-  echo "1) MoonTV 管理"
-  echo "2) RustDesk 管理"
-  echo "3) LibreTV 安装"
-  echo "4) 甬哥Sing-box-yg管理"
-  echo "5) 勇哥ArgoSB脚本"
+  echo "1) MoonTV 管理  $moon_status"
+  echo "2) RustDesk 管理  $rustdesk_status"
+  echo "3) LibreTV 安装  $libretv_status"
+  echo "4) 甬哥Sing-box-yg管理  $singbox_status"
+  echo "5) 勇哥ArgoSB脚本  $argosb_status"
   echo "6) Kejilion.sh 一键脚本工具箱"
   echo "9) 设置快捷键 Q / q"
   echo "U) 更新菜单脚本 menu.sh"
