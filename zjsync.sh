@@ -30,17 +30,32 @@ show_tasks() {
     fi
 }
 
+# ====== 函数：解析 GitHub URL ======
+parse_github_url() {
+    local URL="$1"
+    if [[ "$URL" =~ github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+) ]]; then
+        OWNER="${BASH_REMATCH[1]}"
+        REPO="${BASH_REMATCH[2]}"
+        BRANCH="${BASH_REMATCH[3]}"
+        FILEPATH="${BASH_REMATCH[4]}"
+    else
+        echo "❌ URL 格式错误"
+        return 1
+    fi
+}
+
 # ====== 函数：添加任务 ======
 add_task() {
     read -p "添加任务编号: " NUM
     [ -z "$NUM" ] && NUM=$(( ${#TASKS[@]} + 1 ))
     read -p "GitHub 文件 URL (不可留空): " URL
     [ -z "$URL" ] && echo "URL 不能为空" && return
+    parse_github_url "$URL" || return
 
     read -p "保存目录 (默认 /var/www/zj): " DEST
     DEST=${DEST:-/var/www/zj}
 
-    FILENAME_DEFAULT=$(basename "$URL").txt
+    FILENAME_DEFAULT=$(basename "$FILEPATH").txt
     read -p "保存文件名 (默认 $FILENAME_DEFAULT): " NAME
     NAME=${NAME:-$FILENAME_DEFAULT}
 
@@ -54,9 +69,10 @@ add_task() {
     if [ "$MODE" = "1" ]; then
         read -p "请输入 GitHub Token: " TOKEN
         # 验证 Token 是否有效
+        API_URL="https://api.github.com/repos/$OWNER/$REPO/contents/$FILEPATH?ref=$BRANCH"
         HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" -H "Authorization: token $TOKEN" \
             -H "Accept: application/vnd.github.v3.raw" \
-            "${URL/\/blob\//\/raw/}")
+            "$API_URL")
         if [ "$HTTP_CODE" -ne 200 ]; then
             echo "❌ Token 无效或无权限访问仓库，HTTP 状态码: $HTTP_CODE"
             return
@@ -72,19 +88,22 @@ add_task() {
         cat > "$SCRIPT" <<EOF
 #!/bin/bash
 mkdir -p "$DEST"
-curl -H "Authorization: token $TOKEN" -fsSL "${URL/\/blob\//\/raw/}" -o "${DEST}/${NAME}"
+curl -H "Authorization: token $TOKEN" \
+     -H "Accept: application/vnd.github.v3.raw" \
+     -fsSL "https://api.github.com/repos/$OWNER/$REPO/contents/$FILEPATH?ref=$BRANCH" \
+     -o "$DEST/$NAME"
 EOF
     else
         cat > "$SCRIPT" <<EOF
 #!/bin/bash
 cd "$DEST"
 if [ ! -d ".git" ]; then
-    git clone git@github.com:$(echo "$URL" | awk -F'github.com/' '{print $2}' | awk -F'/blob/' '{print $1}') .
+    git clone git@github.com:$OWNER/$REPO.git .
 fi
 git fetch --all
-git checkout $(echo "$URL" | awk -F'/blob/' '{print $2}' | awk -F'/' '{print $1}')
-git reset --hard origin/$(echo "$URL" | awk -F'/blob/' '{print $2}' | awk -F'/' '{print $1}')
-cp "$(basename "$URL")" "$NAME"
+git checkout $BRANCH
+git reset --hard origin/$BRANCH
+cp "$FILEPATH" "$NAME"
 EOF
     fi
     chmod +x "$SCRIPT"
@@ -119,7 +138,6 @@ run_all_tasks() {
         echo "暂无任务可执行"
         return
     fi
-    i=1
     for task in "${TASKS[@]}"; do
         IFS='|' read -r NUM URL DEST NAME MINUTES MODE TOKEN <<< "$task"
         SCRIPT="/usr/local/bin/zjsync-${NAME}.sh"
@@ -134,7 +152,6 @@ run_all_tasks() {
         else
             echo "❌ 文件未生成: $DEST/$NAME"
         fi
-        ((i++))
     done
 }
 
