@@ -38,6 +38,45 @@ singbox_menu() {
   bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh)
 }
 
+# ====== 调用 勇哥ArgoSB 脚本 ======
+argosb_menu() {
+  while true; do
+    clear
+    echo "=============================="
+    echo "  🚀 勇哥ArgoSB一键无交互小钢炮"
+    echo "=============================="
+    echo "请选择协议："
+    echo "1) Vless-Reality-Vision (vlpt)"
+    echo "2) Vless-Xhttp-Reality (xhpt)"
+    echo "3) Shadowsocks-2022 (sspt)"
+    echo "4) AnyTLS (anpt)"
+    echo "5) Any-Reality (arpt)"
+    echo "6) Vmess-ws (vmpt)"
+    echo "7) Hysteria2 (hypt)"
+    echo "8) Tuic (tupt)"
+    echo "9) Argo临时隧道CDN优选节点 (vmpt+argo=y)"
+    echo "0) 返回主菜单"
+    echo "=============================="
+    read -rp "请输入选项: " choice
+
+    case "$choice" in
+      1) vlpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+      2) xhpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+      3) sspt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+      4) anpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+      5) arpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+      6) vmpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+      7) hypt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+      8) tupt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+      9) vmpt="" argo="y" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+      0) break ;;
+      *) echo "❌ 无效输入"; sleep 1 ;;
+    esac
+
+    read -rp "按回车返回 ArgoSB 菜单..." dummy
+  done
+}
+
 # ====== 设置快捷键 Q / q ======
 set_q_shortcut() {
   SHELL_RC="$HOME/.bashrc"
@@ -74,7 +113,8 @@ while true; do
   echo "2) RustDesk 管理"
   echo "3) LibreTV 安装"
   echo "4) 甬哥Sing-box-yg管理"
-  echo "5) 其他服务 (预留)"
+  echo "5) 勇哥ArgoSB一键无交互小钢炮"
+  echo "6) 其他服务 (预留)"
   echo "9) 设置快捷键 Q / q"
   echo "U) 更新菜单脚本 menu.sh"
   echo "0) 退出"
@@ -86,7 +126,8 @@ while true; do
     2) rustdesk_menu ;;
     3) libretv_menu ;;
     4) singbox_menu ;;
-    5) echo "⚠️ 其他服务还未实现"; sleep 1 ;;
+    5) argosb_menu ;;
+    6) echo "⚠️ 其他服务还未实现"; sleep 1 ;;
     9) set_q_shortcut ;;
     U) update_menu_script ;;
     0) exit 0 ;;
