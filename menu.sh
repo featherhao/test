@@ -38,42 +38,97 @@ singbox_menu() {
   bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh)
 }
 
-# ====== 调用 勇哥ArgoSB 脚本 ======
+# ====== 勇哥ArgoSB菜单 ======
 argosb_menu() {
   while true; do
     clear
     echo "=============================="
-    echo "  🚀 勇哥ArgoSB一键无交互小钢炮"
+    echo "  🚀 勇哥ArgoSB一键无交互小钢炮管理"
     echo "=============================="
-    echo "请选择协议："
-    echo "1) Vless-Reality-Vision (vlpt)"
-    echo "2) Vless-Xhttp-Reality (xhpt)"
-    echo "3) Shadowsocks-2022 (sspt)"
-    echo "4) AnyTLS (anpt)"
-    echo "5) Any-Reality (arpt)"
-    echo "6) Vmess-ws (vmpt)"
-    echo "7) Hysteria2 (hypt)"
-    echo "8) Tuic (tupt)"
-    echo "9) Argo临时隧道CDN优选节点 (vmpt+argo=y)"
+    echo "1) 安装/运行协议节点"
+    echo "2) 查看节点信息 (agsb list)"
+    echo "3) 更换代理协议变量组 (agsb rep)"
+    echo "4) 更新脚本 (建议卸载重装)"
+    echo "5) 重启脚本 (agsb res)"
+    echo "6) 卸载脚本 (agsb del)"
+    echo "7) 临时切换 IPv4 / IPv6 节点显示"
     echo "0) 返回主菜单"
     echo "=============================="
-    read -rp "请输入选项: " choice
+    read -rp "请输入选项: " main_choice
 
-    case "$choice" in
-      1) vlpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-      2) xhpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-      3) sspt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-      4) anpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-      5) arpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-      6) vmpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-      7) hypt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-      8) tupt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-      9) vmpt="" argo="y" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+    case "$main_choice" in
+      1)
+        # 协议选择子菜单
+        while true; do
+          clear
+          echo "请选择协议："
+          echo "1) Vless-Reality-Vision (vlpt)"
+          echo "2) Vless-Xhttp-Reality (xhpt)"
+          echo "3) Shadowsocks-2022 (sspt)"
+          echo "4) AnyTLS (anpt)"
+          echo "5) Any-Reality (arpt)"
+          echo "6) Vmess-ws (vmpt)"
+          echo "7) Hysteria2 (hypt)"
+          echo "8) Tuic (tupt)"
+          echo "9) Argo临时隧道CDN优选节点 (vmpt+argo=y)"
+          echo "0) 返回上级菜单"
+          read -rp "请输入选项: " proto_choice
+          case "$proto_choice" in
+            1) vlpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+            2) xhpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+            3) sspt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+            4) anpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+            5) arpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+            6) vmpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+            7) hypt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+            8) tupt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+            9) vmpt="" argo="y" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+            0) break ;;
+            *) echo "❌ 无效输入"; sleep 1 ;;
+          esac
+          read -rp "按回车返回协议选择菜单..." dummy
+        done
+        ;;
+      2)
+        echo "🔹 查看节点信息 (agsb list)"
+        agsb list || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list
+        read -rp "按回车返回菜单..." dummy
+        ;;
+      3)
+        echo "🔹 更换代理协议变量组 (agsb rep)"
+        agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep
+        read -rp "按回车返回菜单..." dummy
+        ;;
+      4)
+        echo "🔹 更新脚本 (建议卸载重装)"
+        agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep
+        read -rp "按回车返回菜单..." dummy
+        ;;
+      5)
+        echo "🔹 重启脚本 (agsb res)"
+        agsb res || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) res
+        read -rp "按回车返回菜单..." dummy
+        ;;
+      6)
+        echo "🔹 卸载脚本 (agsb del)"
+        agsb del || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) del
+        read -rp "按回车返回菜单..." dummy
+        ;;
+      7)
+        echo "🔹 临时切换 IPv4 / IPv6 节点显示"
+        echo "1) 显示 IPv4 节点配置"
+        echo "2) 显示 IPv6 节点配置"
+        read -rp "请输入选项: " ip_choice
+        case "$ip_choice" in
+          1) ippz=4 agsb list || ippz=4 bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list ;;
+          2) ippz=6 agsb list || ippz=6 bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list ;;
+          *) echo "❌ 无效输入"; sleep 1 ;;
+        esac
+        read -rp "按回车返回菜单..." dummy
+        ;;
       0) break ;;
       *) echo "❌ 无效输入"; sleep 1 ;;
     esac
-
-    read -rp "按回车返回 ArgoSB 菜单..." dummy
   done
 }
 
