@@ -5,140 +5,154 @@ CONF="/etc/zjsync.conf"
 LOG_DIR="$HOME/zjsync_logs"
 mkdir -p /etc "$LOG_DIR"
 
-pause(){ read -n1 -r -p "按任意键返回主菜单..." key; echo; }
-clear_screen(){ clear; }
-
-declare -A TASKS
+# ====== 读取已有任务 ======
+declare -a TASKS
 if [ -f "$CONF" ]; then
-    while IFS='|' read -r task_name url dest name minutes mode token; do
-        TASKS["$task_name"]="$url|$dest|$name|$minutes|$mode|$token"
-    done < "$CONF"
+    mapfile -t TASKS < "$CONF"
 fi
 
-while true; do
-clear_screen
-echo "===== zjsync 批量管理 ====="
-echo "1) 添加新同步任务"
-echo "2) 查看已有任务"
-echo "3) 删除任务"
-echo "4) 执行所有任务一次同步"
-echo "0) 退出"
-read -p "请选择操作 [0-4]: " op
-op=${op:-0}
+save_tasks() {
+    printf "%s\n" "${TASKS[@]}" > "$CONF"
+}
 
-case "$op" in
-1)
-    read -p "任务编号（唯一）: " task_id
-    [[ -z "$task_id" ]] && echo "任务编号不能为空" && pause && continue
+# ====== 函数：显示任务列表 ======
+show_tasks() {
+    echo "===== 当前任务列表 ====="
+    if [ ${#TASKS[@]} -eq 0 ]; then
+        echo "暂无任务"
+    else
+        i=1
+        for task in "${TASKS[@]}"; do
+            IFS='|' read -r NUM URL DEST NAME MINUTES MODE TOKEN <<< "$task"
+            echo "$i) $NAME   URL: $URL"
+            ((i++))
+        done
+    fi
+}
+
+# ====== 函数：添加任务 ======
+add_task() {
+    read -p "添加任务编号: " NUM
+    [ -z "$NUM" ] && NUM=$(( ${#TASKS[@]} + 1 ))
     read -p "GitHub 文件 URL (不可留空): " URL
-    [[ -z "$URL" ]] && echo "URL不能为空" && pause && continue
+    [ -z "$URL" ] && echo "URL 不能为空" && return
+
     read -p "保存目录 (默认 /var/www/zj): " DEST
     DEST=${DEST:-/var/www/zj}
-    read -p "保存文件名 (默认 根据 URL 文件名加 .txt): " NAME
-    NAME=${NAME:-$(basename "$URL").txt}
+
+    FILENAME_DEFAULT=$(basename "$URL").txt
+    read -p "保存文件名 (默认 $FILENAME_DEFAULT): " NAME
+    NAME=${NAME:-$FILENAME_DEFAULT}
+
     read -p "同步间隔(分钟, 默认 5): " MINUTES
     MINUTES=${MINUTES:-5}
+
     read -p "访问方式 (1=Token, 2=SSH) [1]: " MODE
     MODE=${MODE:-1}
+
     TOKEN=""
-    [[ "$MODE" == "1" ]] && read -p "请输入 GitHub Token: " TOKEN
-
-    mkdir -p "$DEST"
-    [[ ! -w "$DEST" ]] && echo "❌ 目录不可写: $DEST" && pause && continue
-
-    SCRIPT="/usr/local/bin/zjsync-${NAME}.sh"
-
-    if [[ "$URL" =~ github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+) ]]; then
-        REPO="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
-        BRANCH="${BASH_REMATCH[3]}"
-        FILE="${BASH_REMATCH[4]}"
-        API_URL="https://api.github.com/repos/${REPO}/contents/${FILE}?ref=${BRANCH}"
-    else
-        echo "❌ URL 格式错误"
-        pause
-        continue
+    if [ "$MODE" = "1" ]; then
+        read -p "请输入 GitHub Token: " TOKEN
+        # 验证 Token 是否有效
+        HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" -H "Authorization: token $TOKEN" \
+            -H "Accept: application/vnd.github.v3.raw" \
+            "${URL/\/blob\//\/raw/}")
+        if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ Token 无效或无权限访问仓库，HTTP 状态码: $HTTP_CODE"
+            return
+        fi
+        echo "✅ Token 验证成功"
     fi
 
-    if [[ "$MODE" == "1" ]]; then
+    mkdir -p "$DEST"
+    SCRIPT="/usr/local/bin/zjsync-${NAME}.sh"
+
+    # 生成同步脚本
+    if [ "$MODE" = "1" ]; then
         cat > "$SCRIPT" <<EOF
 #!/bin/bash
-set -x
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-echo "开始同步任务: \$(date)"
-/usr/bin/curl -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github.v3.raw" -fsSL "$API_URL" -o "${DEST}/${NAME}"
-if [ \$? -ne 0 ] || [ ! -f "${DEST}/${NAME}" ]; then
-    echo "❌ 文件生成失败: ${DEST}/${NAME}"
-else
-    echo "✅ 文件已生成: ${DEST}/${NAME}"
-fi
+mkdir -p "$DEST"
+curl -H "Authorization: token $TOKEN" -fsSL "${URL/\/blob\//\/raw/}" -o "${DEST}/${NAME}"
 EOF
     else
         cat > "$SCRIPT" <<EOF
 #!/bin/bash
-set -x
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 cd "$DEST"
 if [ ! -d ".git" ]; then
-    git clone git@github.com:${REPO}.git .
+    git clone git@github.com:$(echo "$URL" | awk -F'github.com/' '{print $2}' | awk -F'/blob/' '{print $1}') .
 fi
 git fetch --all
-git checkout $BRANCH
-git reset --hard origin/$BRANCH
-cp "$FILE" "$NAME"
-[ -f "$NAME" ] && echo "✅ 文件已生成: ${DEST}/${NAME}" || echo "❌ 文件生成失败: ${DEST}/${NAME}"
+git checkout $(echo "$URL" | awk -F'/blob/' '{print $2}' | awk -F'/' '{print $1}')
+git reset --hard origin/$(echo "$URL" | awk -F'/blob/' '{print $2}' | awk -F'/' '{print $1}')
+cp "$(basename "$URL")" "$NAME"
 EOF
     fi
     chmod +x "$SCRIPT"
 
-    CRON="*/${MINUTES} * * * * /bin/bash $SCRIPT >> $LOG_DIR/zjsync-${NAME}.log 2>&1"
+    # 添加定时任务
+    CRON="*/${MINUTES} * * * * $SCRIPT >> $LOG_DIR/zjsync-${NAME}.log 2>&1"
     (crontab -l 2>/dev/null; echo "$CRON") | crontab -
 
-    echo "$task_id|$URL|$DEST|$NAME|$MINUTES|$MODE|$TOKEN" >> "$CONF"
-    echo "✅ 任务 $task_id 添加完成, 脚本: $SCRIPT"
-    # 立即执行一次
-    /bin/bash "$SCRIPT"
-    pause
-    ;;
-2)
-    clear_screen
-    if [ ${#TASKS[@]} -eq 0 ]; then echo "暂无任务"; else
-        for task_id in "${!TASKS[@]}"; do
-            IFS='|' read -r url dest name minutes mode token <<< "${TASKS[$task_id]}"
-            echo "$task_id) $name   URL: $url   目录: $dest   间隔: ${minutes}min"
-        done
+    # 保存任务
+    TASKS+=("$NUM|$URL|$DEST|$NAME|$MINUTES|$MODE|$TOKEN")
+    save_tasks
+    echo "✅ 任务 $NUM 添加完成, 脚本: $SCRIPT"
+}
+
+# ====== 函数：删除任务 ======
+delete_task() {
+    show_tasks
+    read -p "请输入要删除的任务序号: " DEL_NUM
+    if [[ "$DEL_NUM" -ge 1 && "$DEL_NUM" -le ${#TASKS[@]} ]]; then
+        unset 'TASKS[DEL_NUM-1]'
+        TASKS=("${TASKS[@]}")
+        save_tasks
+        echo "✅ 任务已删除"
+    else
+        echo "❌ 无效序号"
     fi
-    pause
-    ;;
-3)
-    read -p "输入要删除的任务编号: " del_id
-    [[ -z "${TASKS[$del_id]}" ]] && echo "任务不存在" && pause && continue
-    IFS='|' read -r url dest name minutes mode token <<< "${TASKS[$del_id]}"
-    rm -f "/usr/local/bin/zjsync-$name.sh"
-    sed -i "/^$del_id|/d" "$CONF"
-    crontab -l | grep -v "zjsync-$name.sh" | crontab -
-    unset TASKS["$del_id"]
-    echo "✅ 任务 $del_id 已删除"
-    pause
-    ;;
-4)
-    [[ ${#TASKS[@]} -eq 0 ]] && echo "暂无任务可执行" && pause && continue
-    for task_id in "${!TASKS[@]}"; do
-        IFS='|' read -r url dest name minutes mode token <<< "${TASKS[$task_id]}"
-        SCRIPT="/usr/local/bin/zjsync-$name.sh"
-        if [ -f "$SCRIPT" ]; then
-            echo "📌 执行 $SCRIPT"
-            /bin/bash "$SCRIPT" >> "$LOG_DIR/zjsync-$name.log" 2>&1
+}
+
+# ====== 函数：执行所有任务 ======
+run_all_tasks() {
+    if [ ${#TASKS[@]} -eq 0 ]; then
+        echo "暂无任务可执行"
+        return
+    fi
+    i=1
+    for task in "${TASKS[@]}"; do
+        IFS='|' read -r NUM URL DEST NAME MINUTES MODE TOKEN <<< "$task"
+        SCRIPT="/usr/local/bin/zjsync-${NAME}.sh"
+        if [ ! -f "$SCRIPT" ]; then
+            echo "⚠️ 脚本不存在: $SCRIPT"
+            continue
         fi
+        echo "📌 执行 $SCRIPT"
+        bash "$SCRIPT" >> "$LOG_DIR/zjsync-${NAME}.log" 2>&1
+        if [ -f "$DEST/$NAME" ]; then
+            echo "✅ 文件已生成: $DEST/$NAME"
+        else
+            echo "❌ 文件未生成: $DEST/$NAME"
+        fi
+        ((i++))
     done
-    pause
-    ;;
-0)
-    echo "退出"
-    exit 0
-    ;;
-*)
-    echo "无效选择"
-    pause
-    ;;
-esac
+}
+
+# ====== 主菜单 ======
+while true; do
+    echo "===== zjsync 批量管理 ====="
+    echo "1) 添加新同步任务"
+    echo "2) 查看已有任务"
+    echo "3) 删除任务"
+    echo "4) 执行所有任务一次同步"
+    echo "0) 退出"
+    read -p "请选择操作 [0-4]: " CHOICE
+    case "$CHOICE" in
+        1) add_task ;;
+        2) show_tasks; read -n1 -r -p "按任意键返回主菜单..." ;;
+        3) delete_task ;;
+        4) run_all_tasks; read -n1 -r -p "按任意键返回主菜单..." ;;
+        0) exit 0 ;;
+        *) echo "❌ 无效选择" ;;
+    esac
 done
