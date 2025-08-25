@@ -39,8 +39,15 @@ libretv_menu() { bash <(curl -fsSL "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
 singbox_menu() { bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh); }
 
 # ================== 勇哥ArgoSB菜单 ==================
+# ================== 勇哥ArgoSB菜单 ==================
 argosb_menu() {
-  [[ -f /etc/opt/ArgoSB/config.json ]] && argosb_status="✅ 已安装" || argosb_status="❌ 未安装"
+  # 动态检测安装状态
+  if command -v agsb &>/dev/null; then
+      argosb_status="✅ 已安装"
+  else
+      argosb_status="❌ 未安装"
+  fi
+
 
   while true; do
     clear
