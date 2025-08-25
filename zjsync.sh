@@ -116,9 +116,9 @@ EOF
     # ===== 保存到配置文件 =====
     {
         echo "[task$TASK_NUM]"
+        echo "NAME=$NAME"
         echo "URL=$URL"
         echo "DEST=$DEST"
-        echo "NAME=$NAME"
         echo "MINUTES=$MINUTES"
         echo "MODE=$MODE"
         [ "$MODE" = "1" ] && echo "TOKEN=$TOKEN"
@@ -129,13 +129,24 @@ EOF
 2)
     # 查看任务
     echo "===== 当前任务列表 ====="
-    grep "^\[task" "$CONFIG_FILE" || echo "没有任务"
+    grep "^\[task" "$CONFIG_FILE" | while read -r line; do
+        num=${line#*[task}
+        num=${num%]*}
+        name=$(grep -A4 "\[task${num}\]" "$CONFIG_FILE" | grep "^NAME=" | awk -F= '{print $2}')
+        url=$(grep -A4 "\[task${num}\]" "$CONFIG_FILE" | grep "^URL=" | awk -F= '{print $2}')
+        echo "$num) $name   URL: $url"
+    done
     read -p "按回车返回菜单..."
     ;;
 3)
     # 删除任务
     echo "===== 删除任务 ====="
-    grep "^\[task" "$CONFIG_FILE"
+    grep "^\[task" "$CONFIG_FILE" | while read -r line; do
+        num=${line#*[task}
+        num=${num%]*}
+        name=$(grep -A4 "\[task${num}\]" "$CONFIG_FILE" | grep "^NAME=" | awk -F= '{print $2}')
+        echo "$num) $name"
+    done
     read -p "请输入要删除的任务编号: " DEL
     sed -i "/\[task${DEL}\]/,+5d" "$CONFIG_FILE"
     echo "✅ 任务 $DEL 已删除"
@@ -143,9 +154,12 @@ EOF
     ;;
 4)
     # 执行所有任务
-    grep "NAME=" "$CONFIG_FILE" | while IFS='=' read -r _ taskname; do
-        SCRIPT="/usr/local/bin/zjsync-${taskname}.sh"
-        LOG_FILE="${LOG_DIR}/zjsync-${taskname}.log"
+    grep "^\[task" "$CONFIG_FILE" | while read -r line; do
+        num=${line#*[task}
+        num=${num%]*}
+        name=$(grep -A4 "\[task${num}\]" "$CONFIG_FILE" | grep "^NAME=" | awk -F= '{print $2}')
+        SCRIPT="/usr/local/bin/zjsync-${name}.sh"
+        LOG_FILE="${LOG_DIR}/zjsync-${name}.log"
         if [ -f "$SCRIPT" ]; then
             echo "📌 执行 $SCRIPT"
             $SCRIPT >> "$LOG_FILE" 2>&1
