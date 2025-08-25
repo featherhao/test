@@ -7,13 +7,11 @@ SCRIPT_PATH="$HOME/menu.sh"
 
 # ================== 自我初始化逻辑 ==================
 if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
-  # 说明是用 bash <(curl …) 临时运行
   echo "⚡ 检测到你是通过 <(curl …) 临时运行的"
   echo "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
   curl -fsSL "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
   chmod +x "$SCRIPT_PATH"
   echo "✅ 已保存，下次可直接执行：bash ~/menu.sh 或 q"
-  echo
   sleep 2
 fi
 
@@ -42,6 +40,11 @@ singbox_menu() { bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/si
 
 # ================== 勇哥ArgoSB菜单 ==================
 argosb_menu() {
+  run_argosb() {
+    local proto_vars="$1"
+    eval "$proto_vars bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh)"
+  }
+
   while true; do
     clear
     echo "=============================="
@@ -74,41 +77,57 @@ argosb_menu() {
           echo "9) Argo临时隧道CDN优选节点 (vmpt+argo=y)"
           echo "0) 返回上级菜单"
           read -rp "请输入选项: " proto_choice
+
           case "$proto_choice" in
-            1) vlpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-            2) xhpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-            3) sspt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-            4) anpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-            5) arpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-            6) vmpt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-            7) hypt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-            8) tupt="" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
-            9) vmpt="" argo="y" bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) ;;
+            1) run_argosb 'vlpt=""' ;;
+            2) run_argosb 'xhpt=""' ;;
+            3) run_argosb 'sspt=""' ;;
+            4) run_argosb 'anpt=""' ;;
+            5) run_argosb 'arpt=""' ;;
+            6) run_argosb 'vmpt=""' ;;
+            7) run_argosb 'hypt=""' ;;
+            8) run_argosb 'tupt=""' ;;
+            9) run_argosb 'vmpt="" argo="y"' ;;
             0) break ;;
             *) echo "❌ 无效输入"; sleep 1 ;;
           esac
           read -rp "按回车返回协议选择菜单..." dummy
         done
         ;;
-      2) agsb list || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list ;;
-      3) agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep ;;
-      4) agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep ;;
-      5) agsb res || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) res ;;
-      6) agsb del || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) del ;;
+      2)
+        agsb list || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list
+        read -rp "按回车返回菜单..." dummy
+        ;;
+      3)
+        agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep
+        read -rp "按回车返回菜单..." dummy
+        ;;
+      4)
+        agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep
+        read -rp "按回车返回菜单..." dummy
+        ;;
+      5)
+        agsb res || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) res
+        read -rp "按回车返回菜单..." dummy
+        ;;
+      6)
+        agsb del || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) del
+        read -rp "按回车返回菜单..." dummy
+        ;;
       7)
         echo "1) 显示 IPv4 节点配置"
         echo "2) 显示 IPv6 节点配置"
         read -rp "请输入选项: " ip_choice
         case "$ip_choice" in
-          1) ippz=4 agsb list || ippz=4 bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list ;;
-          2) ippz=6 agsb list || ippz=6 bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list ;;
+          1) run_argosb 'ippz=4' ;;
+          2) run_argosb 'ippz=6' ;;
           *) echo "❌ 无效输入"; sleep 1 ;;
         esac
+        read -rp "按回车返回菜单..." dummy
         ;;
       0) break ;;
       *) echo "❌ 无效输入"; sleep 1 ;;
     esac
-    read -rp "按回车返回菜单..." dummy
   done
 }
 
