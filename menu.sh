@@ -32,6 +32,8 @@ RUSTDESK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/ma
 WORKDIR_LIBRETV="/opt/libretv"
 LIBRETV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_libretv.sh"
 
+ZJSYNC_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/zjsync.sh"
+
 # ================== 调用子脚本 ==================
 moon_menu() { bash <(curl -fsSL "${MOONTV_SCRIPT}?t=$(date +%s)"); }
 rustdesk_menu() { bash <(curl -fsSL "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
@@ -47,7 +49,6 @@ argosb_menu() {
   else
       argosb_status="❌ 未安装"
   fi
-
 
   while true; do
     clear
@@ -165,8 +166,6 @@ argosb_menu() {
   done
 }
 
-
-
 # ================== 更新菜单脚本 ==================
 update_menu_script() {
   echo "🔄 正在更新 menu.sh..."
@@ -219,6 +218,7 @@ while true; do
   echo "4) 甬哥Sing-box-yg管理  $singbox_status"
   echo "5) 勇哥ArgoSB脚本  $argosb_status"
   echo "6) Kejilion.sh 一键脚本工具箱  $kejilion_status"
+  echo "7) zjsync（GitHub 文件自动同步）"
   echo "9) 设置快捷键 Q / q"
   echo "U) 更新菜单脚本 menu.sh"
   echo "8) 其他服务 (预留)"
@@ -233,6 +233,7 @@ while true; do
     4) singbox_menu ;;
     5) argosb_menu ;;
     6) bash <(curl -sL kejilion.sh) ;;
+    7) bash <(curl -fsSL "${ZJSYNC_SCRIPT}?t=$(date +%s)") ;;
     9) set_q_shortcut ;;
     U) update_menu_script ;;
     8) echo "⚠️ 其他服务还未实现"; sleep 1 ;;
