@@ -17,7 +17,7 @@ if [ -f "$CONFIG_FILE" ]; then
         line="${line%%$'\r'}"
         if [[ "$line" =~ \[task([0-9]+)\] ]]; then
             current_task="${BASH_REMATCH[1]}"
-        elif [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+        elif [[ "$line" =~ ^([^=]+)=(.*)$ ]] && [ -n "$current_task" ]; then
             key="${BASH_REMATCH[1]}"
             value="${BASH_REMATCH[2]}"
             TASKS["$current_task-$key"]="$value"
@@ -115,7 +115,7 @@ EOF
 
     # ===== 添加 cron =====
     CRON="*/${MINUTES} * * * *"
-    (crontab -l 2>/dev/null; echo "${CRON} ${SCRIPT} >> ${LOG_DIR}/zjsync-${NAME}.log 2>&1") | crontab -
+    (crontab -l 2>/dev/null | grep -v "$SCRIPT"; echo "${CRON} ${SCRIPT} >> ${LOG_DIR}/zjsync-${NAME}.log 2>&1") | crontab -
 
     # ===== 保存配置 =====
     {
@@ -133,34 +133,57 @@ EOF
     ;;
 2)
     echo "===== 当前任务列表 ====="
-    if [ ! -f "$CONFIG_FILE" ]; then
+    if [ ${#TASKS[@]} -eq 0 ]; then
         echo "暂无任务"
     else
-        grep -n "^\[task" "$CONFIG_FILE" | while read -r line; do
-            num=$(echo $line | cut -d'[' -f2 | cut -d']' -f1)
-            name=$(awk -v t="$num" '$0=="[task"t"]"{getline; getline; getline; print substr($0,6)}' "$CONFIG_FILE")
-            url=$(awk -v t="$num" '$0=="[task"t"]"{getline; getline; getline; getline; print substr($0,5)}' "$CONFIG_FILE")
-            echo "$num) $name   URL: $url"
+        for t in $(printf "%s\n" "${!TASKS[@]}" | cut -d'-' -f1 | sort -u); do
+            name="${TASKS[$t-NAME]}"
+            url="${TASKS[$t-URL]}"
+            echo "$t) $name   URL: $url"
         done
     fi
     read -n1 -rsp "按任意键返回主菜单..."
     ;;
 3)
     echo "===== 删除任务 ====="
-    grep -n "^\[task" "$CONFIG_FILE" | while read -r line; do
-        num=$(echo $line | cut -d'[' -f2 | cut -d']' -f1)
-        name=$(awk -v t="$num" '$0=="[task"t"]"{getline; getline; getline; print substr($0,6)}' "$CONFIG_FILE")
-        echo "$num) $name"
+    if [ ${#TASKS[@]} -eq 0 ]; then
+        echo "暂无任务可删除"
+        read -n1 -rsp "按任意键返回主菜单..."
+        continue
+    fi
+
+    for t in $(printf "%s\n" "${!TASKS[@]}" | cut -d'-' -f1 | sort -u); do
+        name="${TASKS[$t-NAME]}"
+        url="${TASKS[$t-URL]}"
+        echo "$t) $name   URL: $url"
     done
+
     read -p "请输入要删除的任务编号: " DEL
+    SCRIPT="/usr/local/bin/zjsync-${TASKS[$DEL-NAME]}.sh"
+    # 删除 cron
+    crontab -l | grep -v "$SCRIPT" | crontab -
+    # 删除脚本
+    [ -f "$SCRIPT" ] && rm -f "$SCRIPT"
+    # 删除配置块
     sed -i "/\[task${DEL}\]/,+6d" "$CONFIG_FILE"
+    unset TASKS[$DEL-NAME]
+    unset TASKS[$DEL-URL]
+    unset TASKS[$DEL-DEST]
+    unset TASKS[$DEL-MINUTES]
+    unset TASKS[$DEL-MODE]
+    unset TASKS[$DEL-TOKEN]
     echo "✅ 任务 $DEL 已删除"
     read -n1 -rsp "按任意键返回主菜单..."
     ;;
 4)
     # 执行所有任务
-    grep -oP '(?<=\[task)\d+(?=\])' "$CONFIG_FILE" | while read -r num; do
-        name=$(awk -v t="$num" '$0=="[task"t"]"{getline; getline; getline; print substr($0,6)}' "$CONFIG_FILE")
+    if [ ${#TASKS[@]} -eq 0 ]; then
+        echo "暂无任务可执行"
+        read -n1 -rsp "按任意键返回主菜单..."
+        continue
+    fi
+    for t in $(printf "%s\n" "${!TASKS[@]}" | cut -d'-' -f1 | sort -u); do
+        name="${TASKS[$t-NAME]}"
         SCRIPT="/usr/local/bin/zjsync-${name}.sh"
         LOG_FILE="${LOG_DIR}/zjsync-${name}.log"
 
