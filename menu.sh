@@ -38,8 +38,23 @@ rustdesk_menu() { bash <(curl -fsSL "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
 libretv_menu() { bash <(curl -fsSL "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
 singbox_menu() { bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh); }
 
-# ================== 勇哥ArgoSB菜单 ==================
+# ================== 勇哥ArgoSB菜单（增量协议） ==================
 argosb_menu() {
+  get_existing_protos() {
+    local installed=""
+    if command -v agsb &>/dev/null; then
+      [[ $(agsb list | grep -q "Vless-Reality-Vision") ]] && installed="$installed vlpt=\"\""
+      [[ $(agsb list | grep -q "Vless-Xhttp-Reality") ]] && installed="$installed xhpt=\"\""
+      [[ $(agsb list | grep -q "Shadowsocks-2022") ]] && installed="$installed sspt=\"\""
+      [[ $(agsb list | grep -q "AnyTLS") ]] && installed="$installed anpt=\"\""
+      [[ $(agsb list | grep -q "Any-Reality") ]] && installed="$installed arpt=\"\""
+      [[ $(agsb list | grep -q "Vmess-ws") ]] && installed="$installed vmpt=\"\""
+      [[ $(agsb list | grep -q "Hysteria2") ]] && installed="$installed hypt=\"\""
+      [[ $(agsb list | grep -q "Tuic") ]] && installed="$installed tupt=\"\""
+    fi
+    echo "$installed"
+  }
+
   run_argosb() {
     local proto_vars="$1"
     eval "$proto_vars bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh)"
@@ -48,7 +63,7 @@ argosb_menu() {
   while true; do
     clear
     echo "=============================="
-    echo "  🚀 勇哥ArgoSB一键无交互小钢炮管理"
+    echo "  🚀 勇哥ArgoSB增量协议管理"
     echo "=============================="
     echo "1) 安装/运行协议节点"
     echo "2) 查看节点信息 (agsb list)"
@@ -65,7 +80,7 @@ argosb_menu() {
       1)
         while true; do
           clear
-          echo "请选择协议："
+          echo "请选择协议（增量添加）："
           echo "1) Vless-Reality-Vision (vlpt)"
           echo "2) Vless-Xhttp-Reality (xhpt)"
           echo "3) Shadowsocks-2022 (sspt)"
@@ -78,19 +93,26 @@ argosb_menu() {
           echo "0) 返回上级菜单"
           read -rp "请输入选项: " proto_choice
 
+          EXISTING_PROTOS=$(get_existing_protos)
+
           case "$proto_choice" in
-            1) run_argosb 'vlpt=""' ;;
-            2) run_argosb 'xhpt=""' ;;
-            3) run_argosb 'sspt=""' ;;
-            4) run_argosb 'anpt=""' ;;
-            5) run_argosb 'arpt=""' ;;
-            6) run_argosb 'vmpt=""' ;;
-            7) run_argosb 'hypt=""' ;;
-            8) run_argosb 'tupt=""' ;;
-            9) run_argosb 'vmpt="" argo="y"' ;;
+            1) NEW_PROTO='vlpt=""' ;;
+            2) NEW_PROTO='xhpt=""' ;;
+            3) NEW_PROTO='sspt=""' ;;
+            4) NEW_PROTO='anpt=""' ;;
+            5) NEW_PROTO='arpt=""' ;;
+            6) NEW_PROTO='vmpt=""' ;;
+            7) NEW_PROTO='hypt=""' ;;
+            8) NEW_PROTO='tupt=""' ;;
+            9) NEW_PROTO='vmpt="" argo="y"' ;;
             0) break ;;
-            *) echo "❌ 无效输入"; sleep 1 ;;
+            *) echo "❌ 无效输入"; sleep 1; continue ;;
           esac
+
+          ALL_PROTOS="$EXISTING_PROTOS $NEW_PROTO"
+          echo "🔹 正在增量添加协议..."
+          run_argosb "$ALL_PROTOS"
+
           read -rp "按回车返回协议选择菜单..." dummy
         done
         ;;
