@@ -19,14 +19,16 @@ fi
 # 工具函数
 # =========================
 pause(){ read -n1 -r -p "按任意键返回主菜单..."; echo; }
+
 validate_token(){
     local url="$1"
     local token="$2"
     status=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $token" \
         -H "Accept: application/vnd.github.v3.raw" \
         "$url")
-    if [[ "$status" == "200" ]]; then return 0; else return 1; fi
+    [[ "$status" == "200" ]]
 }
+
 generate_script(){
     local idx="$1"
     local url="$2"
@@ -58,10 +60,12 @@ EOF
     chmod +x "$script"
     echo "$script"
 }
+
 add_cron(){
     local script="$1"
     local minutes="$2"
-    (crontab -l 2>/dev/null; echo "*/$minutes * * * * $script >> $LOG_DIR/$(basename $script).log 2>&1") | crontab -
+    # 防止重复 cron
+    crontab -l 2>/dev/null | grep -v "$script" | { cat; echo "*/$minutes * * * * $script >> $LOG_DIR/$(basename $script).log 2>&1"; } | crontab -
 }
 
 # =========================
@@ -74,8 +78,9 @@ echo "1) 添加新同步任务"
 echo "2) 查看已有任务"
 echo "3) 删除任务"
 echo "4) 执行所有任务一次同步"
+echo "5) 修改任务 GitHub Token"
 echo "0) 退出"
-read -p "请选择操作 [0-4]: " choice
+read -p "请选择操作 [0-5]: " choice
 
 case "$choice" in
 0) exit 0;;
@@ -166,6 +171,31 @@ case "$choice" in
         echo "✅ 文件已生成: $dest/$name"
         head -n 10 "$dest/$name"
     done
+    pause
+    ;;
+
+5)
+    if [ ${#TASKS[@]} -eq 0 ]; then echo "暂无任务"; pause; continue; fi
+    echo "===== 当前任务列表 ====="
+    for k in "${!TASKS[@]}"; do
+        IFS='|' read -r url dest name minutes mode token <<< "${TASKS[$k]}"
+        echo "$k) $name   URL: $url   当前Token: ${token:0:6}..."
+    done
+    read -p "请输入要修改Token的任务序号: " modidx
+    if [[ -z "${TASKS[$modidx]}" ]]; then echo "❌ 无此任务"; pause; continue; fi
+    read -p "请输入新的 GitHub Token: " newtoken
+    IFS='|' read -r url dest name minutes mode oldtoken <<< "${TASKS[$modidx]}"
+    if ! validate_token "$url" "$newtoken"; then
+        echo "❌ Token 无效或无权限访问仓库"; pause; continue
+    fi
+    echo "✅ Token 验证成功"
+    TASKS["$modidx"]="$url|$dest|$name|$minutes|$mode|$newtoken"
+    # 重新生成脚本
+    generate_script "$modidx" "$url" "$dest" "$name" "$mode" "$newtoken"
+    # 保存配置
+    > "$CONF"
+    for k in "${!TASKS[@]}"; do echo "$k|${TASKS[$k]}" >> "$CONF"; done
+    echo "✅ 任务 $modidx Token 已更新"
     pause
     ;;
 
