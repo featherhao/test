@@ -38,19 +38,14 @@ rustdesk_menu() { bash <(curl -fsSL "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
 libretv_menu() { bash <(curl -fsSL "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
 singbox_menu() { bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh); }
 
-# ================== 勇哥ArgoSB菜单（多协议一次安装） ==================
+# ================== 勇哥ArgoSB菜单（增量添加协议） ==================
 argosb_menu() {
-  run_argosb() {
-    local proto_vars="$1"
-    eval "$proto_vars bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh)"
-  }
-
   while true; do
     clear
     echo "=============================="
-    echo "  🚀 勇哥ArgoSB多协议安装管理"
+    echo "  🚀 勇哥ArgoSB增量添加协议"
     echo "=============================="
-    echo "1) 安装/运行协议节点 (可多选)"
+    echo "1) 增量添加协议节点"
     echo "2) 查看节点信息 (agsb list)"
     echo "3) 更换代理协议变量组 (agsb rep)"
     echo "4) 更新脚本 (建议卸载重装)"
@@ -63,8 +58,16 @@ argosb_menu() {
 
     case "$main_choice" in
       1)
-        clear
-        echo "请选择要安装的协议（可多选，用空格分隔，例如 1 3 5）:"
+        # 自动读取已有变量
+        EXISTING_VARS=""
+        for var in vlpt xhpt sspt anpt arpt vmpt hypt tupt; do
+          if [[ -n "${!var}" ]]; then
+            EXISTING_VARS="$EXISTING_VARS $var=\"\""
+          fi
+        done
+
+        # 用户选择新增协议
+        echo "请选择要新增的协议（可多选，用空格分隔，例如 1 3 5）:"
         echo "1) Vless-Reality-Vision (vlpt)"
         echo "2) Vless-Xhttp-Reality (xhpt)"
         echo "3) Shadowsocks-2022 (sspt)"
@@ -76,30 +79,30 @@ argosb_menu() {
         echo "9) Argo临时隧道CDN优选节点 (vmpt+argo=y)"
         read -rp "输入序号: " choices
 
-        proto_vars=""
+        NEW_VARS=""
         for c in $choices; do
           case $c in
-            1) proto_vars="$proto_vars vlpt=\"\"" ;;
-            2) proto_vars="$proto_vars xhpt=\"\"" ;;
-            3) proto_vars="$proto_vars sspt=\"\"" ;;
-            4) proto_vars="$proto_vars anpt=\"\"" ;;
-            5) proto_vars="$proto_vars arpt=\"\"" ;;
-            6) proto_vars="$proto_vars vmpt=\"\"" ;;
-            7) proto_vars="$proto_vars hypt=\"\"" ;;
-            8) proto_vars="$proto_vars tupt=\"\"" ;;
-            9) proto_vars="$proto_vars vmpt=\"\" argo=\"y\"" ;;
-            *) echo "❌ 序号 $c 无效，已忽略" ;;
+            1) NEW_VARS="$NEW_VARS vlpt=\"\"" ;;
+            2) NEW_VARS="$NEW_VARS xhpt=\"\"" ;;
+            3) NEW_VARS="$NEW_VARS sspt=\"\"" ;;
+            4) NEW_VARS="$NEW_VARS anpt=\"\"" ;;
+            5) NEW_VARS="$NEW_VARS arpt=\"\"" ;;
+            6) NEW_VARS="$NEW_VARS vmpt=\"\"" ;;
+            7) NEW_VARS="$NEW_VARS hypt=\"\"" ;;
+            8) NEW_VARS="$NEW_VARS tupt=\"\"" ;;
+            9) NEW_VARS="$NEW_VARS vmpt=\"\" argo=\"y\"" ;;
           esac
         done
 
-        if [[ -n "$proto_vars" ]]; then
-          echo "🔹 正在安装所选协议..."
-          run_argosb "$proto_vars"
+        # 合并已有变量 + 新增变量，并执行 rep
+        ALL_VARS="$EXISTING_VARS $NEW_VARS"
+        if [[ -n "$ALL_VARS" ]]; then
+          echo "🔹 正在增量更新节点..."
+          eval "$ALL_VARS bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep"
         else
           echo "⚠️ 未选择有效协议"
         fi
-
-        read -rp "按回车返回协议菜单..." dummy
+        read -rp "按回车返回菜单..." dummy
         ;;
 
       2)
@@ -127,9 +130,8 @@ argosb_menu() {
         echo "2) 显示 IPv6 节点配置"
         read -rp "请输入选项: " ip_choice
         case "$ip_choice" in
-          1) run_argosb 'ippz=4' ;;
-          2) run_argosb 'ippz=6' ;;
-          *) echo "❌ 无效输入"; sleep 1 ;;
+          1) ippz=4 bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list ;;
+          2) ippz=6 bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list ;;
         esac
         read -rp "按回车返回菜单..." dummy
         ;;
@@ -157,21 +159,8 @@ set_q_shortcut() {
   sed -i '/alias Q=/d' "$SHELL_RC"
   sed -i '/alias q=/d' "$SHELL_RC"
 
-  echo "请选择快捷方式模式："
-  echo "1) 本地模式 (bash ~/menu.sh)"
-  echo "2) 远程模式 (始终运行最新脚本)"
-  read -rp "请输入选项 [1/2]: " alias_mode
-
-  if [ "$alias_mode" = "2" ]; then
-    echo "alias Q='bash <(curl -fsSL ${SCRIPT_URL})'" >> "$SHELL_RC"
-    echo "alias q='bash <(curl -fsSL ${SCRIPT_URL})'" >> "$SHELL_RC"
-    echo "✅ 已设置为远程模式"
-  else
-    echo "alias Q='bash ~/menu.sh'" >> "$SHELL_RC"
-    echo "alias q='bash ~/menu.sh'" >> "$SHELL_RC"
-    echo "✅ 已设置为本地模式"
-  fi
-
+  echo "alias Q='bash ~/menu.sh'" >> "$SHELL_RC"
+  echo "alias q='bash ~/menu.sh'" >> "$SHELL_RC"
   echo "⚡ 请执行 'source $SHELL_RC' 或重启终端生效"
   sleep 2
 }
@@ -186,7 +175,7 @@ while true; do
   echo "2) RustDesk 管理"
   echo "3) LibreTV 安装"
   echo "4) 甬哥Sing-box-yg管理"
-  echo "5) 勇哥ArgoSB多协议安装"
+  echo "5) 勇哥ArgoSB增量添加协议"
   echo "6) Kejilion.sh 一键脚本工具箱"
   echo "9) 设置快捷键 Q / q"
   echo "U) 更新菜单脚本 menu.sh"
