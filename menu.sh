@@ -60,15 +60,23 @@ argosb_menu() {
 
     case "$main_choice" in
       1)
+        # 检测已安装协议
+        declare -A protocol_status
+        [[ -f /etc/opt/ArgoSB/config.json ]] && {
+          for p in vlpt xhpt sspt anpt arpt vmpt hypt tupt; do
+            grep -q "$p" /etc/opt/ArgoSB/config.json && protocol_status[$p]="✅ 已安装" || protocol_status[$p]="❌ 未安装"
+          done
+        }
+
         echo "请选择要新增的协议（可多选，用空格分隔，例如 1 3 5）:"
-        echo "1) Vless-Reality-Vision (vlpt)"
-        echo "2) Vless-Xhttp-Reality (xhpt)"
-        echo "3) Shadowsocks-2022 (sspt)"
-        echo "4) AnyTLS (anpt)"
-        echo "5) Any-Reality (arpt)"
-        echo "6) Vmess-ws (vmpt)"
-        echo "7) Hysteria2 (hypt)"
-        echo "8) Tuic (tupt)"
+        echo "1) Vless-Reality-Vision (vlpt) ${protocol_status[vlpt]}"
+        echo "2) Vless-Xhttp-Reality (xhpt) ${protocol_status[xhpt]}"
+        echo "3) Shadowsocks-2022 (sspt) ${protocol_status[sspt]}"
+        echo "4) AnyTLS (anpt) ${protocol_status[anpt]}"
+        echo "5) Any-Reality (arpt) ${protocol_status[arpt]}"
+        echo "6) Vmess-ws (vmpt) ${protocol_status[vmpt]}"
+        echo "7) Hysteria2 (hypt) ${protocol_status[hypt]}"
+        echo "8) Tuic (tupt) ${protocol_status[tupt]}"
         echo "9) Argo临时隧道CDN优选节点 (vmpt+argo=y)"
         read -rp "输入序号: " choices
 
@@ -105,6 +113,7 @@ argosb_menu() {
     esac
   done
 }
+
 
 # ================== 更新菜单脚本 ==================
 update_menu_script() {
