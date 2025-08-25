@@ -58,7 +58,6 @@ argosb_menu() {
 
     case "$main_choice" in
       1)
-        # 协议选择子菜单
         while true; do
           clear
           echo "请选择协议："
@@ -90,32 +89,26 @@ argosb_menu() {
         done
         ;;
       2)
-        echo "🔹 查看节点信息 (agsb list)"
         agsb list || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list
         read -rp "按回车返回菜单..." dummy
         ;;
       3)
-        echo "🔹 更换代理协议变量组 (agsb rep)"
         agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep
         read -rp "按回车返回菜单..." dummy
         ;;
       4)
-        echo "🔹 更新脚本 (建议卸载重装)"
         agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep
         read -rp "按回车返回菜单..." dummy
         ;;
       5)
-        echo "🔹 重启脚本 (agsb res)"
         agsb res || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) res
         read -rp "按回车返回菜单..." dummy
         ;;
       6)
-        echo "🔹 卸载脚本 (agsb del)"
         agsb del || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) del
         read -rp "按回车返回菜单..." dummy
         ;;
       7)
-        echo "🔹 临时切换 IPv4 / IPv6 节点显示"
         echo "1) 显示 IPv4 节点配置"
         echo "2) 显示 IPv6 节点配置"
         read -rp "请输入选项: " ip_choice
@@ -132,7 +125,18 @@ argosb_menu() {
   done
 }
 
-# ====== 设置快捷键 Q / q ======
+# ====== 更新菜单脚本 ======
+update_menu_script() {
+  SCRIPT_PATH="$HOME/menu.sh"
+  echo "🔄 正在更新 menu.sh..."
+  curl -fsSL "https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh?t=$(date +%s)" -o "$SCRIPT_PATH"
+  chmod +x "$SCRIPT_PATH"
+  echo "✅ menu.sh 已更新到 $SCRIPT_PATH"
+  echo "👉 以后可直接执行：bash ~/menu.sh 启动最新菜单"
+  sleep 2
+}
+
+# ====== 设置快捷键 Q / q 指向本地菜单 ======
 set_q_shortcut() {
   SHELL_RC="$HOME/.bashrc"
   [ -n "$ZSH_VERSION" ] && SHELL_RC="$HOME/.zshrc"
@@ -140,21 +144,10 @@ set_q_shortcut() {
   sed -i '/alias Q=/d' "$SHELL_RC"
   sed -i '/alias q=/d' "$SHELL_RC"
 
-  echo "alias Q='bash <(curl -fsSL \"https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh?t=\$(date +%s)\")'" >> "$SHELL_RC"
-  echo "alias q='bash <(curl -fsSL \"https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh?t=\$(date +%s)\")'" >> "$SHELL_RC"
+  echo "alias Q='bash ~/menu.sh'" >> "$SHELL_RC"
+  echo "alias q='bash ~/menu.sh'" >> "$SHELL_RC"
 
   echo "✅ 快捷键 Q / q 已设置，请执行 'source $SHELL_RC' 或重启终端生效"
-  sleep 2
-}
-
-# ====== 更新 menu.sh 脚本 ======
-update_menu_script() {
-  SCRIPT_PATH="$HOME/menu.sh"
-  echo "🔄 正在更新 menu.sh..."
-  curl -fsSL "https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh?t=$(date +%s)" -o "$SCRIPT_PATH"
-  chmod +x "$SCRIPT_PATH"
-  echo "✅ menu.sh 已更新，保存路径：$SCRIPT_PATH"
-  echo "👉 执行：bash $SCRIPT_PATH 启动最新菜单"
   sleep 2
 }
 
@@ -170,6 +163,7 @@ while true; do
   echo "4) 甬哥Sing-box-yg管理"
   echo "5) 勇哥ArgoSB一键无交互小钢炮"
   echo "6) 其他服务 (预留)"
+  echo "7) Kejilion.sh 一键脚本工具箱"
   echo "9) 设置快捷键 Q / q"
   echo "U) 更新菜单脚本 menu.sh"
   echo "0) 退出"
@@ -183,6 +177,7 @@ while true; do
     4) singbox_menu ;;
     5) argosb_menu ;;
     6) echo "⚠️ 其他服务还未实现"; sleep 1 ;;
+    7) bash <(curl -sL kejilion.sh) ;;
     9) set_q_shortcut ;;
     U) update_menu_script ;;
     0) exit 0 ;;
