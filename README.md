@@ -57,8 +57,8 @@ https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh
 
 ### 临时运行
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/你的用户名/你的仓库/main/menu.sh)
-
+bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh)
+```
 
 # 🚀 menu.sh 使用说明
 
@@ -81,19 +81,21 @@ bash <(curl -fsSL https://raw.githubusercontent.com/你的用户名/你的仓库
 
 ### 临时运行
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/你的用户名/你的仓库/main/menu.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh)
+
+````
 脚本会自动检测并保存到 $HOME/menu.sh，以后可以直接运行：
 
-bash
-复制
-编辑
-bash ~/menu.sh
-或者通过快捷键：
 
-bash
-复制
-编辑
+````
+bash ~/menu.sh
+````
+或者通过快捷键：
+`````
+
+````
 Q 或 q
+`````
 主菜单功能说明
 1) MoonTV 管理
 管理 MoonTV 容器环境
@@ -154,11 +156,7 @@ U) 更新菜单脚本
 退出菜单
 
 使用示例
-临时执行
-bash
-复制
-编辑
-bash <(curl -fsSL https://raw.githubusercontent.com/你的用户名/你的仓库/main/menu.sh)
+
 添加 zjsync 同步任务
 选择 7) zjsync
 
