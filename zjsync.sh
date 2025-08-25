@@ -7,8 +7,9 @@ mkdir -p /etc
 mkdir -p /usr/local/bin
 mkdir -p "$LOG_DIR"
 
-# ====== 读取已有任务 ======
 declare -A TASKS
+
+# ====== 读取已有任务 ======
 if [ -f "$CONFIG_FILE" ]; then
     current_task=""
     while IFS= read -r line; do
@@ -44,34 +45,28 @@ case "$CHOICE" in
     done
     echo "添加任务编号: $TASK_NUM"
 
-    # 输入 URL
     while true; do
         read -p "请输入 GitHub 文件 URL: " URL
         [ -n "$URL" ] && break
         echo "❌ URL 不能为空"
     done
 
-    # 保存目录
     read -p "保存目录 (默认 /var/www/zj): " DEST
     DEST=${DEST:-/var/www/zj}
     mkdir -p "$DEST"
 
-    # 文件名
     FILE=$(basename "$URL")
     read -p "保存文件名 (默认 ${FILE}.txt): " NAME
     NAME=${NAME:-${FILE}.txt}
 
-    # 同步间隔
     read -p "同步间隔(分钟, 默认 5): " MINUTES
     MINUTES=${MINUTES:-5}
 
-    # 访问方式
     read -p "访问方式 (1=Token, 2=SSH) [1]: " MODE
     MODE=${MODE:-1}
 
     if [ "$MODE" = "1" ]; then
         read -p "请输入 GitHub Token: " TOKEN
-
         # ===== Token 验证 =====
         if [[ "$URL" =~ github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+) ]]; then
             USER="${BASH_REMATCH[1]}"
@@ -98,7 +93,6 @@ case "$CHOICE" in
 
     SCRIPT="/usr/local/bin/zjsync-${NAME}.sh"
 
-    # ===== 生成同步脚本 =====
     if [ "$MODE" = "1" ]; then
 cat > "$SCRIPT" <<EOF
 #!/bin/bash
@@ -123,7 +117,7 @@ EOF
     CRON="*/${MINUTES} * * * *"
     (crontab -l 2>/dev/null; echo "${CRON} ${SCRIPT} >> ${LOG_DIR}/zjsync-${NAME}.log 2>&1") | crontab -
 
-    # ===== 保存到配置文件 =====
+    # ===== 保存配置 =====
     {
         echo "[task$TASK_NUM]"
         echo "NAME=$NAME"
@@ -138,24 +132,24 @@ EOF
     read -n1 -rsp "按任意键返回主菜单..."
     ;;
 2)
-    # 查看任务
     echo "===== 当前任务列表 ====="
-    grep "^\[task" "$CONFIG_FILE" | while read -r line; do
-        num=${line#*[task}
-        num=${num%]*}
-        name=$(grep -A5 "\[task${num}\]" "$CONFIG_FILE" | grep "^NAME=" | awk -F= '{print $2}')
-        url=$(grep -A5 "\[task${num}\]" "$CONFIG_FILE" | grep "^URL=" | awk -F= '{print $2}')
-        echo "$num) $name   URL: $url"
-    done
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "暂无任务"
+    else
+        grep -n "^\[task" "$CONFIG_FILE" | while read -r line; do
+            num=$(echo $line | cut -d'[' -f2 | cut -d']' -f1)
+            name=$(awk -v t="$num" '$0=="[task"t"]"{getline; getline; getline; print substr($0,6)}' "$CONFIG_FILE")
+            url=$(awk -v t="$num" '$0=="[task"t"]"{getline; getline; getline; getline; print substr($0,5)}' "$CONFIG_FILE")
+            echo "$num) $name   URL: $url"
+        done
+    fi
     read -n1 -rsp "按任意键返回主菜单..."
     ;;
 3)
-    # 删除任务
     echo "===== 删除任务 ====="
-    grep "^\[task" "$CONFIG_FILE" | while read -r line; do
-        num=${line#*[task}
-        num=${num%]*}
-        name=$(grep -A5 "\[task${num}\]" "$CONFIG_FILE" | grep "^NAME=" | awk -F= '{print $2}')
+    grep -n "^\[task" "$CONFIG_FILE" | while read -r line; do
+        num=$(echo $line | cut -d'[' -f2 | cut -d']' -f1)
+        name=$(awk -v t="$num" '$0=="[task"t"]"{getline; getline; getline; print substr($0,6)}' "$CONFIG_FILE")
         echo "$num) $name"
     done
     read -p "请输入要删除的任务编号: " DEL
@@ -165,25 +159,28 @@ EOF
     ;;
 4)
     # 执行所有任务
-    grep "^\[task" "$CONFIG_FILE" | while read -r line; do
-        num=${line#*[task}
-        num=${num%]*}
-        name=$(grep -A5 "\[task${num}\]" "$CONFIG_FILE" | grep "^NAME=" | awk -F= '{print $2}')
+    grep -oP '(?<=\[task)\d+(?=\])' "$CONFIG_FILE" | while read -r num; do
+        name=$(awk -v t="$num" '$0=="[task"t"]"{getline; getline; getline; print substr($0,6)}' "$CONFIG_FILE")
         SCRIPT="/usr/local/bin/zjsync-${name}.sh"
         LOG_FILE="${LOG_DIR}/zjsync-${name}.log"
+
+        echo "📌 执行 $SCRIPT"
         if [ -f "$SCRIPT" ]; then
-            echo "📌 执行 $SCRIPT"
             if $SCRIPT >> "$LOG_FILE" 2>&1; then
                 echo "✅ 执行成功"
             else
                 echo "❌ 执行失败，请检查日志: $LOG_FILE"
             fi
-            if [ -f "$LOG_FILE" ]; then
+            if [ -s "$LOG_FILE" ]; then
                 echo "最近日志（最后 10 行）："
                 tail -n 10 "$LOG_FILE"
+            else
+                echo "📄 日志文件为空或首次同步，检查 Token/URL 是否正确"
             fi
-            echo
+        else
+            echo "❌ 脚本 $SCRIPT 不存在"
         fi
+        echo
     done
     read -n1 -rsp "按任意键返回主菜单..."
     ;;
