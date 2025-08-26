@@ -227,7 +227,7 @@ while true; do
   echo "U) 更新菜单脚本 menu.sh"
   echo "0) 退出"
   echo "=============================="
-  read -rp "请输入选项: " main_choic
+  read -rp "请输入选项: " main_choice
 
   case "${main_choice^^}" in
     1) moon_menu ;;
