@@ -27,15 +27,14 @@ check_port() {
 }
 
 # ==================
-# Key 获取，等待生成
+# 获取 RustDesk Key
 # ==================
 get_rustdesk_key() {
-    KEY_FILE="$WORKDIR/data/id_ed25519.pub"
-    echo "⏳ 等待客户端 Key 生成..."
-    while [[ ! -f "$KEY_FILE" ]]; do
-        sleep 2
-    done
-    cat "$KEY_FILE"
+    if docker ps --format '{{.Names}}' | grep -q hbbs; then
+        docker exec hbbs cat /data/id_ed25519.pub 2>/dev/null || echo "⏳ Key 尚未生成"
+    else
+        echo "⏳ Key 尚未生成"
+    fi
 }
 
 check_update() {
@@ -64,6 +63,7 @@ show_info() {
 # ==================
 install_rustdesk() {
     echo "📦 安装 RustDesk Server..."
+
     mkdir -p $WORKDIR/data
     check_port 21115
     check_port 21116
