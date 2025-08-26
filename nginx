@@ -1,32 +1,40 @@
 #!/bin/bash
 set -e
 
-echo "=== 域名绑定 VPS IP + 端口并开启 HTTPS ==="
-
-# 读取用户输入
-read -rp "请输入你的域名（例如 example.com）: " DOMAIN
-read -rp "请输入服务运行的本地端口（例如 8181）: " PORT
-read -rp "请输入你的邮箱（用于 HTTPS 证书）: " EMAIL
-
-# 获取 VPS 公网 IP
-VPS_IP=$(curl -s https://api.ip.sb/ip)
+# ================== 获取 VPS 公网 IP ==================
+VPS_IP=$(curl -fsSL https://api.ipify.org)
 if [[ -z "$VPS_IP" ]]; then
-    echo "❌ 无法获取 VPS 公网 IP，请检查网络"
-    exit 1
+    echo "⚠️ 获取 VPS 公网 IP 失败，请检查网络"
+    VPS_IP="127.0.0.1"
 fi
 
-# 创建 nginx 配置目录
-mkdir -p /etc/nginx/sites-enabled
+# ================== 用户输入 ==================
+read -rp "请输入你的域名（例如 example.com）: " DOMAIN
+while [[ -z "$DOMAIN" ]]; do
+    read -rp "域名不能为空，请重新输入: " DOMAIN
+done
 
-# 写入 nginx 配置文件
+read -rp "请输入服务运行的本地端口（例如 8181）: " PORT
+while [[ ! "$PORT" =~ ^[0-9]+$ ]]; do
+    read -rp "端口格式错误，请重新输入: " PORT
+done
+
+read -rp "请输入你的邮箱（用于 HTTPS 证书）: " EMAIL
+while [[ ! "$EMAIL" =~ .+@.+\..+ ]]; do
+    read -rp "请输入有效邮箱（用于 HTTPS 证书）: " EMAIL
+done
+
+# ================== 写入 nginx 配置 ==================
 NGINX_CONF="/etc/nginx/sites-enabled/$DOMAIN"
+mkdir -p "$(dirname "$NGINX_CONF")"
+
 cat > "$NGINX_CONF" <<EOF
 server {
     listen 80;
     server_name $DOMAIN;
 
     location / {
-        proxy_pass http://$VPS_IP:$PORT;
+        proxy_pass http://127.0.0.1:$PORT;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -37,24 +45,27 @@ EOF
 
 echo "✅ 配置已写入 $NGINX_CONF"
 
-# 测试 nginx 配置并重载
-if nginx -t; then
-    echo "🔹 nginx 配置测试通过，正在重载 nginx..."
-    systemctl reload nginx
+# ================== 测试并重载 nginx ==================
+nginx -t && systemctl reload nginx
+if [[ $? -eq 0 ]]; then
+    echo "🔹 nginx 配置测试通过，已重载 nginx"
 else
-    echo "❌ nginx 配置测试失败，请检查 $NGINX_CONF"
+    echo "⚠️ nginx 配置测试失败，请检查"
 fi
 
-# 获取 HTTPS 证书
-echo "🔹 正在为 $DOMAIN 获取 HTTPS 证书..."
-if certbot --nginx -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive; then
-    echo "✅ HTTPS 已成功启用，可通过 https://$DOMAIN 访问"
-else
+# ================== 获取 HTTPS 证书 ==================
+if command -v certbot &>/dev/null; then
+    certbot --nginx -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive || \
     echo "⚠️ 证书获取失败，请检查域名解析和 nginx 配置"
+else
+    echo "⚠️ certbot 未安装，无法自动获取 HTTPS 证书"
 fi
 
+# ================== 最终输出 ==================
 echo "=============================="
 echo "域名 $DOMAIN 已绑定到 http://$VPS_IP:$PORT"
+echo "HTTPS 已开启，可通过 https://$DOMAIN 访问（如果证书获取成功）"
 echo "请确保 DNS 已解析到 VPS 公网 IP"
 echo "=============================="
+
 read -rp "按回车返回上一级菜单..." dummy
