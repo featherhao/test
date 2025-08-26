@@ -11,6 +11,7 @@ function success() { echo -e "\e[32m[✓]\e[0m $1"; }
 function error() { echo -e "\e[31m[✗]\e[0m $1"; }
 
 # 显示状态函数
+# 显示状态函数
 function show_status() {
     info "检查 LibreTV 当前状态..."
 
@@ -42,17 +43,21 @@ function show_status() {
         error "LibreTV 服务不可访问"
     fi
 
-    # 输出公网 IP
-    IPV4=$(curl -s ifconfig.me || echo "localhost")
-    IPV6=$(curl -6 -s https://ifconfig.co || echo "未获取到 IPv6")
+    # 公网 IPv4
+    IPV4=$(curl -s ipv4.ip.sb || curl -s ifconfig.me || curl -s icanhazip.com || echo "localhost")
     success "访问地址 IPv4: http://${IPV4}:${PORT}"
-    if [[ $IPV6 != "未获取到 IPv6" ]]; then
+
+    # 公网 IPv6（过滤掉非 IP）
+    IPV6=$(curl -s -6 ipv6.ip.sb || curl -s -6 icanhazip.com || echo "")
+    if [[ "$IPV6" =~ ^([0-9a-fA-F:]+)$ ]]; then
         success "访问地址 IPv6: http://[${IPV6}]:${PORT}"
     else
         error "IPv6 地址未获取到"
     fi
+
     echo "----------------------------------"
 }
+
 
 # 安装 LibreTV
 function install_libretv() {
