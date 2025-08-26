@@ -27,11 +27,11 @@ check_port() {
 }
 
 get_rustdesk_key() {
-    KEY_FILE="$WORKDIR/data/id_ed25519/id_ed25519.pub"
+    KEY_FILE="$WORKDIR/data/id_ed25519.pub"
     if [[ -f "$KEY_FILE" ]]; then
         cat "$KEY_FILE"
     else
-        echo "⏳ Key 尚未生成，请稍后再查看"
+        docker logs hbbs 2>/dev/null | grep "Key:" | tail -1 | awk '{print $NF}' || echo "⏳ Key 尚未生成，请稍后再查看"
     fi
 }
 
@@ -60,30 +60,17 @@ install_rustdesk() {
     check_port 21116
     check_port 21117
 
-    # 启动 hbbs 容器
     docker run -d --name hbbs \
         --restart unless-stopped \
         -v $WORKDIR/data:/data \
         -p 21115:21115 -p 21116:21116 -p 21116:21116/udp \
         rustdesk/rustdesk-server hbbs -r ${SERVER_IP}:21117
 
-    # 启动 hbbr 容器
     docker run -d --name hbbr \
         --restart unless-stopped \
         -v $WORKDIR/data:/data \
         -p 21117:21117 \
         rustdesk/rustdesk-server hbbr
-
-    # 等待 hbbs 内生成 Key 并复制到宿主机
-    echo "⏳ 等待 hbbs 生成 Key..."
-    for i in {1..20}; do
-        if docker exec hbbs sh -c "test -f id_ed25519/id_ed25519.pub"; then
-            docker exec hbbs sh -c "cp -r id_ed25519 /data/"
-            echo "✅ Key 已写入宿主机: $WORKDIR/data/id_ed25519"
-            break
-        fi
-        sleep 1
-    done
 
     echo "✅ 安装完成"
     show_info
