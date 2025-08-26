@@ -31,14 +31,10 @@ get_rustdesk_key() {
     if [[ -f "$KEY_FILE" ]]; then
         cat "$KEY_FILE"
     else
-        # 文件不存在则从容器日志获取
-        if docker ps --format '{{.Names}}' | grep -q hbbs; then
-            docker logs hbbs 2>&1 | grep 'Key:' | tail -n1 | awk '{print $NF}'
-        else
-            echo "⏳ Key 尚未生成"
-        fi
+        echo "⏳ Key 尚未生成或卷未挂载，请确认容器已启动并挂载 /data"
     fi
 }
+
 
 check_update() {
     local image="rustdesk/rustdesk-server:latest"
@@ -73,10 +69,11 @@ install_rustdesk() {
 
     # 启动 hbbs
     docker run -d --name hbbs \
-        --restart unless-stopped \
-        -v $WORKDIR/data:/data \
-        -p 21115:21115 -p 21116:21116 -p 21116:21116/udp \
-        rustdesk/rustdesk-server hbbs -r ${SERVER_IP}:21117
+    --restart unless-stopped \
+    -v $WORKDIR/data:/data \
+    -p 21115:21115 -p 21116:21116 -p 21116:21116/udp \
+    rustdesk/rustdesk-server hbbs -r ${SERVER_IP}:21117
+
 
     # 启动 hbbr
     docker run -d --name hbbr \
