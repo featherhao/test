@@ -31,15 +31,20 @@ get_rustdesk_key() {
     if [[ -f "$KEY_FILE" ]]; then
         cat "$KEY_FILE"
     else
-        # 容器内也可能有 key
-        docker exec hbbs sh -c "cat /data/id_ed25519.pub 2>/dev/null" 2>/dev/null || echo "⏳ Key 尚未生成"
+        echo "⏳ Key 尚未生成"
     fi
 }
 
 check_update() {
     local image="rustdesk/rustdesk-server:latest"
-    echo "🔍 异步检查更新中..."
-    (docker pull $image >/dev/null 2>&1 && echo "✅ 当前已是最新版本（本地镜像存在）") &
+    docker pull $image >/dev/null 2>&1
+    local local_id=$(docker images -q $image)
+    local remote_id=$(docker inspect --format='{{.Id}}' $image)
+    if [[ "$local_id" != "$remote_id" ]]; then
+        echo "⬆️  有新版本可更新！(选择 5 更新)"
+    else
+        echo "✅ 当前已是最新版本（本地镜像存在）"
+    fi
 }
 
 show_info() {
@@ -55,13 +60,16 @@ show_info() {
 # ==================
 install_rustdesk() {
     echo "📦 安装 RustDesk Server..."
-
     mkdir -p $WORKDIR/data
     check_port 21115
     check_port 21116
     check_port 21117
 
-    # 启动 hbbs，如果已有 Key 就挂载，不生成新 key
+    # 如果 Key 已存在，直接挂载
+    if [[ ! -f "$WORKDIR/data/id_ed25519.pub" ]]; then
+        echo "⏳ Key 文件不存在，将在容器启动时生成新的 Key"
+    fi
+
     docker run -d --name hbbs \
         --restart unless-stopped \
         -v $WORKDIR/data:/data \
@@ -88,6 +96,8 @@ uninstall_rustdesk() {
     if [[ "$yn" =~ ^[Yy]$ ]]; then
         rm -rf $WORKDIR
         echo "🗑️ 数据文件已删除"
+    else
+        echo "💾 数据文件保留，Key 可复用"
     fi
     echo "✅ 卸载完成"
 }
