@@ -31,12 +31,18 @@ get_rustdesk_key() {
     if [[ -f "$KEY_FILE" ]]; then
         cat "$KEY_FILE"
     else
-        echo "⏳ Key 尚未生成"
+        # 文件不存在则从容器日志获取
+        if docker ps --format '{{.Names}}' | grep -q hbbs; then
+            docker logs hbbs 2>&1 | grep 'Key:' | tail -n1 | awk '{print $NF}'
+        else
+            echo "⏳ Key 尚未生成"
+        fi
     fi
 }
 
 check_update() {
     local image="rustdesk/rustdesk-server:latest"
+    echo "🔍 检查更新中..."
     docker pull $image >/dev/null 2>&1
     local local_id=$(docker images -q $image)
     local remote_id=$(docker inspect --format='{{.Id}}' $image)
@@ -65,22 +71,32 @@ install_rustdesk() {
     check_port 21116
     check_port 21117
 
-    # 如果 Key 已存在，直接挂载
-    if [[ ! -f "$WORKDIR/data/id_ed25519.pub" ]]; then
-        echo "⏳ Key 文件不存在，将在容器启动时生成新的 Key"
-    fi
-
+    # 启动 hbbs
     docker run -d --name hbbs \
         --restart unless-stopped \
         -v $WORKDIR/data:/data \
         -p 21115:21115 -p 21116:21116 -p 21116:21116/udp \
         rustdesk/rustdesk-server hbbs -r ${SERVER_IP}:21117
 
+    # 启动 hbbr
     docker run -d --name hbbr \
         --restart unless-stopped \
         -v $WORKDIR/data:/data \
         -p 21117:21117 \
         rustdesk/rustdesk-server hbbr
+
+    # 如果 Key 文件不存在，等待容器生成
+    if [[ ! -f "$WORKDIR/data/id_ed25519.pub" ]]; then
+        echo "⏳ 等待 hbbs 生成 Key..."
+        sleep 5
+        KEY=$(docker logs hbbs 2>&1 | grep 'Key:' | tail -n1 | awk '{print $NF}')
+        if [[ -n "$KEY" ]]; then
+            echo "$KEY" > "$WORKDIR/data/id_ed25519.pub"
+            echo "✅ Key 已生成并写入 $WORKDIR/data/id_ed25519.pub"
+        else
+            echo "⚠️ 未能获取 Key，请稍后再查看"
+        fi
+    fi
 
     echo "✅ 安装完成"
     show_info
@@ -96,8 +112,6 @@ uninstall_rustdesk() {
     if [[ "$yn" =~ ^[Yy]$ ]]; then
         rm -rf $WORKDIR
         echo "🗑️ 数据文件已删除"
-    else
-        echo "💾 数据文件保留，Key 可复用"
     fi
     echo "✅ 卸载完成"
 }
