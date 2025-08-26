@@ -1,12 +1,13 @@
 #!/bin/bash
 set -e
 
-# ================== 获取 VPS 公网 IP ==================
-VPS_IP=$(curl -fsSL https://api.ipify.org)
+# ================== 获取 VPS 公网 IPv6 ==================
+VPS_IP=$(curl -6 -fsSL https://api64.ipify.org)
 if [[ -z "$VPS_IP" ]]; then
-    echo "⚠️ 获取 VPS 公网 IP 失败，请检查网络"
-    VPS_IP="127.0.0.1"
+    echo "⚠️ 获取 VPS 公网 IPv6 失败，请检查网络"
+    VPS_IP="::1"
 fi
+echo "🌐 VPS 公网 IPv6: $VPS_IP"
 
 # ================== 检查并安装依赖 ==================
 install_deps() {
@@ -34,10 +35,13 @@ while [[ ! "$PORT" =~ ^[0-9]+$ ]]; do
     read -rp "端口格式错误，请重新输入: " PORT
 done
 
-read -rp "请输入你的邮箱（用于 HTTPS 证书）: " EMAIL
-while [[ ! "$EMAIL" =~ .+@.+\..+ ]]; do
-    read -rp "请输入有效邮箱（用于 HTTPS 证书）: " EMAIL
-done
+# 自动生成随机邮箱
+RANDOM_EMAIL="user$((RANDOM%100000))@random.com"
+read -rp "请输入你的邮箱（用于 HTTPS 证书，留空则随机生成）: " EMAIL
+if [[ -z "$EMAIL" ]]; then
+    EMAIL="$RANDOM_EMAIL"
+    echo "⚡ 使用随机邮箱: $EMAIL"
+fi
 
 # ================== 写入 nginx 配置 ==================
 NGINX_CONF="/etc/nginx/sites-enabled/$DOMAIN"
@@ -50,7 +54,7 @@ server {
     server_name $DOMAIN;
 
     location / {
-        proxy_pass http://127.0.0.1:$PORT;
+        proxy_pass http://[::1]:$PORT;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -82,9 +86,9 @@ fi
 
 # ================== 最终输出 ==================
 echo "=============================="
-echo "域名 $DOMAIN 已绑定到 http://$VPS_IP:$PORT"
+echo "域名 $DOMAIN 已绑定到 http://[$VPS_IP]:$PORT"
 echo "HTTPS 已开启，可通过 https://$DOMAIN 访问（如果证书获取成功）"
-echo "请确保 DNS 已解析到 VPS 公网 IP: $VPS_IP"
+echo "请确保 DNS AAAA 已解析到 VPS 公网 IPv6: $VPS_IP"
 echo "=============================="
 
 read -rp "按回车返回上一级菜单..." dummy
