@@ -110,12 +110,26 @@ restart_rustdesk() {
 # 更新
 # ==================
 update_rustdesk() {
-    echo "⬆️ 更新 RustDesk Server..."
-    docker pull rustdesk/rustdesk-server:latest
-    docker rm -f hbbs hbbr 2>/dev/null || true
-    install_rustdesk
-    echo "✅ 更新完成"
+  echo "⬆️ 更新 RustDesk Server..."
+  docker pull rustdesk/rustdesk-server:latest
+
+  echo "📦 重新部署 RustDesk Server..."
+  docker rm -f hbbs hbbr >/dev/null 2>&1 || true
+  docker run -d --name hbbs \
+    -v $WORKDIR:/data \
+    -p 21115:21115 -p 21116:21116 -p 21117:21117 \
+    rustdesk/rustdesk-server hbbs -r 0.0.0.0:21117
+  docker run -d --name hbbr \
+    --net=host \
+    rustdesk/rustdesk-server hbbr
+
+  sleep 2
+  echo "✅ 更新完成"
+
+  # 🔄 重新检测状态和 Key
+  show_info
 }
+
 
 # ==================
 # 主菜单
