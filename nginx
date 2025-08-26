@@ -18,9 +18,13 @@ if [[ -d "$NGINX_DIR" ]]; then
 
     if [[ $COUNT -eq 0 ]]; then
         echo "  暂无绑定域名"
+        read -rp "按回车返回上一级菜单..." dummy
+        return   # 二级脚本用 return，而不是 exit
     fi
 else
     echo "  暂无绑定域名"
+    read -rp "按回车返回上一级菜单..." dummy
+    return
 fi
 echo "=============================="
 
