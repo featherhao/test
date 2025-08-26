@@ -26,38 +26,25 @@ check_port() {
     fi
 }
 
-# 改进版 Key 获取
+# ==================
+# Key 获取，等待生成
+# ==================
 get_rustdesk_key() {
     KEY_FILE="$WORKDIR/data/id_ed25519.pub"
-
-    # 优先检查宿主机挂载目录
-    if [[ -f "$KEY_FILE" ]]; then
-        cat "$KEY_FILE"
-        return
-    fi
-
-    # 如果挂载目录没有，尝试从容器里拷贝出来
-    if docker ps -a --format '{{.Names}}' | grep -q hbbs; then
-        echo "⏳ 挂载目录未找到 Key，尝试从容器内导出..."
-        docker cp hbbs:/root/.local/share/rustdesk/id_ed25519.pub $WORKDIR/data/ 2>/dev/null || true
-        docker cp hbbs:/root/.local/share/rustdesk/id_ed25519 $WORKDIR/data/ 2>/dev/null || true
-        if [[ -f "$KEY_FILE" ]]; then
-            echo "✅ 已从容器导出 Key"
-            cat "$KEY_FILE"
-            return
-        fi
-    fi
-
-    echo "❌ Key 尚未生成，请确认容器已启动并等待初始化"
+    echo "⏳ 等待客户端 Key 生成..."
+    while [[ ! -f "$KEY_FILE" ]]; do
+        sleep 2
+    done
+    cat "$KEY_FILE"
 }
 
 check_update() {
     local image="rustdesk/rustdesk-server:latest"
     echo "🔍 检查更新中..."
-    local old_id=$(docker images -q $image 2>/dev/null || true)
     docker pull $image >/dev/null 2>&1
-    local new_id=$(docker images -q $image)
-    if [[ "$old_id" != "$new_id" ]]; then
+    local local_id=$(docker images -q $image)
+    local remote_id=$(docker inspect --format='{{.Id}}' $image)
+    if [[ "$local_id" != "$remote_id" ]]; then
         echo "⬆️  有新版本可更新！(选择 5 更新)"
     else
         echo "✅ 当前已是最新版本"
@@ -77,7 +64,6 @@ show_info() {
 # ==================
 install_rustdesk() {
     echo "📦 安装 RustDesk Server..."
-
     mkdir -p $WORKDIR/data
     check_port 21115
     check_port 21116
