@@ -1,32 +1,30 @@
 #!/bin/bash
 set -e
 
-# ================== 显示已绑定的域名 ==================
+# 显示已绑定域名
 NGINX_DIR="/etc/nginx/sites-enabled"
-
 echo "=============================="
 echo "📄 已绑定的域名列表："
 
+COUNT=0
 if [[ -d "$NGINX_DIR" ]]; then
-    COUNT=0
     for f in "$NGINX_DIR"/*; do
         [[ -f "$f" ]] || continue
         DOMAIN_NAME=$(basename "$f")
         echo "  - $DOMAIN_NAME"
         ((COUNT++))
     done
+fi
 
-    if [[ $COUNT -eq 0 ]]; then
-        echo "  暂无绑定域名"
-        read -rp "按回车返回上一级菜单..." dummy
-        return   # 二级脚本用 return，而不是 exit
-    fi
-else
+if [[ $COUNT -eq 0 ]]; then
     echo "  暂无绑定域名"
-    read -rp "按回车返回上一级菜单..." dummy
-    return
 fi
 echo "=============================="
+
+# 等待用户确认再返回
+read -rp "按回车返回上一级菜单..." dummy
+# 然后直接结束脚本，不用 exit
+
 
 
 
