@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# 简单域名绑定 + HTTPS 自动获取脚本
+# 按提示操作即可
+
+echo "=== 域名绑定 VPS IP+端口并开启 HTTPS ==="
+
+# 提示用户输入域名
+read -p "请输入你的域名（例如 example.com）: " DOMAIN
+
+# 提示用户输入本地端口
+read -p "请输入服务运行的本地端口（例如 8181）: " PORT
+
+# 检查 nginx 是否安装
+if ! command -v nginx &> /dev/null
+then
+    echo "Nginx 未安装，请先安装: sudo apt install nginx -y"
+    exit 1
+fi
+
+# 检查 certbot 是否安装
+if ! command -v certbot &> /dev/null
+then
+    echo "Certbot 未安装，正在安装..."
+    sudo apt update
+    sudo apt install certbot python3-certbot-nginx -y
+fi
+
+NGINX_CONF_DIR="/etc/nginx/sites-available"
+NGINX_ENABLED_DIR="/etc/nginx/sites-enabled"
+CONF_FILE="$NGINX_CONF_DIR/$DOMAIN"
+
+# 创建 nginx 配置（HTTP）
+sudo bash -c "cat > $CONF_FILE <<EOL
+server {
+    listen 80;
+    server_name $DOMAIN;
+
+    location / {
+        proxy_pass http://127.0.0.1:$PORT;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOL"
+
+# 启用站点
+sudo ln -sf $CONF_FILE $NGINX_ENABLED_DIR/
+
+# 测试 nginx 配置
+sudo nginx -t
+
+# 重载 nginx
+sudo systemctl reload nginx
+
+# 自动申请 HTTPS
+echo "正在为 $DOMAIN 获取 HTTPS 证书..."
+sudo certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m admin@$DOMAIN
+
+echo "=============================="
+echo "域名 $DOMAIN 已绑定到 http://127.0.0.1:$PORT"
+echo "HTTPS 已开启，可通过 https://$DOMAIN 访问"
+echo "请确保 DNS 已解析到 VPS 公网 IP"
