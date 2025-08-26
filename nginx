@@ -1,6 +1,34 @@
 #!/bin/bash
 set -e
 
+# ================== 显示已绑定的域名 ==================
+NGINX_DIR="/etc/nginx/sites-enabled"
+
+echo "=============================="
+echo "📄 已绑定的域名列表："
+
+if [[ -d "$NGINX_DIR" ]]; then
+    COUNT=0
+    for f in "$NGINX_DIR"/*; do
+        [[ -f "$f" ]] || continue
+        DOMAIN_NAME=$(basename "$f")
+        echo "  - $DOMAIN_NAME"
+        ((COUNT++))
+    done
+
+    if [[ $COUNT -eq 0 ]]; then
+        echo "  暂无绑定域名"
+    fi
+else
+    echo "  暂无绑定域名"
+fi
+echo "=============================="
+
+
+
+
+
+
 # ================== 获取 VPS 公网 IPv6 ==================
 VPS_IP=$(curl -6 -fsSL https://api64.ipify.org)
 if [[ -z "$VPS_IP" ]]; then
