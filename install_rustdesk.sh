@@ -27,16 +27,33 @@ check_port() {
 }
 
 # ==================
-# 获取 RustDesk Key
+# 获取客户端 Key（不会阻塞）
 # ==================
 get_rustdesk_key() {
-    if docker ps --format '{{.Names}}' | grep -q hbbs; then
-        docker exec hbbs cat /data/id_ed25519.pub 2>/dev/null || echo "⏳ Key 尚未生成"
-    else
-        echo "⏳ Key 尚未生成"
+    KEY_FILE="$WORKDIR/data/id_ed25519.pub"
+
+    # 优先从宿主机挂载目录读取
+    if [[ -f "$KEY_FILE" ]]; then
+        cat "$KEY_FILE"
+        return
     fi
+
+    # 尝试从容器拷贝
+    if docker ps --format '{{.Names}}' | grep -q hbbs; then
+        docker cp hbbs:/data/id_ed25519.pub "$KEY_FILE" 2>/dev/null || true
+        if [[ -f "$KEY_FILE" ]]; then
+            cat "$KEY_FILE"
+            return
+        fi
+    fi
+
+    # 都没有就直接返回提示
+    echo "⏳ Key 尚未生成或容器未启动"
 }
 
+# ==================
+# 检查更新
+# ==================
 check_update() {
     local image="rustdesk/rustdesk-server:latest"
     echo "🔍 检查更新中..."
@@ -50,6 +67,9 @@ check_update() {
     fi
 }
 
+# ==================
+# 显示服务信息
+# ==================
 show_info() {
     echo "🌐 RustDesk 服务端连接信息："
     echo "ID Server : ${SERVER_IP}:21115"
@@ -63,8 +83,8 @@ show_info() {
 # ==================
 install_rustdesk() {
     echo "📦 安装 RustDesk Server..."
-
     mkdir -p $WORKDIR/data
+
     check_port 21115
     check_port 21116
     check_port 21117
