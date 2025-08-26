@@ -1,21 +1,32 @@
 #!/bin/bash
 set -e
 
-echo "=== 域名绑定 VPS IP+端口并开启 HTTPS ==="
+echo "=== 域名绑定 VPS IP + 端口并开启 HTTPS ==="
 
+# 读取用户输入
 read -rp "请输入你的域名（例如 example.com）: " DOMAIN
-read -rp "请输入服务运行的本地端口（例如 8181）: " LOCAL_PORT
+read -rp "请输入服务运行的本地端口（例如 8181）: " PORT
+read -rp "请输入你的邮箱（用于 HTTPS 证书）: " EMAIL
 
-NGINX_SITE_CONF="/etc/nginx/sites-enabled/${DOMAIN}"
+# 获取 VPS 公网 IP
+VPS_IP=$(curl -s https://api.ip.sb/ip)
+if [[ -z "$VPS_IP" ]]; then
+    echo "❌ 无法获取 VPS 公网 IP，请检查网络"
+    exit 1
+fi
 
-# 生成标准 nginx 配置
-cat > "$NGINX_SITE_CONF" <<EOF
+# 创建 nginx 配置目录
+mkdir -p /etc/nginx/sites-enabled
+
+# 写入 nginx 配置文件
+NGINX_CONF="/etc/nginx/sites-enabled/$DOMAIN"
+cat > "$NGINX_CONF" <<EOF
 server {
     listen 80;
     server_name $DOMAIN;
 
     location / {
-        proxy_pass http://127.0.0.1:$LOCAL_PORT;
+        proxy_pass http://$VPS_IP:$PORT;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -24,27 +35,26 @@ server {
 }
 EOF
 
-echo "✅ 配置已写入 $NGINX_SITE_CONF"
+echo "✅ 配置已写入 $NGINX_CONF"
 
-# 测试 nginx 配置
+# 测试 nginx 配置并重载
 if nginx -t; then
     echo "🔹 nginx 配置测试通过，正在重载 nginx..."
     systemctl reload nginx
 else
-    echo "❌ nginx 配置测试失败，请检查配置文件"
+    echo "❌ nginx 配置测试失败，请检查 $NGINX_CONF"
 fi
 
 # 获取 HTTPS 证书
 echo "🔹 正在为 $DOMAIN 获取 HTTPS 证书..."
-certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m your-email@example.com || {
+if certbot --nginx -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive; then
+    echo "✅ HTTPS 已成功启用，可通过 https://$DOMAIN 访问"
+else
     echo "⚠️ 证书获取失败，请检查域名解析和 nginx 配置"
-}
+fi
 
 echo "=============================="
-echo "域名 $DOMAIN 已绑定到 http://127.0.0.1:$LOCAL_PORT"
-echo "HTTPS 已开启，可通过 https://$DOMAIN 访问"
+echo "域名 $DOMAIN 已绑定到 http://$VPS_IP:$PORT"
 echo "请确保 DNS 已解析到 VPS 公网 IP"
 echo "=============================="
-
-# 等待用户确认，不自动退出
 read -rp "按回车返回上一级菜单..." dummy
