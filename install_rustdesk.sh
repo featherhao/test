@@ -1,30 +1,47 @@
 #!/bin/bash
 set -e
 
-# ================== 基础配置 ==================
+# ==================
+# 基础配置
+# ==================
 WORKDIR="/opt/rustdesk"
-IMAGE="rustdesk/rustdesk-server:latest"
-SERVER_IP=$(curl -s ipv4.ip.sb || curl -s ifconfig.me)
+SERVER_IP=$(curl -s ipv4.ip.sb || curl -s ifconfig.me || echo "0.0.0.0")
 
-# ================== 工具函数 ==================
-pause() {
-    read -p "按回车继续..."
+# ==================
+# 工具函数
+# ==================
+check_port() {
+    local port=$1
+    if lsof -i:$port >/dev/null 2>&1; then
+        pid=$(lsof -t -i:$port)
+        echo "⚠️  端口 $port 已被进程 PID:$pid 占用"
+        read -p "是否释放该端口？[y/N] " yn
+        if [[ "$yn" =~ ^[Yy]$ ]]; then
+            kill -9 $pid
+            echo "✅ 已释放端口 $port"
+        else
+            echo "❌ 请修改端口或停止占用进程后再试"
+            exit 1
+        fi
+    fi
 }
 
-check_docker() {
-    if ! command -v docker &>/dev/null; then
-        echo "📦 正在安装 Docker..."
-        curl -fsSL https://get.docker.com | bash
+get_rustdesk_key() {
+    KEY_FILE="$WORKDIR/data/id_ed25519.pub"
+    if [[ -f "$KEY_FILE" ]]; then
+        cat "$KEY_FILE"
+    else
+        echo "⏳ Key 尚未生成，请等待容器初始化后再查看"
     fi
 }
 
 check_update() {
+    local image="rustdesk/rustdesk-server:latest"
     echo "🔍 检查更新中..."
-    docker pull $IMAGE >/dev/null
-    LOCAL=$(docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | grep "$IMAGE" | awk '{print $2}')
-    REMOTE=$(docker inspect --format='{{.Id}}' $IMAGE 2>/dev/null || true)
-
-    if [[ "$LOCAL" != "$REMOTE" ]]; then
+    local old_id=$(docker images -q $image 2>/dev/null || true)
+    docker pull $image >/dev/null 2>&1
+    local new_id=$(docker images -q $image)
+    if [[ "$old_id" != "$new_id" ]]; then
         echo "⬆️  有新版本可更新！(选择 5 更新)"
     else
         echo "✅ 当前已是最新版本"
@@ -36,93 +53,99 @@ show_info() {
     echo "ID Server : ${SERVER_IP}:21115"
     echo "Relay     : ${SERVER_IP}:21116"
     echo "API       : ${SERVER_IP}:21117"
-
-    # 从容器读取 Key
-    if docker exec hbbs test -f /root/.config/rustdesk/id_ed25519.pub 2>/dev/null; then
-        KEY=$(docker exec hbbs cat /root/.config/rustdesk/id_ed25519.pub)
-        echo "🔑 客户端 Key：$KEY"
-    else
-        echo "⚠️ 未找到客户端 Key 文件"
-    fi
-
-    pause
+    echo "🔑 客户端 Key：$(get_rustdesk_key)"
 }
 
+# ==================
+# 安装
+# ==================
 install_rustdesk() {
-    check_docker
-    mkdir -p $WORKDIR
-
     echo "📦 安装 RustDesk Server..."
-    docker run -d --name hbbs --restart unless-stopped \
-        -v $WORKDIR:/root/.config/rustdesk \
-        -p 21115:21115 -p 21116:21116 -p 21116:21116/udp \
-        $IMAGE hbbs
 
-    docker run -d --name hbbr --restart unless-stopped \
-        -v $WORKDIR:/root/.config/rustdesk \
+    mkdir -p $WORKDIR/data
+    check_port 21115
+    check_port 21116
+    check_port 21117
+
+    docker run -d --name hbbs \
+        --restart unless-stopped \
+        -v $WORKDIR/data:/data \
+        -p 21115:21115 -p 21116:21116 -p 21116:21116/udp \
+        rustdesk/rustdesk-server hbbs -r ${SERVER_IP}:21117
+
+    docker run -d --name hbbr \
+        --restart unless-stopped \
+        -v $WORKDIR/data:/data \
         -p 21117:21117 \
-        $IMAGE hbbr
+        rustdesk/rustdesk-server hbbr
 
     echo "✅ 安装完成"
     show_info
 }
 
+# ==================
+# 卸载
+# ==================
 uninstall_rustdesk() {
     echo "🗑️ 卸载 RustDesk Server..."
-    docker rm -f hbbs hbbr >/dev/null 2>&1 || true
-    rm -rf $WORKDIR
+    docker rm -f hbbs hbbr 2>/dev/null || true
+    read -p "是否删除数据文件 (Key/配置)? [y/N] " yn
+    if [[ "$yn" =~ ^[Yy]$ ]]; then
+        rm -rf $WORKDIR
+        echo "🗑️ 数据文件已删除"
+    fi
     echo "✅ 卸载完成"
-    pause
 }
 
+# ==================
+# 重启
+# ==================
 restart_rustdesk() {
     echo "🔄 重启 RustDesk Server..."
-    docker restart hbbs hbbr >/dev/null
+    docker restart hbbs hbbr
     echo "✅ 重启完成"
-    pause
 }
 
+# ==================
+# 更新
+# ==================
 update_rustdesk() {
     echo "⬆️ 更新 RustDesk Server..."
-    docker pull $IMAGE
-    uninstall_rustdesk
+    docker pull rustdesk/rustdesk-server:latest
+    docker rm -f hbbs hbbr 2>/dev/null || true
     install_rustdesk
     echo "✅ 更新完成"
-    pause
 }
 
-# ================== 主菜单 ==================
+# ==================
+# 主菜单
+# ==================
 while true; do
-    clear
     echo "============================="
     echo "     RustDesk 服务端管理"
     echo "============================="
-
-    if docker ps -a --format '{{.Names}}' | grep -q hbbs; then
+    if docker ps --format '{{.Names}}' | grep -q hbbs; then
         echo "服务端状态: 已安装 ✅"
     else
         echo "服务端状态: 未安装 ❌"
     fi
-
     check_update
 
-    cat <<EOF
-1) 安装 RustDesk Server
-2) 卸载 RustDesk Server
-3) 重启 RustDesk Server
-4) 查看连接信息
-5) 更新 RustDesk Server
-0) 退出
-EOF
-
+    echo "1) 安装 RustDesk Server"
+    echo "2) 卸载 RustDesk Server"
+    echo "3) 重启 RustDesk Server"
+    echo "4) 查看连接信息"
+    echo "5) 更新 RustDesk Server"
+    echo "0) 退出"
     read -p "请选择操作 [0-5]: " choice
+
     case $choice in
         1) install_rustdesk ;;
         2) uninstall_rustdesk ;;
         3) restart_rustdesk ;;
-        4) show_info ;;
-        5) update_rustdesk ;;
+        4) show_info; read -p "按回车继续..." ;;
+        5) update_rustdesk; read -p "按回车继续..." ;;
         0) exit 0 ;;
-        *) echo "❌ 无效选项"; pause ;;
+        *) echo "无效选项，请重试" ;;
     esac
 done
