@@ -1,65 +1,50 @@
 #!/bin/bash
-
-# 简单域名绑定 + HTTPS 自动获取脚本
-# 按提示操作即可
+set -e
 
 echo "=== 域名绑定 VPS IP+端口并开启 HTTPS ==="
 
-# 提示用户输入域名
-read -p "请输入你的域名（例如 example.com）: " DOMAIN
+read -rp "请输入你的域名（例如 example.com）: " DOMAIN
+read -rp "请输入服务运行的本地端口（例如 8181）: " LOCAL_PORT
 
-# 提示用户输入本地端口
-read -p "请输入服务运行的本地端口（例如 8181）: " PORT
+NGINX_SITE_CONF="/etc/nginx/sites-enabled/${DOMAIN}"
 
-# 检查 nginx 是否安装
-if ! command -v nginx &> /dev/null
-then
-    echo "Nginx 未安装，请先安装: sudo apt install nginx -y"
-    exit 1
-fi
-
-# 检查 certbot 是否安装
-if ! command -v certbot &> /dev/null
-then
-    echo "Certbot 未安装，正在安装..."
-    sudo apt update
-    sudo apt install certbot python3-certbot-nginx -y
-fi
-
-NGINX_CONF_DIR="/etc/nginx/sites-available"
-NGINX_ENABLED_DIR="/etc/nginx/sites-enabled"
-CONF_FILE="$NGINX_CONF_DIR/$DOMAIN"
-
-# 创建 nginx 配置（HTTP）
-sudo bash -c "cat > $CONF_FILE <<EOL
+# 生成标准 nginx 配置
+cat > "$NGINX_SITE_CONF" <<EOF
 server {
     listen 80;
     server_name $DOMAIN;
 
     location / {
-        proxy_pass http://127.0.0.1:$PORT;
+        proxy_pass http://127.0.0.1:$LOCAL_PORT;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
-EOL"
+EOF
 
-# 启用站点
-sudo ln -sf $CONF_FILE $NGINX_ENABLED_DIR/
+echo "✅ 配置已写入 $NGINX_SITE_CONF"
 
 # 测试 nginx 配置
-sudo nginx -t
+if nginx -t; then
+    echo "🔹 nginx 配置测试通过，正在重载 nginx..."
+    systemctl reload nginx
+else
+    echo "❌ nginx 配置测试失败，请检查配置文件"
+fi
 
-# 重载 nginx
-sudo systemctl reload nginx
-
-# 自动申请 HTTPS
-echo "正在为 $DOMAIN 获取 HTTPS 证书..."
-sudo certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m admin@$DOMAIN
+# 获取 HTTPS 证书
+echo "🔹 正在为 $DOMAIN 获取 HTTPS 证书..."
+certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m your-email@example.com || {
+    echo "⚠️ 证书获取失败，请检查域名解析和 nginx 配置"
+}
 
 echo "=============================="
-echo "域名 $DOMAIN 已绑定到 http://127.0.0.1:$PORT"
+echo "域名 $DOMAIN 已绑定到 http://127.0.0.1:$LOCAL_PORT"
 echo "HTTPS 已开启，可通过 https://$DOMAIN 访问"
 echo "请确保 DNS 已解析到 VPS 公网 IP"
+echo "=============================="
+
+# 等待用户确认，不自动退出
+read -rp "按回车返回上一级菜单..." dummy
