@@ -42,16 +42,16 @@ get_rustdesk_key() {
 
 check_update() {
     local image="rustdesk/rustdesk-server:latest"
-    echo "🔍 检查更新中..."
-    docker pull $image >/dev/null 2>&1
-    local local_id=$(docker images -q $image)
-    local remote_id=$(docker inspect --format='{{.Id}}' $image)
-    if [[ "$local_id" != "$remote_id" ]]; then
-        echo "⬆️  有新版本可更新！(选择 5 更新)"
-    else
+    echo "🔍 异步检查更新中..."
+    # 异步执行，不阻塞
+    (docker pull $image >/tmp/rustdesk_update.log 2>&1 && \
+    if grep -q 'Image is up to date' /tmp/rustdesk_update.log; then
         echo "✅ 当前已是最新版本（本地镜像存在）"
-    fi
+    else
+        echo "⬆️ 有新版本可更新！(选择 5 更新)"
+    fi) &
 }
+
 
 show_info() {
     echo "🌐 RustDesk 服务端连接信息："
