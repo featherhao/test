@@ -27,7 +27,7 @@ check_port() {
 }
 
 get_rustdesk_key() {
-    KEY_FILE="$WORKDIR/data/id_ed25519.pub"
+    KEY_FILE="$WORKDIR/data/id_ed25519/id_ed25519.pub"
     if [[ -f "$KEY_FILE" ]]; then
         cat "$KEY_FILE"
     else
@@ -35,20 +35,16 @@ get_rustdesk_key() {
     fi
 }
 
-# ==================
-# 异步检查更新
-# ==================
 check_update() {
     local image="rustdesk/rustdesk-server:latest"
     echo "🔍 异步检查更新中..."
-    # 异步拉取镜像，不阻塞菜单
-    docker pull $image >/tmp/rustdesk_update.log 2>&1 &
-
-    # 快速判断本地镜像是否存在
-    if docker images -q $image >/dev/null 2>&1; then
-        echo "✅ 当前已是最新版本（本地镜像存在）"
+    docker pull $image >/dev/null 2>&1
+    local local_id=$(docker images -q $image)
+    local remote_id=$(docker inspect --format='{{.Id}}' $image)
+    if [[ "$local_id" != "$remote_id" ]]; then
+        echo "⬆️  有新版本可更新！(选择 5 更新)"
     else
-        echo "⚠️ 镜像未拉取完成，可稍后选择更新"
+        echo "✅ 当前已是最新版本（本地镜像存在）"
     fi
 }
 
@@ -74,12 +70,14 @@ install_rustdesk() {
     docker run -d --name hbbs \
         --restart unless-stopped \
         -v $WORKDIR/data:/data \
+        -w /data \
         -p 21115:21115 -p 21116:21116 -p 21116:21116/udp \
         rustdesk/rustdesk-server hbbs -r ${SERVER_IP}:21117
 
     docker run -d --name hbbr \
         --restart unless-stopped \
         -v $WORKDIR/data:/data \
+        -w /data \
         -p 21117:21117 \
         rustdesk/rustdesk-server hbbr
 
