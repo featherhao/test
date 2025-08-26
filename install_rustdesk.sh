@@ -27,29 +27,28 @@ check_port() {
 }
 
 get_rustdesk_key() {
-    # 从容器日志读取最新 Key
-    if docker ps --format '{{.Names}}' | grep -q hbbs; then
-        key=$(docker logs hbbs 2>&1 | grep "Key:" | tail -1 | awk '{print $NF}')
-        if [[ -n "$key" ]]; then
-            echo "$key"
-        else
-            echo "⏳ Key 尚未生成，请稍后再查看"
-        fi
+    KEY_FILE="$WORKDIR/data/id_ed25519.pub"
+    if [[ -f "$KEY_FILE" ]]; then
+        cat "$KEY_FILE"
     else
         echo "⏳ Key 尚未生成，请稍后再查看"
     fi
 }
 
+# ==================
+# 异步检查更新
+# ==================
 check_update() {
     local image="rustdesk/rustdesk-server:latest"
-    echo "🔍 检查更新中..."
-    docker pull $image >/dev/null 2>&1
-    local local_id=$(docker images -q $image)
-    local remote_id=$(docker inspect --format='{{.Id}}' $image)
-    if [[ "$local_id" != "$remote_id" ]]; then
-        echo "⬆️  有新版本可更新！(选择 5 更新)"
+    echo "🔍 异步检查更新中..."
+    # 异步拉取镜像，不阻塞菜单
+    docker pull $image >/tmp/rustdesk_update.log 2>&1 &
+
+    # 快速判断本地镜像是否存在
+    if docker images -q $image >/dev/null 2>&1; then
+        echo "✅ 当前已是最新版本（本地镜像存在）"
     else
-        echo "✅ 当前已是最新版本"
+        echo "⚠️ 镜像未拉取完成，可稍后选择更新"
     fi
 }
 
