@@ -1,79 +1,77 @@
 #!/bin/bash
 set -e
 
-# 显示已绑定域名
-NGINX_DIR="/etc/nginx/sites-enabled"
-echo "=============================="
-echo "📄 已绑定的域名列表："
+domain_menu() {
+    while true; do
+        clear
+        echo "=============================="
+        echo "📄 域名绑定管理"
+        echo "=============================="
 
-COUNT=0
-for f in "$NGINX_DIR"/*; do
-    [[ -f "$f" ]] || continue
-    DOMAIN_NAME=$(basename "$f")
-    echo "  - $DOMAIN_NAME"
-    ((COUNT++))
-done
+        # 显示已绑定域名
+        NGINX_DIR="/etc/nginx/sites-enabled"
+        COUNT=0
+        for f in "$NGINX_DIR"/*; do
+            [[ -f "$f" ]] || continue
+            DOMAIN_NAME=$(basename "$f")
+            echo "  - $DOMAIN_NAME"
+            ((COUNT++))
+        done
 
-if [[ $COUNT -eq 0 ]]; then
-    echo "  暂无绑定域名"
-fi
-echo "=============================="
+        if [[ $COUNT -eq 0 ]]; then
+            echo "  暂无绑定域名"
+        fi
+        echo "=============================="
 
-read -rp "按回车返回上一级菜单..." dummy
+        echo "1) 添加新域名"
+        echo "0) 返回上一级菜单"
+        read -rp "请输入选项: " choice
 
+        case $choice in
+            1)
+                # ================== 获取 VPS 公网 IPv6 ==================
+                VPS_IP=$(curl -6 -fsSL https://api64.ipify.org || echo "::1")
+                echo "🌐 VPS 公网 IPv6: $VPS_IP"
 
+                # ================== 检查并安装依赖 ==================
+                install_deps() {
+                    if ! command -v nginx &>/dev/null; then
+                        echo "📦 正在安装 nginx..."
+                        apt update -y && apt install -y nginx
+                        systemctl enable nginx --now
+                    fi
 
+                    if ! command -v certbot &>/dev/null; then
+                        echo "📦 正在安装 certbot..."
+                        apt install -y certbot python3-certbot-nginx
+                    fi
+                }
+                install_deps
 
+                # ================== 用户输入 ==================
+                read -rp "请输入你的域名（例如 example.com）: " DOMAIN
+                while [[ -z "$DOMAIN" ]]; do
+                    read -rp "域名不能为空，请重新输入: " DOMAIN
+                done
 
+                read -rp "请输入服务运行的本地端口（例如 8181）: " PORT
+                while [[ ! "$PORT" =~ ^[0-9]+$ ]]; do
+                    read -rp "端口格式错误，请重新输入: " PORT
+                done
 
+                # 自动生成随机邮箱
+                RANDOM_EMAIL="user$((RANDOM%100000))@random.com"
+                read -rp "请输入你的邮箱（用于 HTTPS 证书，留空则随机生成）: " EMAIL
+                if [[ -z "$EMAIL" ]]; then
+                    EMAIL="$RANDOM_EMAIL"
+                    echo "⚡ 使用随机邮箱: $EMAIL"
+                fi
 
-# ================== 获取 VPS 公网 IPv6 ==================
-VPS_IP=$(curl -6 -fsSL https://api64.ipify.org)
-if [[ -z "$VPS_IP" ]]; then
-    echo "⚠️ 获取 VPS 公网 IPv6 失败，请检查网络"
-    VPS_IP="::1"
-fi
-echo "🌐 VPS 公网 IPv6: $VPS_IP"
+                # ================== 写入 nginx 配置 ==================
+                NGINX_CONF="/etc/nginx/sites-enabled/$DOMAIN"
+                mkdir -p "$(dirname "$NGINX_CONF")"
 
-# ================== 检查并安装依赖 ==================
-install_deps() {
-    if ! command -v nginx &>/dev/null; then
-        echo "📦 正在安装 nginx..."
-        apt update -y && apt install -y nginx
-        systemctl enable nginx --now
-    fi
-
-    if ! command -v certbot &>/dev/null; then
-        echo "📦 正在安装 certbot..."
-        apt install -y certbot python3-certbot-nginx
-    fi
-}
-install_deps
-
-# ================== 用户输入 ==================
-read -rp "请输入你的域名（例如 example.com）: " DOMAIN
-while [[ -z "$DOMAIN" ]]; do
-    read -rp "域名不能为空，请重新输入: " DOMAIN
-done
-
-read -rp "请输入服务运行的本地端口（例如 8181）: " PORT
-while [[ ! "$PORT" =~ ^[0-9]+$ ]]; do
-    read -rp "端口格式错误，请重新输入: " PORT
-done
-
-# 自动生成随机邮箱
-RANDOM_EMAIL="user$((RANDOM%100000))@random.com"
-read -rp "请输入你的邮箱（用于 HTTPS 证书，留空则随机生成）: " EMAIL
-if [[ -z "$EMAIL" ]]; then
-    EMAIL="$RANDOM_EMAIL"
-    echo "⚡ 使用随机邮箱: $EMAIL"
-fi
-
-# ================== 写入 nginx 配置 ==================
-NGINX_CONF="/etc/nginx/sites-enabled/$DOMAIN"
-mkdir -p "$(dirname "$NGINX_CONF")"
-
-cat > "$NGINX_CONF" <<EOF
+                cat > "$NGINX_CONF" <<EOF
 server {
     listen 80;
     listen [::]:80;
@@ -92,29 +90,41 @@ server {
 }
 EOF
 
-echo "✅ 配置已写入 $NGINX_CONF"
+                echo "✅ 配置已写入 $NGINX_CONF"
 
-# ================== 测试并重载 nginx ==================
-if nginx -t; then
-    systemctl reload nginx
-    echo "🔹 nginx 配置测试通过，已重载 nginx"
-else
-    echo "⚠️ nginx 配置测试失败，请检查"
-    exit 1
-fi
+                # ================== 测试并重载 nginx ==================
+                if nginx -t; then
+                    systemctl reload nginx
+                    echo "🔹 nginx 配置测试通过，已重载 nginx"
+                else
+                    echo "⚠️ nginx 配置测试失败，请检查"
+                fi
 
-# ================== 获取 HTTPS 证书 ==================
-if certbot --nginx -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive; then
-    echo "✅ HTTPS 证书获取成功"
-else
-    echo "⚠️ 证书获取失败，请检查域名解析和 nginx 配置"
-fi
+                # ================== 获取 HTTPS 证书 ==================
+                if certbot --nginx -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive; then
+                    echo "✅ HTTPS 证书获取成功"
+                else
+                    echo "⚠️ 证书获取失败，请检查域名解析和 nginx 配置"
+                fi
 
-# ================== 最终输出 ==================
-echo "=============================="
-echo "域名 $DOMAIN 已绑定到 http://[$VPS_IP]:$PORT"
-echo "HTTPS 已开启，可通过 https://$DOMAIN 访问（如果证书获取成功）"
-echo "请确保 DNS AAAA 已解析到 VPS 公网 IPv6: $VPS_IP"
-echo "=============================="
+                echo "=============================="
+                echo "域名 $DOMAIN 已绑定到 http://[$VPS_IP]:$PORT"
+                echo "HTTPS 已开启，可通过 https://$DOMAIN 访问（如果证书获取成功）"
+                echo "请确保 DNS AAAA 已解析到 VPS 公网 IPv6: $VPS_IP"
+                echo "=============================="
 
-read -rp "按回车返回上一级菜单..." dummy
+                read -rp "按回车返回域名管理菜单..." dummy
+                ;;
+            0)
+                break  # 返回上一级菜单
+                ;;
+            *)
+                echo "⚠️ 选项无效，请重新输入"
+                sleep 1
+                ;;
+        esac
+    done
+}
+
+# 调用二级菜单
+domain_menu
