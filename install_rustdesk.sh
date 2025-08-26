@@ -26,13 +26,29 @@ check_port() {
     fi
 }
 
+# 改进版 Key 获取
 get_rustdesk_key() {
     KEY_FILE="$WORKDIR/data/id_ed25519.pub"
+
+    # 优先检查宿主机挂载目录
     if [[ -f "$KEY_FILE" ]]; then
         cat "$KEY_FILE"
-    else
-        echo "⏳ Key 尚未生成，请等待容器初始化后再查看"
+        return
     fi
+
+    # 如果挂载目录没有，尝试从容器里拷贝出来
+    if docker ps -a --format '{{.Names}}' | grep -q hbbs; then
+        echo "⏳ 挂载目录未找到 Key，尝试从容器内导出..."
+        docker cp hbbs:/root/.local/share/rustdesk/id_ed25519.pub $WORKDIR/data/ 2>/dev/null || true
+        docker cp hbbs:/root/.local/share/rustdesk/id_ed25519 $WORKDIR/data/ 2>/dev/null || true
+        if [[ -f "$KEY_FILE" ]]; then
+            echo "✅ 已从容器导出 Key"
+            cat "$KEY_FILE"
+            return
+        fi
+    fi
+
+    echo "❌ Key 尚未生成，请确认容器已启动并等待初始化"
 }
 
 check_update() {
