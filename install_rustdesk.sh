@@ -31,23 +31,31 @@ get_rustdesk_key() {
     if [[ -f "$KEY_FILE" ]]; then
         cat "$KEY_FILE"
     else
-        docker logs hbbs 2>/dev/null | grep "Key:" | tail -1 | awk '{print $NF}' || echo "⏳ Key 尚未生成，请稍后再查看"
+        echo "⏳ Key 尚未生成，请稍后再查看"
     fi
 }
 
-check_update() {
+# ==================
+# 异步更新检查
+# ==================
+UPDATE_STATUS="未检查"
+async_check_update() {
     local image="rustdesk/rustdesk-server:latest"
-    echo "🔍 异步检查更新中..."
-    docker pull $image >/dev/null 2>&1
     local local_id=$(docker images -q $image)
-    local remote_id=$(docker inspect --format='{{.Id}}' $image)
+    docker pull $image >/dev/null 2>&1
+    local remote_id=$(docker images -q $image)
     if [[ "$local_id" != "$remote_id" ]]; then
-        echo "⬆️  有新版本可更新！(选择 5 更新)"
+        UPDATE_STATUS="⬆️ 有新版本可更新！(选择 5 更新)"
     else
-        echo "✅ 当前已是最新版本（本地镜像存在）"
+        UPDATE_STATUS="✅ 当前已是最新版本（本地镜像存在）"
     fi
 }
+# 启动后台检查
+async_check_update &
 
+# ==================
+# 显示连接信息
+# ==================
 show_info() {
     echo "🌐 RustDesk 服务端连接信息："
     echo "ID Server : ${SERVER_IP}:21115"
@@ -61,7 +69,6 @@ show_info() {
 # ==================
 install_rustdesk() {
     echo "📦 安装 RustDesk Server..."
-
     mkdir -p $WORKDIR/data
     check_port 21115
     check_port 21116
@@ -129,7 +136,10 @@ while true; do
     else
         echo "服务端状态: 未安装 ❌"
     fi
-    check_update
+
+    # 显示异步更新状态
+    echo "🔍 异步检查更新中..."
+    echo "$UPDATE_STATUS"
 
     echo "1) 安装 RustDesk Server"
     echo "2) 卸载 RustDesk Server"
