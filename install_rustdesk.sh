@@ -27,9 +27,14 @@ check_port() {
 }
 
 get_rustdesk_key() {
-    KEY_FILE="$WORKDIR/data/id_ed25519.pub"
-    if [[ -f "$KEY_FILE" ]]; then
-        cat "$KEY_FILE"
+    # 从容器日志读取最新 Key
+    if docker ps --format '{{.Names}}' | grep -q hbbs; then
+        key=$(docker logs hbbs 2>&1 | grep "Key:" | tail -1 | awk '{print $NF}')
+        if [[ -n "$key" ]]; then
+            echo "$key"
+        else
+            echo "⏳ Key 尚未生成，请稍后再查看"
+        fi
     else
         echo "⏳ Key 尚未生成，请稍后再查看"
     fi
@@ -63,13 +68,9 @@ install_rustdesk() {
     echo "📦 安装 RustDesk Server..."
 
     mkdir -p $WORKDIR/data
-    chmod 777 $WORKDIR/data
-
     check_port 21115
     check_port 21116
     check_port 21117
-
-    docker rm -f hbbs hbbr 2>/dev/null || true
 
     docker run -d --name hbbs \
         --restart unless-stopped \
@@ -84,15 +85,6 @@ install_rustdesk() {
         rustdesk/rustdesk-server hbbr
 
     echo "✅ 安装完成"
-
-    # 等待 Key 文件生成（最多等待 10 秒）
-    for i in {1..10}; do
-        if [[ -f "$WORKDIR/data/id_ed25519.pub" ]]; then
-            break
-        fi
-        sleep 1
-    done
-
     show_info
 }
 
