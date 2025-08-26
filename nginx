@@ -8,6 +8,21 @@ if [[ -z "$VPS_IP" ]]; then
     VPS_IP="127.0.0.1"
 fi
 
+# ================== 检查并安装依赖 ==================
+install_deps() {
+    if ! command -v nginx &>/dev/null; then
+        echo "📦 正在安装 nginx..."
+        apt update -y && apt install -y nginx
+        systemctl enable nginx --now
+    fi
+
+    if ! command -v certbot &>/dev/null; then
+        echo "📦 正在安装 certbot..."
+        apt install -y certbot python3-certbot-nginx
+    fi
+}
+install_deps
+
 # ================== 用户输入 ==================
 read -rp "请输入你的域名（例如 example.com）: " DOMAIN
 while [[ -z "$DOMAIN" ]]; do
@@ -31,10 +46,14 @@ mkdir -p "$(dirname "$NGINX_CONF")"
 cat > "$NGINX_CONF" <<EOF
 server {
     listen 80;
+    listen [::]:80;
     server_name $DOMAIN;
 
     location / {
         proxy_pass http://127.0.0.1:$PORT;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -46,26 +65,26 @@ EOF
 echo "✅ 配置已写入 $NGINX_CONF"
 
 # ================== 测试并重载 nginx ==================
-nginx -t && systemctl reload nginx
-if [[ $? -eq 0 ]]; then
+if nginx -t; then
+    systemctl reload nginx
     echo "🔹 nginx 配置测试通过，已重载 nginx"
 else
     echo "⚠️ nginx 配置测试失败，请检查"
+    exit 1
 fi
 
 # ================== 获取 HTTPS 证书 ==================
-if command -v certbot &>/dev/null; then
-    certbot --nginx -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive || \
-    echo "⚠️ 证书获取失败，请检查域名解析和 nginx 配置"
+if certbot --nginx -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive; then
+    echo "✅ HTTPS 证书获取成功"
 else
-    echo "⚠️ certbot 未安装，无法自动获取 HTTPS 证书"
+    echo "⚠️ 证书获取失败，请检查域名解析和 nginx 配置"
 fi
 
 # ================== 最终输出 ==================
 echo "=============================="
 echo "域名 $DOMAIN 已绑定到 http://$VPS_IP:$PORT"
 echo "HTTPS 已开启，可通过 https://$DOMAIN 访问（如果证书获取成功）"
-echo "请确保 DNS 已解析到 VPS 公网 IP"
+echo "请确保 DNS 已解析到 VPS 公网 IP: $VPS_IP"
 echo "=============================="
 
 read -rp "按回车返回上一级菜单..." dummy
