@@ -31,11 +31,11 @@ domain_menu() {
 
         case $choice in
             1)
-                # ================== 获取 VPS 公网 IPv6 ==================
+                # 获取 VPS 公网 IPv6
                 VPS_IP=$(curl -6 -fsSL https://api64.ipify.org || echo "::1")
                 echo "🌐 VPS 公网 IPv6: $VPS_IP"
 
-                # ================== 检查并安装依赖 ==================
+                # 检查并安装依赖
                 if ! command -v nginx &>/dev/null; then
                     echo "📦 正在安装 nginx..."
                     apt update -y && apt install -y nginx
@@ -46,7 +46,7 @@ domain_menu() {
                     apt install -y certbot python3-certbot-nginx
                 fi
 
-                # ================== 用户输入 ==================
+                # 用户输入
                 read -rp "请输入你的域名（例如 example.com）: " DOMAIN
                 while [[ -z "$DOMAIN" ]]; do
                     read -rp "域名不能为空，请重新输入: " DOMAIN
@@ -65,7 +65,7 @@ domain_menu() {
                     echo "⚡ 使用随机邮箱: $EMAIL"
                 fi
 
-                # ================== 写入 nginx 配置 ==================
+                # 写入 nginx 配置
                 NGINX_CONF="/etc/nginx/sites-enabled/$DOMAIN"
                 mkdir -p "$(dirname "$NGINX_CONF")"
 
@@ -90,7 +90,7 @@ EOF
 
                 echo "✅ 配置已写入 $NGINX_CONF"
 
-                # ================== 测试并重载 nginx ==================
+                # 测试并重载 nginx
                 if nginx -t; then
                     systemctl reload nginx
                     echo "🔹 nginx 配置测试通过，已重载 nginx"
@@ -98,7 +98,7 @@ EOF
                     echo "⚠️ nginx 配置测试失败，请检查"
                 fi
 
-                # ================== 获取 HTTPS 证书 ==================
+                # 获取 HTTPS 证书
                 if certbot --nginx -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive; then
                     echo "✅ HTTPS 证书获取成功"
                 else
