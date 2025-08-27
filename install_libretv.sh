@@ -11,15 +11,16 @@ function success() { echo -e "\e[32m[✓]\e[0m $1"; }
 function error() { echo -e "\e[31m[✗]\e[0m $1"; }
 
 # 显示状态函数
-# 显示状态函数
 function show_status() {
     info "检查 LibreTV 当前状态..."
 
-    # 获取端口，如果 docker-compose.yml 不存在，使用默认 8899
+    # 获取端口 & 密码，如果 docker-compose.yml 不存在则用默认值
     if [ -f "$DOCKER_COMPOSE_FILE" ]; then
         PORT=$(grep -Po '(?<=- ")[0-9]+(?=:8080")' "$DOCKER_COMPOSE_FILE" 2>/dev/null || echo "8899")
+        PASSWORD=$(grep -Po '(?<=PASSWORD=).*' "$DOCKER_COMPOSE_FILE" 2>/dev/null || echo "111111")
     else
         PORT=8899
+        PASSWORD=111111
     fi
 
     # 容器状态
@@ -45,19 +46,21 @@ function show_status() {
 
     # 公网 IPv4
     IPV4=$(curl -s ipv4.ip.sb || curl -s ifconfig.me || curl -s icanhazip.com || echo "localhost")
-    success "访问地址 IPv4: http://${IPV4}:${PORT}"
+    success "访问地址 IPv4: http://${IPV4}:${PORT}   (密码: ${PASSWORD})"
 
-    # 公网 IPv6（过滤掉非 IP）
+    # 公网 IPv6
     IPV6=$(curl -s -6 ipv6.ip.sb || curl -s -6 icanhazip.com || echo "")
     if [[ "$IPV6" =~ ^([0-9a-fA-F:]+)$ ]]; then
-        success "访问地址 IPv6: http://[${IPV6}]:${PORT}"
+        success "访问地址 IPv6: http://[${IPV6}]:${PORT}   (密码: ${PASSWORD})"
     else
         error "IPv6 地址未获取到"
     fi
 
+    # 显示密码
+    success "登录密码: ${PASSWORD}"
+
     echo "----------------------------------"
 }
-
 
 # 安装 LibreTV
 function install_libretv() {
@@ -140,19 +143,24 @@ function uninstall_libretv() {
 # -------- 脚本入口 --------
 echo "=== LibreTV 管理脚本 ==="
 
-# **进入脚本就显示当前状态**
-show_status
+# 主循环
+while true; do
+    # **进入脚本就显示当前状态**
+    show_status
 
-# 提示操作
-echo "请选择操作："
-echo "1) 安装 LibreTV"
-echo "2) 卸载 LibreTV"
-echo "3) 退出"
-read -p "请输入数字 [1-3]: " CHOICE
+    # 提示操作
+    echo "请选择操作："
+    echo "1) 安装 LibreTV"
+    echo "2) 卸载 LibreTV"
+    echo "3) 退出"
+    read -p "请输入数字 [1-3]: " CHOICE
 
-case "$CHOICE" in
-    1) install_libretv ;;
-    2) uninstall_libretv ;;
-    3) exit 0 ;;
-    *) error "无效选择"; exit 1 ;;
-esac
+    case "$CHOICE" in
+        1) install_libretv ;;
+        2) uninstall_libretv ;;
+        3) exit 0 ;;
+        *) error "无效选择";;
+    esac
+
+    echo ""   # 操作完成后换行
+done
