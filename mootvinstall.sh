@@ -60,6 +60,25 @@ EOF
 }
 
 # =========================
+# 镜像选择
+# =========================
+choose_image() {
+  echo "📦 请选择安装镜像："
+  echo "1) 官方镜像 ghcr.io/moontechlab/lunatv:latest"
+  echo "2) Docker Hub 镜像 featherhao/lunatv:latest"
+  echo "3) Docker Hub 镜像 featherhao/moontv:100"
+  read -rp "请输入数字 [1-3] (默认 1): " img_choice
+  img_choice=${img_choice:-1}
+  case "$img_choice" in
+    1) IMAGE="ghcr.io/moontechlab/lunatv:latest" ;;
+    2) IMAGE="featherhao/lunatv:latest" ;;
+    3) IMAGE="featherhao/moontv:100" ;;
+    *) IMAGE="ghcr.io/moontechlab/lunatv:latest" ;;
+  esac
+  echo "使用镜像: $IMAGE"
+}
+
+# =========================
 # 选择端口并生成 docker-compose.yml
 # =========================
 choose_port_and_write_compose() {
@@ -76,7 +95,7 @@ choose_port_and_write_compose() {
   cat > $COMPOSE_FILE <<EOF
 services:
   moontv-core:
-    image: ghcr.io/moontechlab/lunatv:latest
+    image: $IMAGE
     container_name: moontv-core
     restart: unless-stopped
     ports:
@@ -115,6 +134,7 @@ EOF
 install_main() {
   install_docker
   [[ ! -f "$ENV_FILE" ]] && input_config || echo "✅ 已存在配置文件"
+  choose_image
   choose_port_and_write_compose
   $DOCKER_COMPOSE -f $COMPOSE_FILE up -d
 
@@ -134,11 +154,13 @@ install_main() {
 # 更新
 # =========================
 update() {
-  echo "🔄 正在更新 MoonTV..."
+  echo "🔄 请选择更新镜像："
+  choose_image
   install_docker
   [ -f "$COMPOSE_FILE" ] || { echo "❌ 未找到 $COMPOSE_FILE，请先安装"; return 1; }
   cd $WORKDIR
-  $DOCKER_COMPOSE pull
+  echo "📦 拉取镜像 $IMAGE..."
+  docker pull $IMAGE
   $DOCKER_COMPOSE up -d
   echo "✅ 更新完成"
 }
@@ -171,23 +193,19 @@ moontv_menu() {
   while true; do
     clear
 
-    # 检查安装状态
     if [ -d "$WORKDIR" ] && [ -f "$COMPOSE_FILE" ]; then
       STATUS="已安装 ✅"
       CONFIG_DISPLAY="配置："
 
-      # 用户名、密码、AUTH_TOKEN
       if [ -f "$ENV_FILE" ]; then
         CONFIG_DISPLAY+=$'\n'"$(grep -E "USERNAME|PASSWORD|AUTH_TOKEN" "$ENV_FILE")"
       else
         CONFIG_DISPLAY+=" ❌ 配置文件不存在"
       fi
 
-      # 从 docker-compose.yml 获取宿主机端口
       HOST_PORT=$(grep -Po "(?<=- )\d+(?=:3000)" "$COMPOSE_FILE" | tr -d "'")
-      HOST_PORT=${HOST_PORT:-8181}  # 默认端口
+      HOST_PORT=${HOST_PORT:-8181}
 
-      # 获取公网 IP
       IPV4=$(curl -4 -s ifconfig.me || hostname -I | awk '{print $1}')
       IPV6=$(curl -6 -s ifconfig.me || ip -6 addr show scope global | awk '{print $2}' | cut -d/ -f1 | head -n1)
 
@@ -200,7 +218,6 @@ moontv_menu() {
       CONFIG_DISPLAY=""
     fi
 
-    # 彩色状态显示
     if [ "$STATUS" = "已安装 ✅" ]; then
       echo -e "状态: \e[32m$STATUS\e[0m"
     else
