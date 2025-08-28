@@ -65,14 +65,16 @@ EOF
 choose_image() {
   echo "📦 请选择安装镜像："
   echo "1) 官方镜像 ghcr.io/moontechlab/lunatv:latest"
-  echo "2) Docker Hub 镜像 (官方备用镜像)featherhao/lunatv:latest"
-  echo "3) Docker Hub 镜像 （100版本号防作者删库用）featherhao/moontv:100"
-  read -rp "请输入数字 [1-3] (默认 1): " img_choice
+  echo "2) Docker Hub 镜像 (官方备用镜像) featherhao/lunatv:latest"
+  echo "3) Docker Hub 镜像 （100版本号防作者删库用） featherhao/moontv:100"
+  echo "4) 小黄人大佬镜像（带弹幕） ghcr.io/featherhao/lunatv:latest"
+  read -rp "请输入数字 [1-4] (默认 1): " img_choice
   img_choice=${img_choice:-1}
   case "$img_choice" in
     1) IMAGE="ghcr.io/moontechlab/lunatv:latest" ;;
     2) IMAGE="featherhao/lunatv:latest" ;;
     3) IMAGE="featherhao/moontv:100" ;;
+    4) IMAGE="ghcr.io/featherhao/lunatv:latest" ;;
     *) IMAGE="ghcr.io/moontechlab/lunatv:latest" ;;
   esac
   echo "使用镜像: $IMAGE"
