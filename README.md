@@ -1,6 +1,7 @@
 
 菜单：
 bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh)
+域名调取：bash <(curl -fsSL https://sh.qqy.pp.ua)
 
 bash <(curl -fsSL "https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh?$(date +%s)")
 
