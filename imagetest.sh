@@ -4,10 +4,15 @@ set -e
 # =========================
 # 配置
 # =========================
-REPO_URL="https://github.com/featherhao/LunaTV.git"  # GitHub 地址
+REPO_URL="https://github.com/featherhao/LunaTV.git"
 WORKDIR="/opt/lunatv"
-IMAGE_NAME="lunatvn:latest"  # 你自己的镜像名
+IMAGE_NAME="lunatvn:latest"
 KVROCKS_VOLUME="$WORKDIR/kvrocks-data"
+
+# 默认用户名、密码和授权码，可修改
+USERNAME="admin"
+PASSWORD="admin_password"
+AUTH_TOKEN="授权码"
 
 # =========================
 # 安装 Docker & Docker Compose
@@ -41,7 +46,7 @@ COPY package.json pnpm-lock.yaml ./
 RUN npm install -g pnpm && pnpm install
 COPY . .
 EXPOSE 3000
-CMD ["node", "启动.js"]
+CMD ["node", "start.js"]
 EOF
 
 # =========================
@@ -64,13 +69,14 @@ services:
     ports:
       - '3000:3000'
     environment:
-      - USERNAME=admin
-      - PASSWORD=admin_password
+      - USERNAME=$USERNAME
+      - PASSWORD=$PASSWORD
       - NEXT_PUBLIC_STORAGE_TYPE=kvrocks
       - KVROCKS_URL=redis://lunatv-kvrocks:6666
-      - AUTH_TOKEN=授权码
+      - AUTH_TOKEN=$AUTH_TOKEN
     depends_on:
       - lunatv-kvrocks
+
   lunatv-kvrocks:
     image: apache/kvrocks
     container_name: lunatv-kvrocks
@@ -86,5 +92,6 @@ echo "🚀 启动 LunaTV + KVrocks..."
 docker compose up -d
 
 echo "✅ 部署完成！访问地址: http://<服务器IP>:3000"
-echo "用户名：admin"
-echo "密码：admin_password"
+echo "用户名：$USERNAME"
+echo "密码：$PASSWORD"
+echo "授权码：$AUTH_TOKEN"
