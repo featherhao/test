@@ -46,6 +46,7 @@ input_config() {
   echo "AUTH_TOKEN: $AUTH_TOKEN"
   echo "==============================================="
   read -rp "是否确认保存？(y/N): " CONFIRM
+  CONFIRM=${CONFIRM:-Y}  # 默认 Y
   [[ ! "$CONFIRM" =~ ^[Yy]$ ]] && { echo "已取消"; return 1; }
 
   mkdir -p $WORKDIR
@@ -173,10 +174,12 @@ update() {
 uninstall() {
   echo "⚠️ 即将卸载 MoonTV"
   read -rp "确认？(y/N): " CONFIRM
+  CONFIRM=${CONFIRM:-Y}  # 默认 Y
   [[ ! "$CONFIRM" =~ ^[Yy]$ ]] && { echo "已取消"; return; }
   install_docker
   if [ -f "$COMPOSE_FILE" ]; then
     read -rp "是否删除容器数据卷？(y/N): " DEL_VOL
+    DEL_VOL=${DEL_VOL:-Y}  # 默认 Y
     if [[ "$DEL_VOL" =~ ^[Yy]$ ]]; then
       $DOCKER_COMPOSE -f $COMPOSE_FILE down -v
     else
@@ -184,6 +187,7 @@ uninstall() {
     fi
   fi
   read -rp "是否删除 $WORKDIR 目录？(y/N): " DEL_DIR
+  DEL_DIR=${DEL_DIR:-Y}  # 默认 Y
   [[ "$DEL_DIR" =~ ^[Yy]$ ]] && rm -rf "$WORKDIR"
   echo "✅ 卸载完成"
 }
@@ -265,6 +269,7 @@ moontv_menu() {
         if [ "$STATUS" = "已安装 ✅" ]; then
           cd "$WORKDIR"
           read -rp "是否持续跟踪日志？(y/N): " LOG_FOLLOW
+          LOG_FOLLOW=${LOG_FOLLOW:-Y}  # 默认 Y
           if [[ "$LOG_FOLLOW" =~ ^[Yy]$ ]]; then
             $DOCKER_COMPOSE logs -f
           else
