@@ -133,13 +133,7 @@ EOF
 # =========================
 # 安装 / 启动
 # =========================
-install_main() {
-  # ✅ 新增：确保工作目录存在
-  mkdir -p "$WORKDIR"
-  chmod 755 "$WORKDIR"
-  # 如果 .env 不存在就调用 input_config
-  [[ ! -f "$ENV_FILE" ]] && input_config
-  
+install_main() { 
   install_docker
   [[ ! -f "$ENV_FILE" ]] && input_config || echo "✅ 已存在配置文件"
   choose_image
