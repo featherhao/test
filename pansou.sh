@@ -6,6 +6,10 @@ CONTAINER_NAME="pansou-web"
 PAN_DIR="/root/pansou-web"
 LOCAL_IP=$(hostname -I | awk '{print $1}')
 FRONTEND_PORT=80
+CHANNELS_DEFAULT="tgsearchers3"
+PLUGINS_ENABLED_DEFAULT="true"
+PROXY_DEFAULT=""
+EXT_DEFAULT='{"is_all":true}'
 
 # 检查端口是否可用
 check_port() {
@@ -17,7 +21,6 @@ check_port() {
     fi
 }
 
-# 安装前后端集成版
 install_pansou_web() {
     echo "⚙️ 开始安装 PanSou 前后端集成版"
 
@@ -61,6 +64,11 @@ services:
     restart: unless-stopped
     ports:
       - "$FRONTEND_PORT:80"
+    environment:
+      CHANNELS: "$CHANNELS_DEFAULT"
+      PLUGINS_ENABLED: "$PLUGINS_ENABLED_DEFAULT"
+      PROXY: "$PROXY_DEFAULT"
+      EXT: '$EXT_DEFAULT'
 EOF
 
     # 启动服务
@@ -70,13 +78,14 @@ EOF
     echo "✅ 安装完成！"
 }
 
-# 显示状态
 show_status() {
     cd $PAN_DIR
     if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
         echo "✅ PanSou 正在运行"
         echo "👉 前端地址: http://$LOCAL_IP:$FRONTEND_PORT"
         echo "👉 API 地址: http://$LOCAL_IP:80/api/search"
+        echo "📡 当前 TG 频道: $(docker compose exec $CONTAINER_NAME printenv CHANNELS 2>/dev/null)"
+        echo "🧩 插件启用: $(docker compose exec $CONTAINER_NAME printenv PLUGINS_ENABLED 2>/dev/null)"
     else
         echo "⚠️ PanSou 未运行"
     fi
@@ -106,6 +115,48 @@ uninstall_pansou() {
     fi
 }
 
+modify_env() {
+    cd $PAN_DIR
+    echo "当前环境变量："
+    echo "1) CHANNELS: $(docker compose exec $CONTAINER_NAME printenv CHANNELS 2>/dev/null)"
+    echo "2) PLUGINS_ENABLED: $(docker compose exec $CONTAINER_NAME printenv PLUGINS_ENABLED 2>/dev/null)"
+    echo "3) PROXY: $(docker compose exec $CONTAINER_NAME printenv PROXY 2>/dev/null)"
+    echo "4) EXT: $(docker compose exec $CONTAINER_NAME printenv EXT 2>/dev/null)"
+    echo ""
+
+    read -p "输入新的 TG 频道 (回车保持不变): " NEW_CHANNELS
+    read -p "插件启用 (true/false, 回车保持不变): " NEW_PLUGINS
+    read -p "代理 (socks5://..., 回车保持不变): " NEW_PROXY
+    read -p "EXT JSON (回车保持不变): " NEW_EXT
+
+    # 读取原有变量，未输入则保持原值
+    CHANNELS=${NEW_CHANNELS:-$(docker compose exec $CONTAINER_NAME printenv CHANNELS 2>/dev/null)}
+    PLUGINS_ENABLED=${NEW_PLUGINS:-$(docker compose exec $CONTAINER_NAME printenv PLUGINS_ENABLED 2>/dev/null)}
+    PROXY=${NEW_PROXY:-$(docker compose exec $CONTAINER_NAME printenv PROXY 2>/dev/null)}
+    EXT=${NEW_EXT:-$(docker compose exec $CONTAINER_NAME printenv EXT 2>/dev/null)}
+
+    # 更新 docker-compose.yml
+    cat > docker-compose.yml <<EOF
+version: "3.9"
+services:
+  $CONTAINER_NAME:
+    image: ghcr.io/fish2018/pansou-web
+    container_name: $CONTAINER_NAME
+    restart: unless-stopped
+    ports:
+      - "$FRONTEND_PORT:80"
+    environment:
+      CHANNELS: "$CHANNELS"
+      PLUGINS_ENABLED: "$PLUGINS_ENABLED"
+      PROXY: "$PROXY"
+      EXT: '$EXT'
+EOF
+
+    # 重启服务
+    docker compose up -d
+    echo "✅ 环境变量已更新并重启容器"
+}
+
 # 交互菜单
 menu() {
     while true; do
@@ -115,7 +166,8 @@ menu() {
         echo "2) 查看状态"
         echo "3) 停止 PanSou"
         echo "4) 重启 PanSou"
-        echo "5) 卸载 PanSou"
+        echo "5) 修改环境变量并重启"
+        echo "6) 卸载 PanSou"
         echo "0) 退出"
         echo "===================================="
         read -p "请输入选项: " CHOICE
@@ -139,6 +191,9 @@ menu() {
                 restart_pansou
                 ;;
             5)
+                modify_env
+                ;;
+            6)
                 uninstall_pansou
                 ;;
             0)
