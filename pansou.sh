@@ -17,7 +17,7 @@ show_usage() {
 }
 
 install_pansou() {
-    echo "⚙️ 开始安装 PanSou (API 端口: $API_PORT)"
+    echo "⚙️ 开始安装 PanSou"
 
     # 检查 docker
     if ! command -v docker &> /dev/null; then
@@ -36,13 +36,6 @@ install_pansou() {
         chmod +x /usr/local/bin/docker-compose
     else
         echo "✅ docker-compose 已安装"
-    fi
-
-    # 检查是否已安装
-    if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
-        echo "✅ PanSou 已经安装"
-        show_status
-        exit 0
     fi
 
     # 写入 docker-compose.yml
@@ -67,14 +60,13 @@ EOF
     echo "🚀 启动 PanSou 服务..."
     docker-compose up -d
     sleep 5
-
     show_status
 }
 
 show_status() {
     if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
         echo "✅ PanSou 正在运行"
-        echo "👉 API 地址: http://$LOCAL_IP:$API_PORT/api/search"
+        echo "👉 后端 API 地址: http://$LOCAL_IP:$API_PORT/api/search"
         echo ""
         echo "📌 常用命令:"
         echo "  查看日志: docker-compose logs -f"
@@ -86,20 +78,25 @@ show_status() {
 }
 
 uninstall_pansou() {
-    echo "🛑 正在卸载 PanSou..."
-    if [ -f docker-compose.yml ]; then
+    if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
+        echo "🛑 停止并卸载 PanSou..."
         docker-compose down -v
         rm -f docker-compose.yml
         echo "✅ PanSou 已卸载 (容器和缓存卷已删除)"
     else
-        echo "⚠️ 未找到 docker-compose.yml，可能未安装 PanSou"
+        echo "⚠️ PanSou 未安装或已卸载"
     fi
 }
 
 # 主逻辑
 case "$1" in
-    install)
-        install_pansou
+    install|"")
+        if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
+            echo "✅ PanSou 已经安装"
+            show_status
+        else
+            install_pansou
+        fi
         ;;
     status)
         show_status
