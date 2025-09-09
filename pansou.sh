@@ -4,9 +4,8 @@ set -e
 # 配置
 CONTAINER_NAME="pansou-web"
 PAN_DIR="/root/pansou-web"
-LOCAL_IP=$(hostname -I | awk '{print $1}')
 FRONTEND_PORT=80
-CHANNELS_DEFAULT="tgsearchers3"
+CHANNELS_DEFAULT="tgsearchers1,tgsearchers2,tgsearchers3,tgsearchers4,tgsearchers5,tgsearchers6,tgsearchers7,tgsearchers8,tgsearchers9,tgsearchers10,tgsearchers11,tgsearchers12" # 可扩展
 PLUGINS_ENABLED_DEFAULT="true"
 PROXY_DEFAULT=""
 EXT_DEFAULT='{"is_all":true}'
@@ -35,7 +34,7 @@ install_pansou_web() {
     fi
 
     # Docker Compose
-    if ! command -v docker-compose &>/dev/null && ! command -v docker &>/dev/null; then
+    if ! command -v docker-compose &>/dev/null; then
         echo "⚙️ 未检测到 Docker Compose，正在安装..."
         curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         chmod +x /usr/local/bin/docker-compose
@@ -81,10 +80,17 @@ EOF
 show_status() {
     cd $PAN_DIR
     if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
+        PUBLIC_IP=$(curl -s ifconfig.me || echo "未检测到公网IP")
         echo "✅ PanSou 正在运行"
-        echo "👉 前端地址: http://$LOCAL_IP:$FRONTEND_PORT"
-        echo "👉 API 地址: http://$LOCAL_IP:80/api/search"
-        echo "📡 当前 TG 频道: $(docker compose exec $CONTAINER_NAME printenv CHANNELS 2>/dev/null)"
+        echo "👉 前端地址: http://$PUBLIC_IP:$FRONTEND_PORT"
+        echo "👉 API 地址: http://$PUBLIC_IP:$FRONTEND_PORT/api/search"
+
+        CHANNELS_FULL=$(docker compose exec $CONTAINER_NAME printenv CHANNELS 2>/dev/null)
+        CHANNELS_ARRAY=(${CHANNELS_FULL//,/ })
+        TOTAL=${#CHANNELS_ARRAY[@]}
+        DISPLAY=$(IFS=, ; echo "${CHANNELS_ARRAY[@]:0:10}")
+        echo "📡 当前 TG 频道 (前10个 / 共 $TOTAL 个): $DISPLAY"
+
         echo "🧩 插件启用: $(docker compose exec $CONTAINER_NAME printenv PLUGINS_ENABLED 2>/dev/null)"
     else
         echo "⚠️ PanSou 未运行"
