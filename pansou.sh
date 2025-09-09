@@ -29,6 +29,7 @@ check_port() {
     fi
 }
 
+# 选择端口，返回纯数字
 choose_port() {
     PORT=$DEFAULT_PORT
     while ! check_port $PORT; do
@@ -36,8 +37,6 @@ choose_port() {
         read -p "请输入一个未占用的端口用于 PanSou API (回车默认 $DEFAULT_PORT): " INPUT_PORT
         PORT=${INPUT_PORT:-$DEFAULT_PORT}
     done
-    echo "✅ 端口 $PORT 可用"
-    echo
     echo $PORT
 }
 
@@ -70,6 +69,7 @@ install_pansou() {
 
     # 选择端口
     PORT=$(choose_port)
+    echo "✅ 端口 $PORT 可用"
 
     # 写入 docker-compose.yml (兼容 v2+)
     cat > docker-compose.yml <<EOF
