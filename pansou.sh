@@ -1,12 +1,11 @@
 #!/bin/bash
 set -e
 
-# 基本配置
-CONTAINER_NAME="pansou"
-DEFAULT_PORT=6001
-PAN_DIR="/root/pansou"
+# 配置
+CONTAINER_NAME="pansou-web"
+PAN_DIR="/root/pansou-web"
 LOCAL_IP=$(hostname -I | awk '{print $1}')
-FRONTEND_PORT=80  # 前端默认端口
+FRONTEND_PORT=80
 
 # 检查端口是否可用
 check_port() {
@@ -18,18 +17,9 @@ check_port() {
     fi
 }
 
-choose_port() {
-    PORT=$DEFAULT_PORT
-    while ! check_port $PORT; do
-        echo "⚠️ 端口 $PORT 已被占用"
-        read -p "请输入一个未占用的端口用于 PanSou API (回车默认 $DEFAULT_PORT): " INPUT_PORT
-        PORT=${INPUT_PORT:-$DEFAULT_PORT}
-    done
-    echo $PORT
-}
-
-install_pansou() {
-    echo "⚙️ 开始安装 PanSou"
+# 安装前后端集成版
+install_pansou_web() {
+    echo "⚙️ 开始安装 PanSou 前后端集成版"
 
     # Docker
     if ! command -v docker &>/dev/null; then
@@ -54,42 +44,39 @@ install_pansou() {
     mkdir -p $PAN_DIR
     cd $PAN_DIR
 
-    # 选择端口
-    PORT=$(choose_port)
-    echo "✅ 端口 $PORT 可用"
+    # 检查端口
+    if ! check_port $FRONTEND_PORT; then
+        read -p "⚠️ 端口 $FRONTEND_PORT 已被占用，请输入新端口 (回车默认 8080): " INPUT_PORT
+        FRONTEND_PORT=${INPUT_PORT:-8080}
+    fi
+    echo "✅ 前端端口 $FRONTEND_PORT 可用"
 
     # 写 docker-compose.yml
     cat > docker-compose.yml <<EOF
+version: "3.9"
 services:
-  pansou:
-    image: ghcr.io/fish2018/pansou:latest
+  $CONTAINER_NAME:
+    image: ghcr.io/fish2018/pansou-web
     container_name: $CONTAINER_NAME
     restart: unless-stopped
     ports:
-      - "$PORT:8888"
       - "$FRONTEND_PORT:80"
-    volumes:
-      - pansou-cache:/app/cache
-    environment:
-      CHANNELS: tgsearchers3
-
-volumes:
-  pansou-cache:
 EOF
 
-    echo "🚀 启动 PanSou 服务..."
+    # 启动服务
+    echo "🚀 启动 PanSou 前后端集成版..."
     docker compose up -d
     sleep 5
-
     echo "✅ 安装完成！"
 }
 
+# 显示状态
 show_status() {
     cd $PAN_DIR
     if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
         echo "✅ PanSou 正在运行"
         echo "👉 前端地址: http://$LOCAL_IP:$FRONTEND_PORT"
-        echo "👉 API 地址: http://$LOCAL_IP:$PORT/api/search"
+        echo "👉 API 地址: http://$LOCAL_IP:80/api/search"
     else
         echo "⚠️ PanSou 未运行"
     fi
@@ -124,7 +111,7 @@ menu() {
     while true; do
         echo ""
         echo "========== PanSou 管理菜单 =========="
-        echo "1) 安装 / 启动 PanSou"
+        echo "1) 安装 / 启动 PanSou 前后端集成版"
         echo "2) 查看状态"
         echo "3) 停止 PanSou"
         echo "4) 重启 PanSou"
@@ -138,7 +125,7 @@ menu() {
                     echo "✅ PanSou 已安装"
                     docker compose up -d
                 else
-                    install_pansou
+                    install_pansou_web
                 fi
                 show_status
                 ;;
