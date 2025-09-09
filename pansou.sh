@@ -5,7 +5,6 @@ set -e
 CONTAINER_NAME="pansou-web"
 PAN_DIR="/root/pansou-web"
 FRONTEND_PORT=80
-CHANNELS_DEFAULT="tgsearchers1,tgsearchers2,tgsearchers3,tgsearchers4,tgsearchers5,tgsearchers6,tgsearchers7,tgsearchers8,tgsearchers9,tgsearchers10,tgsearchers11,tgsearchers12" # 可扩展
 PLUGINS_ENABLED_DEFAULT="true"
 PROXY_DEFAULT=""
 EXT_DEFAULT='{"is_all":true}'
@@ -53,7 +52,7 @@ install_pansou_web() {
     fi
     echo "✅ 前端端口 $FRONTEND_PORT 可用"
 
-    # 写 docker-compose.yml
+    # 写 docker-compose.yml，初次安装不设置 CHANNELS 环境变量
     cat > docker-compose.yml <<EOF
 services:
   $CONTAINER_NAME:
@@ -63,7 +62,6 @@ services:
     ports:
       - "$FRONTEND_PORT:80"
     environment:
-      CHANNELS: "$CHANNELS_DEFAULT"
       PLUGINS_ENABLED: "$PLUGINS_ENABLED_DEFAULT"
       PROXY: "$PROXY_DEFAULT"
       EXT: '$EXT_DEFAULT'
@@ -79,18 +77,30 @@ EOF
 show_status() {
     cd $PAN_DIR
     if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
-        PUBLIC_IP=$(curl -s ifconfig.me || echo "未检测到公网IP")
+        PUBLIC_IPV4=$(curl -4 -s ifconfig.me 2>/dev/null || echo "无法获取IPv4")
+        PUBLIC_IPV6=$(curl -6 -s ifconfig.me 2>/dev/null || echo "无法获取IPv6")
+
         echo "✅ PanSou 正在运行"
-        echo "👉 前端地址: http://$PUBLIC_IP:$FRONTEND_PORT"
-        echo "👉 API 地址: http://$PUBLIC_IP:$FRONTEND_PORT/api/search"
+        echo "👉 前端地址 (IPv4): http://$PUBLIC_IPV4:$FRONTEND_PORT"
+        echo "👉 前端地址 (IPv6): http://[$PUBLIC_IPV6]:$FRONTEND_PORT"
+        echo "👉 API 地址: http://$PUBLIC_IPV4:$FRONTEND_PORT/api/search"
 
         CHANNELS_FULL=$(docker compose exec $CONTAINER_NAME printenv CHANNELS 2>/dev/null)
-        CHANNELS_ARRAY=(${CHANNELS_FULL//,/ })
-        TOTAL=${#CHANNELS_ARRAY[@]}
-        DISPLAY=$(IFS=, ; echo "${CHANNELS_ARRAY[@]:0:10}")
-        echo "📡 当前 TG 频道 (前10个 / 共 $TOTAL 个): $DISPLAY"
-
-        echo "🧩 插件启用: $(docker compose exec $CONTAINER_NAME printenv PLUGINS_ENABLED 2>/dev/null)"
+        
+        # 检查 CHANNELS 是否为空，若为空则显示“使用镜像默认列表”
+        if [ -z "$CHANNELS_FULL" ]; then
+            echo "📡 当前 TG 频道: 使用镜像自带默认列表"
+        else
+            CHANNELS_ARRAY=(${CHANNELS_FULL//,/ })
+            TOTAL=${#CHANNELS_ARRAY[@]}
+            echo "📡 当前 TG 频道 (共 $TOTAL 个):"
+            for (( i=0; i<${#CHANNELS_ARRAY[@]}; i+=10 )); do
+                DISPLAY=$(IFS=, ; echo "${CHANNELS_ARRAY[@]:$i:10}")
+                echo "   $DISPLAY"
+            done
+        fi
+        
+        echo "🧩 启用插件: $(docker compose exec $CONTAINER_NAME printenv PLUGINS_ENABLED 2>/dev/null)"
     else
         echo "⚠️ PanSou 未运行"
     fi
@@ -129,18 +139,42 @@ modify_env() {
     echo "4) EXT: $(docker compose exec $CONTAINER_NAME printenv EXT 2>/dev/null)"
     echo ""
 
-    read -p "输入新的 TG 频道 (回车保持不变): " NEW_CHANNELS
-    read -p "插件启用 (true/false, 回车保持不变): " NEW_PLUGINS
-    read -p "代理 (socks5://..., 回车保持不变): " NEW_PROXY
-    read -p "EXT JSON (回车保持不变): " NEW_EXT
+    read -p "输入新的 TG 频道 (多个用逗号分隔，回车保留，或输入 'reset' 重置): " NEW_CHANNELS
+    read -p "插件启用 (true/false, 回车保留): " NEW_PLUGINS
+    read -p "代理 (socks5://..., 回车保留): " NEW_PROXY
+    read -p "EXT JSON (回车保留): " NEW_EXT
 
-    # 读取原有变量，未输入则保持原值
-    CHANNELS=${NEW_CHANNELS:-$(docker compose exec $CONTAINER_NAME printenv CHANNELS 2>/dev/null)}
-    PLUGINS_ENABLED=${NEW_PLUGINS:-$(docker compose exec $CONTAINER_NAME printenv PLUGINS_ENABLED 2>/dev/null)}
-    PROXY=${NEW_PROXY:-$(docker compose exec $CONTAINER_NAME printenv PROXY 2>/dev/null)}
-    EXT=${NEW_EXT:-$(docker compose exec $CONTAINER_NAME printenv EXT 2>/dev/null)}
+    # 获取当前环境变量
+    CURRENT_CHANNELS=$(docker compose exec $CONTAINER_NAME printenv CHANNELS 2>/dev/null)
+    CURRENT_PLUGINS_ENABLED=$(docker compose exec $CONTAINER_NAME printenv PLUGINS_ENABLED 2>/dev/null)
+    CURRENT_PROXY=$(docker compose exec $CONTAINER_NAME printenv PROXY 2>/dev/null)
+    CURRENT_EXT=$(docker compose exec $CONTAINER_NAME printenv EXT 2>/dev/null)
 
-    # 更新 docker-compose.yml
+    # 处理 CHANNELS 的逻辑
+    if [ -n "$NEW_CHANNELS" ]; then
+        # 如果用户输入 'reset'，则将 CHANNELS 设置为空，表示使用镜像默认
+        if [ "$NEW_CHANNELS" = "reset" ]; then
+            CHANNELS=""
+        else
+            # 否则，如果当前有频道，则追加新频道；如果没有，则使用新输入的频道
+            if [ -n "$CURRENT_CHANNELS" ]; then
+                CHANNELS="$CURRENT_CHANNELS,$NEW_CHANNELS"
+            else
+                CHANNELS="$NEW_CHANNELS"
+            fi
+        fi
+    else
+        # 如果用户回车，则保留当前频道列表
+        CHANNELS="$CURRENT_CHANNELS"
+    fi
+
+    # 处理其他变量，如果用户输入为空则保持不变
+    PLUGINS_ENABLED=${NEW_PLUGINS:-$CURRENT_PLUGINS_ENABLED}
+    PROXY=${NEW_PROXY:-$CURRENT_PROXY}
+    EXT=${NEW_EXT:-$CURRENT_EXT}
+
+    # 更新 docker-compose.yml 文件
+    # 重新生成整个文件，以确保环境配置的正确性
     cat > docker-compose.yml <<EOF
 services:
   $CONTAINER_NAME:
@@ -150,11 +184,14 @@ services:
     ports:
       - "$FRONTEND_PORT:80"
     environment:
-      CHANNELS: "$CHANNELS"
       PLUGINS_ENABLED: "$PLUGINS_ENABLED"
       PROXY: "$PROXY"
       EXT: '$EXT'
 EOF
+    # 如果 CHANNELS 变量不为空，则追加该行
+    if [ -n "$CHANNELS" ]; then
+        sed -i "/environment:/a\      CHANNELS: \"$CHANNELS\"" docker-compose.yml
+    fi
 
     # 重启服务
     docker compose up -d
