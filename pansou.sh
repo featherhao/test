@@ -4,7 +4,7 @@ set -e
 # 配置
 CONTAINER_NAME="pansou-web"
 PAN_DIR="/root/pansou-web"
-FRONTEND_PORT=80
+FRONTEND_PORT=8001 # 默认端口已修改为 8001
 PLUGINS_ENABLED_DEFAULT="true"
 PROXY_DEFAULT=""
 EXT_DEFAULT='{"is_all":true}'
@@ -42,11 +42,11 @@ install_pansou_web() {
     fi
 
     # 创建目录
-    mkdir -p $PAN_DIR
-    cd $PAN_DIR
+    mkdir -p "$PAN_DIR"
+    cd "$PAN_DIR"
 
     # 检查端口
-    if ! check_port $FRONTEND_PORT; then
+    if ! check_port "$FRONTEND_PORT"; then
         read -p "⚠️ 端口 $FRONTEND_PORT 已被占用，请输入新端口 (回车默认 8080): " INPUT_PORT
         FRONTEND_PORT=${INPUT_PORT:-8080}
     fi
@@ -75,17 +75,20 @@ EOF
 }
 
 show_status() {
-    cd $PAN_DIR
+    cd "$PAN_DIR"
     if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
         PUBLIC_IPV4=$(curl -4 -s ifconfig.me 2>/dev/null || echo "无法获取IPv4")
         PUBLIC_IPV6=$(curl -6 -s ifconfig.me 2>/dev/null || echo "无法获取IPv6")
+        
+        # 动态获取当前正在使用的前端端口
+        CURRENT_PORT=$(docker compose port "$CONTAINER_NAME" 80 | cut -d':' -f2 || echo "$FRONTEND_PORT")
 
         echo "✅ PanSou 正在运行"
-        echo "👉 前端地址 (IPv4): http://$PUBLIC_IPV4:$FRONTEND_PORT"
-        echo "👉 前端地址 (IPv6): http://[$PUBLIC_IPV6]:$FRONTEND_PORT"
-        echo "👉 API 地址: http://$PUBLIC_IPV4:$FRONTEND_PORT/api/search"
+        echo "👉 前端地址 (IPv4): http://$PUBLIC_IPV4:$CURRENT_PORT"
+        echo "👉 前端地址 (IPv6): http://[$PUBLIC_IPV6]:$CURRENT_PORT"
+        echo "👉 API 地址: http://$PUBLIC_IPV4:$CURRENT_PORT/api/search"
 
-        CHANNELS_FULL=$(docker compose exec $CONTAINER_NAME printenv CHANNELS 2>/dev/null)
+        CHANNELS_FULL=$(docker compose exec "$CONTAINER_NAME" printenv CHANNELS 2>/dev/null)
         
         # 检查 CHANNELS 是否为空，若为空则显示“使用镜像默认列表”
         if [ -z "$CHANNELS_FULL" ]; then
@@ -100,30 +103,30 @@ show_status() {
             done
         fi
         
-        echo "🧩 启用插件: $(docker compose exec $CONTAINER_NAME printenv PLUGINS_ENABLED 2>/dev/null)"
+        echo "🧩 启用插件: $(docker compose exec "$CONTAINER_NAME" printenv PLUGINS_ENABLED 2>/dev/null)"
     else
         echo "⚠️ PanSou 未运行"
     fi
 }
 
 stop_pansou() {
-    cd $PAN_DIR
+    cd "$PAN_DIR"
     docker compose down
     echo "✅ PanSou 已停止"
 }
 
 restart_pansou() {
-    cd $PAN_DIR
+    cd "$PAN_DIR"
     docker compose restart
     echo "✅ PanSou 已重启"
 }
 
 uninstall_pansou() {
     if [ -d "$PAN_DIR" ]; then
-        cd $PAN_DIR
+        cd "$PAN_DIR"
         docker compose down -v
         cd ~
-        rm -rf $PAN_DIR
+        rm -rf "$PAN_DIR"
         echo "✅ PanSou 已卸载 (容器和缓存卷已删除)"
     else
         echo "⚠️ PanSou 未安装或已卸载"
@@ -131,12 +134,16 @@ uninstall_pansou() {
 }
 
 modify_env() {
-    cd $PAN_DIR
+    cd "$PAN_DIR"
+
+    # 动态获取当前正在使用的前端端口
+    FRONTEND_PORT=$(docker compose port "$CONTAINER_NAME" 80 | cut -d':' -f2 || echo "$FRONTEND_PORT")
+
     echo "当前环境变量："
-    echo "1) CHANNELS: $(docker compose exec $CONTAINER_NAME printenv CHANNELS 2>/dev/null)"
-    echo "2) PLUGINS_ENABLED: $(docker compose exec $CONTAINER_NAME printenv PLUGINS_ENABLED 2>/dev/null)"
-    echo "3) PROXY: $(docker compose exec $CONTAINER_NAME printenv PROXY 2>/dev/null)"
-    echo "4) EXT: $(docker compose exec $CONTAINER_NAME printenv EXT 2>/dev/null)"
+    echo "1) CHANNELS: $(docker compose exec "$CONTAINER_NAME" printenv CHANNELS 2>/dev/null)"
+    echo "2) PLUGINS_ENABLED: $(docker compose exec "$CONTAINER_NAME" printenv PLUGINS_ENABLED 2>/dev/null)"
+    echo "3) PROXY: $(docker compose exec "$CONTAINER_NAME" printenv PROXY 2>/dev/null)"
+    echo "4) EXT: $(docker compose exec "$CONTAINER_NAME" printenv EXT 2>/dev/null)"
     echo ""
 
     read -p "输入新的 TG 频道 (多个用逗号分隔，回车保留，或输入 'reset' 重置): " NEW_CHANNELS
@@ -145,18 +152,16 @@ modify_env() {
     read -p "EXT JSON (回车保留): " NEW_EXT
 
     # 获取当前环境变量
-    CURRENT_CHANNELS=$(docker compose exec $CONTAINER_NAME printenv CHANNELS 2>/dev/null)
-    CURRENT_PLUGINS_ENABLED=$(docker compose exec $CONTAINER_NAME printenv PLUGINS_ENABLED 2>/dev/null)
-    CURRENT_PROXY=$(docker compose exec $CONTAINER_NAME printenv PROXY 2>/dev/null)
-    CURRENT_EXT=$(docker compose exec $CONTAINER_NAME printenv EXT 2>/dev/null)
+    CURRENT_CHANNELS=$(docker compose exec "$CONTAINER_NAME" printenv CHANNELS 2>/dev/null)
+    CURRENT_PLUGINS_ENABLED=$(docker compose exec "$CONTAINER_NAME" printenv PLUGINS_ENABLED 2>/dev/null)
+    CURRENT_PROXY=$(docker compose exec "$CONTAINER_NAME" printenv PROXY 2>/dev/null)
+    CURRENT_EXT=$(docker compose exec "$CONTAINER_NAME" printenv EXT 2>/dev/null)
 
     # 处理 CHANNELS 的逻辑
     if [ -n "$NEW_CHANNELS" ]; then
-        # 如果用户输入 'reset'，则将 CHANNELS 设置为空，表示使用镜像默认
         if [ "$NEW_CHANNELS" = "reset" ]; then
             CHANNELS=""
         else
-            # 否则，如果当前有频道，则追加新频道；如果没有，则使用新输入的频道
             if [ -n "$CURRENT_CHANNELS" ]; then
                 CHANNELS="$CURRENT_CHANNELS,$NEW_CHANNELS"
             else
@@ -164,17 +169,15 @@ modify_env() {
             fi
         fi
     else
-        # 如果用户回车，则保留当前频道列表
         CHANNELS="$CURRENT_CHANNELS"
     fi
 
-    # 处理其他变量，如果用户输入为空则保持不变
+    # 处理其他变量
     PLUGINS_ENABLED=${NEW_PLUGINS:-$CURRENT_PLUGINS_ENABLED}
     PROXY=${NEW_PROXY:-$CURRENT_PROXY}
     EXT=${NEW_EXT:-$CURRENT_EXT}
 
     # 更新 docker-compose.yml 文件
-    # 重新生成整个文件，以确保环境配置的正确性
     cat > docker-compose.yml <<EOF
 services:
   $CONTAINER_NAME:
@@ -188,7 +191,7 @@ services:
       PROXY: "$PROXY"
       EXT: '$EXT'
 EOF
-    # 如果 CHANNELS 变量不为空，则追加该行
+
     if [ -n "$CHANNELS" ]; then
         sed -i "/environment:/a\      CHANNELS: \"$CHANNELS\"" docker-compose.yml
     fi
