@@ -22,6 +22,14 @@ else
   COMPOSE="docker compose"
 fi
 
+# 检测 Panso 状态
+if docker ps -a --format '{{.Names}}' | grep -q "^pansou-web\$"; then
+    panso_status="✅ 已安装"
+else
+    panso_status="❌ 未安装"
+fi
+
+
 # ================== 子脚本路径 ==================
 WORKDIR_MOONTV="/opt/moontv"
 MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/mootvinstall.sh"
@@ -41,6 +49,14 @@ rustdesk_menu() { bash <(curl -fsSL "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
 libretv_menu() { bash <(curl -fsSL "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
 singbox_menu() { bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh); }
 nginx_menu() { bash <(curl -fsSL "${NGINX_SCRIPT}?t=$(date +%s)"); }
+
+
+
+
+
+panso_menu() {
+    bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/refs/heads/main/pansou.sh)
+}
 
 # ================== 勇哥ArgoSB菜单 ==================
 # ================== 勇哥ArgoSB菜单 ==================
@@ -222,10 +238,12 @@ while true; do
   echo "5) 勇哥ArgoSB脚本  $argosb_status"
   echo "6) Kejilion.sh 一键脚本工具箱  $kejilion_status"
   echo "7) zjsync（GitHub 文件自动同步）"
-  echo "8) 域名绑定管理  $nginx_status"
-  echo "9) 设置快捷键 Q / q"
+  echo "8) Panso 管理  $panso_status"
+  echo "9) 域名绑定管理  $nginx_status"
+  echo "10) 设置快捷键 Q / q"
   echo "U) 更新菜单脚本 menu.sh"
   echo "0) 退出"
+
   echo "=============================="
   read -rp "请输入选项: " main_choice
 
@@ -237,10 +255,12 @@ while true; do
     5) argosb_menu ;;
     6) bash <(curl -sL kejilion.sh) ;;
     7) bash <(curl -fsSL "${ZJSYNC_SCRIPT}?t=$(date +%s)") ;;
-    8) nginx_menu ;;
-    9) set_q_shortcut ;;
+    8) panso_menu ;;
+    9) nginx_menu ;;
+    10) set_q_shortcut ;;
     U) update_menu_script ;;
     0) exit 0 ;;
     *) echo "❌ 无效输入"; sleep 1 ;;
+
   esac
 done
