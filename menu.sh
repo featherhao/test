@@ -29,6 +29,13 @@ else
     panso_status="❌ 未安装"
 fi
 
+if [[ -f /etc/zjsync.conf ]]; then
+  zjsync_status="✅ 已配置"
+else
+  zjsync_status="❌ 未配置"
+fi
+
+
 
 # ================== 子脚本路径 ==================
 WORKDIR_MOONTV="/opt/moontv"
@@ -50,12 +57,13 @@ libretv_menu() { bash <(curl -fsSL "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
 singbox_menu() { bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh); }
 nginx_menu() { bash <(curl -fsSL "${NGINX_SCRIPT}?t=$(date +%s)"); }
 
-
-
-
-
 panso_menu() {
     bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/refs/heads/main/pansou.sh)
+}
+
+
+zjsync_menu() {
+  bash <(curl -fsSL "${ZJSYNC_SCRIPT}?t=$(date +%s)")
 }
 
 # ================== 勇哥ArgoSB菜单 ==================
@@ -237,7 +245,7 @@ while true; do
   echo "4) 甬哥Sing-box-yg管理  $singbox_status"
   echo "5) 勇哥ArgoSB脚本  $argosb_status"
   echo "6) Kejilion.sh 一键脚本工具箱  $kejilion_status"
-  echo "7) zjsync（GitHub 文件自动同步）"
+  echo "7) zjsync（GitHub 文件自动同步）  $zjsync_status"
   echo "8) Panso 管理  $panso_status"
   echo "9) 域名绑定管理  $nginx_status"
   echo "10) 设置快捷键 Q / q"
@@ -254,7 +262,7 @@ while true; do
     4) singbox_menu ;;
     5) argosb_menu ;;
     6) bash <(curl -sL kejilion.sh) ;;
-    7) bash <(curl -fsSL "${ZJSYNC_SCRIPT}?t=$(date +%s)") ;;
+    7) zjsync_menu ;;
     8) panso_menu ;;
     9) nginx_menu ;;
     10) set_q_shortcut ;;
