@@ -1,16 +1,31 @@
 #!/bin/bash
 set -e
 
+# 基本配置
 CONTAINER_NAME="pansou"
 DEFAULT_PORT=6001
+PAN_DIR="/root/pansou"
 LOCAL_IP=$(hostname -I | awk '{print $1}')
 
+# 用法提示
+show_usage() {
+    echo "🚀 PanSou 一键管理脚本"
+    echo ""
+    echo "用法: $0 {install|status|uninstall}"
+    echo ""
+    echo "  install    安装并启动 PanSou"
+    echo "  status     显示 PanSou 状态和访问地址"
+    echo "  uninstall  停止并卸载 PanSou (删除容器和缓存卷)"
+    echo ""
+}
+
+# 检查端口是否可用
 check_port() {
     PORT=$1
     if lsof -i :"$PORT" &>/dev/null; then
-        return 1  # 被占用
+        return 1
     else
-        return 0  # 可用
+        return 0
     fi
 }
 
@@ -23,8 +38,10 @@ choose_port() {
     done
     echo "✅ 端口 $PORT 可用"
     echo
+    echo $PORT
 }
 
+# 安装或启动 PanSou
 install_pansou() {
     echo "⚙️ 开始安装 PanSou"
 
@@ -47,7 +64,12 @@ install_pansou() {
         echo "✅ docker-compose 已安装"
     fi
 
-    choose_port  # 检测或选择端口
+    # 创建独立目录
+    mkdir -p $PAN_DIR
+    cd $PAN_DIR
+
+    # 选择端口
+    PORT=$(choose_port)
 
     # 写入 docker-compose.yml
     cat > docker-compose.yml <<EOF
@@ -71,11 +93,14 @@ EOF
     echo "🚀 启动 PanSou 服务..."
     docker-compose up -d
     sleep 5
+
     show_status $PORT
 }
 
+# 显示状态
 show_status() {
     PORT=${1:-$DEFAULT_PORT}
+    cd $PAN_DIR
     if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
         echo "✅ PanSou 正在运行"
         echo "👉 后端 API 地址: http://$LOCAL_IP:$PORT/api/search"
@@ -89,11 +114,13 @@ show_status() {
     fi
 }
 
+# 卸载
 uninstall_pansou() {
-    if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
-        echo "🛑 停止并卸载 PanSou..."
+    if [ -d "$PAN_DIR" ]; then
+        cd $PAN_DIR
         docker-compose down -v
-        rm -f docker-compose.yml
+        cd ~
+        rm -rf $PAN_DIR
         echo "✅ PanSou 已卸载 (容器和缓存卷已删除)"
     else
         echo "⚠️ PanSou 未安装或已卸载"
@@ -117,6 +144,6 @@ case "$1" in
         uninstall_pansou
         ;;
     *)
-        echo "用法: $0 {install|status|uninstall}"
+        show_usage
         ;;
 esac
