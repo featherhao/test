@@ -55,7 +55,6 @@ install_pansou_web() {
 
     # 写 docker-compose.yml
     cat > docker-compose.yml <<EOF
-version: "3.9"
 services:
   $CONTAINER_NAME:
     image: ghcr.io/fish2018/pansou-web
@@ -143,7 +142,6 @@ modify_env() {
 
     # 更新 docker-compose.yml
     cat > docker-compose.yml <<EOF
-version: "3.9"
 services:
   $CONTAINER_NAME:
     image: ghcr.io/fish2018/pansou-web
