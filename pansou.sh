@@ -55,13 +55,13 @@ install_pansou() {
         echo "✅ Docker 已安装"
     fi
 
-    # 检查 docker-compose
-    if ! command -v docker-compose &> /dev/null; then
-        echo "⚙️ 未检测到 docker-compose，正在安装..."
+    # 检查 docker-compose 或 docker compose
+    if ! command -v docker-compose &> /dev/null && ! command -v docker &> /dev/null; then
+        echo "⚙️ 未检测到 Docker Compose，正在安装..."
         curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         chmod +x /usr/local/bin/docker-compose
     else
-        echo "✅ docker-compose 已安装"
+        echo "✅ Docker Compose 已安装"
     fi
 
     # 创建独立目录
@@ -71,9 +71,8 @@ install_pansou() {
     # 选择端口
     PORT=$(choose_port)
 
-    # 写入 docker-compose.yml
+    # 写入 docker-compose.yml (兼容 v2+)
     cat > docker-compose.yml <<EOF
-version: "3.9"
 services:
   pansou:
     image: ghcr.io/fish2018/pansou:latest
@@ -84,14 +83,14 @@ services:
     volumes:
       - pansou-cache:/app/cache
     environment:
-      - CHANNELS=tgsearchers3
+      CHANNELS: tgsearchers3
 
 volumes:
   pansou-cache:
 EOF
 
     echo "🚀 启动 PanSou 服务..."
-    docker-compose up -d pansou
+    docker compose up -d
     sleep 5
 
     show_status $PORT
@@ -106,9 +105,9 @@ show_status() {
         echo "👉 后端 API 地址: http://$LOCAL_IP:$PORT/api/search"
         echo ""
         echo "📌 常用命令:"
-        echo "  查看日志: docker-compose logs -f"
-        echo "  停止服务: docker-compose down"
-        echo "  重启服务: docker-compose restart"
+        echo "  查看日志: docker compose logs -f"
+        echo "  停止服务: docker compose down"
+        echo "  重启服务: docker compose restart"
     else
         echo "⚠️ PanSou 未运行"
     fi
@@ -118,7 +117,7 @@ show_status() {
 uninstall_pansou() {
     if [ -d "$PAN_DIR" ]; then
         cd $PAN_DIR
-        docker-compose down -v
+        docker compose down -v
         cd ~
         rm -rf $PAN_DIR
         echo "✅ PanSou 已卸载 (容器和缓存卷已删除)"
