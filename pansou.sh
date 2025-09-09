@@ -91,7 +91,7 @@ volumes:
 EOF
 
     echo "🚀 启动 PanSou 服务..."
-    docker-compose up -d
+    docker-compose up -d pansou
     sleep 5
 
     show_status $PORT
