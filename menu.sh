@@ -1,9 +1,52 @@
 #!/bin/bash
-set -e
+set -Eeuo pipefail
+
+# 统一失败处理
+trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
 
 # ================== 基础配置 ==================
 SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh"
 SCRIPT_PATH="$HOME/menu.sh"
+
+# ================== 彩色与日志 ==================
+if [[ -t 1 ]] && command -v tput &>/dev/null; then
+  C_RESET="\e[0m"; C_BOLD="\e[1m"
+  C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"; C_BLUE="\e[34m"; C_CYAN="\e[36m"
+else
+  C_RESET=""; C_BOLD=""; C_GREEN=""; C_RED=""; C_YELLOW=""; C_BLUE=""; C_CYAN=""
+fi
+
+info()  { echo -e "${C_CYAN}[*]${C_RESET} $*"; }
+warn()  { echo -e "${C_YELLOW}[!]${C_RESET} $*"; }
+error() { echo -e "${C_RED}[x]${C_RESET} $*"; }
+
+print_header() {
+  local title="$1"
+  echo -e "${C_BOLD}==============================${C_RESET}"
+  echo -e "  ${C_BOLD}${title}${C_RESET}"
+  echo -e "${C_BOLD}==============================${C_RESET}"
+}
+
+render_menu() {
+  # 参数：标题；其余为菜单项数组（每项一行已拼好字符串）
+  local title="$1"; shift
+  clear
+  print_header "$title"
+  local item
+  for item in "$@"; do
+    echo -e "$item"
+  done
+  echo "=============================="
+}
+
+# 统一网络获取封装（带超时与重试）
+fetch() {
+  curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@"
+}
+
+run_url() {
+  bash <(fetch "$1")
+}
 
 # ================== 自我初始化逻辑 ==================
 if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
@@ -22,21 +65,7 @@ else
   COMPOSE="docker compose"
 fi
 
-# 检测 Panso 状态
-if docker ps -a --format '{{.Names}}' | grep -q "^pansou-web\$"; then
-    panso_status="✅ 已安装"
-else
-    panso_status="❌ 未安装"
-fi
-
-if [[ -f /etc/zjsync.conf ]]; then
-  zjsync_status="✅ 已配置"
-else
-  zjsync_status="❌ 未配置"
-fi
-
-
-
+# Panso/zjsync 状态改为在主循环动态检测
 # ================== 子脚本路径 ==================
 WORKDIR_MOONTV="/opt/moontv"
 MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/mootvinstall.sh"
@@ -51,22 +80,21 @@ ZJSYNC_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main
 NGINX_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/nginx"
 
 # ================== 调用子脚本 ==================
-moon_menu() { bash <(curl -fsSL "${MOONTV_SCRIPT}?t=$(date +%s)"); }
-rustdesk_menu() { bash <(curl -fsSL "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
-libretv_menu() { bash <(curl -fsSL "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
-singbox_menu() { bash <(wget -qO- https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh); }
-nginx_menu() { bash <(curl -fsSL "${NGINX_SCRIPT}?t=$(date +%s)"); }
+moon_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${MOONTV_SCRIPT}?t=$(date +%s)"); }
+rustdesk_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
+libretv_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
+singbox_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh); }
+nginx_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${NGINX_SCRIPT}?t=$(date +%s)"); }
 
 panso_menu() {
-    bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/refs/heads/main/pansou.sh)
+    bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 https://raw.githubusercontent.com/featherhao/test/refs/heads/main/pansou.sh)
 }
 
 
 zjsync_menu() {
-  bash <(curl -fsSL "${ZJSYNC_SCRIPT}?t=$(date +%s)")
+  bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${ZJSYNC_SCRIPT}?t=$(date +%s)")
 }
 
-# ================== 勇哥ArgoSB菜单 ==================
 # ================== 勇哥ArgoSB菜单 ==================
 argosb_menu() {
   # 动态检测安装状态
@@ -77,19 +105,15 @@ argosb_menu() {
   fi
 
   while true; do
-    clear
-    echo "=============================="
-    echo "  🚀 勇哥ArgoSB协议管理 $argosb_status"
-    echo "=============================="
-    echo "1) 增量添加协议节点"
-    echo "2) 查看节点信息 (agsb list)"
-    echo "3) 手动更换协议变量组 (自定义变量 → agsb rep)"
-    echo "4) 更新脚本 (建议卸载重装)"
-    echo "5) 重启脚本 (agsb res)"
-    echo "6) 卸载脚本 (agsb del)"
-    echo "7) 临时切换 IPv4 / IPv6 节点显示"
-    echo "0) 返回主菜单"
-    echo "=============================="
+    render_menu "🚀 勇哥ArgoSB协议管理 $argosb_status" \
+      "1) 增量添加协议节点" \
+      "2) 查看节点信息 (agsb list)" \
+      "3) 手动更换协议变量组 (自定义变量 → agsb rep)" \
+      "4) 更新脚本 (建议卸载重装)" \
+      "5) 重启脚本 (agsb res)" \
+      "6) 卸载脚本 (agsb del)" \
+      "7) 临时切换 IPv4 / IPv6 节点显示" \
+      "0) 返回主菜单"
     read -rp "请输入选项: " main_choice
 
     case "$main_choice" in
@@ -195,7 +219,7 @@ argosb_menu() {
 # ================== 更新菜单脚本 ==================
 update_menu_script() {
   echo "🔄 正在更新 menu.sh..."
-  curl -fsSL "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
+  curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
   chmod +x "$SCRIPT_PATH"
   echo "✅ menu.sh 已更新到 $SCRIPT_PATH"
   echo "👉 以后可直接执行：bash ~/menu.sh 或 q"
@@ -232,27 +256,33 @@ while true; do
   else
     argosb_status="❌ 未安装"
   fi
+  # 动态检测 Panso 与 zjsync 状态
+  if docker ps -a --format '{{.Names}}' | grep -q "^pansou-web$"; then
+      panso_status="✅ 已安装"
+  else
+      panso_status="❌ 未安装"
+  fi
+  if [[ -f /etc/zjsync.conf ]]; then
+    zjsync_status="✅ 已配置"
+  else
+    zjsync_status="❌ 未配置"
+  fi
   kejilion_status="⚡ 远程调用"
   nginx_status="⚡ 远程调用"
 
-  clear
-  echo "=============================="
-  echo "       🚀 服务管理中心"
-  echo "=============================="
-  echo "1) MoonTV 管理  $moon_status"
-  echo "2) RustDesk 管理  $rustdesk_status"
-  echo "3) LibreTV 安装  $libretv_status"
-  echo "4) 甬哥Sing-box-yg管理  $singbox_status"
-  echo "5) 勇哥ArgoSB脚本  $argosb_status"
-  echo "6) Kejilion.sh 一键脚本工具箱  $kejilion_status"
-  echo "7) zjsync（GitHub 文件自动同步）  $zjsync_status"
-  echo "8) Panso 管理  $panso_status"
-  echo "9) 域名绑定管理  $nginx_status"
-  echo "10) 设置快捷键 Q / q"
-  echo "U) 更新菜单脚本 menu.sh"
-  echo "0) 退出"
-
-  echo "=============================="
+  render_menu "🚀 服务管理中心" \
+    "1) MoonTV 管理  $moon_status" \
+    "2) RustDesk 管理  $rustdesk_status" \
+    "3) LibreTV 安装  $libretv_status" \
+    "4) 甬哥Sing-box-yg管理  $singbox_status" \
+    "5) 勇哥ArgoSB脚本  $argosb_status" \
+    "6) Kejilion.sh 一键脚本工具箱  $kejilion_status" \
+    "7) zjsync（GitHub 文件自动同步）  $zjsync_status" \
+    "8) Panso 管理  $panso_status" \
+    "9) 域名绑定管理  $nginx_status" \
+    "10) 设置快捷键 Q / q" \
+    "U) 更新菜单脚本 menu.sh" \
+    "0) 退出"
   read -rp "请输入选项: " main_choice
 
   case "${main_choice^^}" in
@@ -261,7 +291,7 @@ while true; do
     3) libretv_menu ;;
     4) singbox_menu ;;
     5) argosb_menu ;;
-    6) bash <(curl -sL kejilion.sh) ;;
+    6) bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 kejilion.sh) ;;
     7) zjsync_menu ;;
     8) panso_menu ;;
     9) nginx_menu ;;
