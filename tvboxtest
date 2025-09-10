@@ -1,0 +1,221 @@
+{
+  "cache_time": 7200,
+  "api_site": {
+    "👍饭太硬": {
+      "api": "http://www.饭太硬.net/tv/",
+      "name": "👍饭太硬"
+    },
+    "hg": {
+      "api": "https://api.hgyx.vip/hgyx.json",
+      "name": "HG"
+    },
+    "潇洒": {
+      "api": "https://9877.kstore.space/AnotherD/api.json",
+      "name": "潇洒"
+    },
+    "拾光4k(卡)": {
+      "api": "https://notabug.org/hailin/shiguang/raw/main/4Kvip.json",
+      "name": "拾光4K(卡)"
+    },
+    "南风": {
+      "api": "https://gh.ddlc.top/https://raw.githubusercontent.com/yoursmile66/TVBox/main/XC.json",
+      "name": "南风"
+    },
+    "小米": {
+      "api": "http://www.mitvbox.xyz/%E5%B0%8F%E7%B1%B3/DEMO.json",
+      "name": "小米"
+    },
+    "业余": {
+      "api": "https://hub.gitmirror.com/https://raw.githubusercontent.com/yydfys/yydf/main/yydf/yydfjk.json",
+      "name": "业余"
+    },
+    "巧技": {
+      "api": "http://cdn.qiaoji8.com/tvbox.json",
+      "name": "巧技"
+    },
+    "毒盒": {
+      "api": "https://tv.youdu.fan:666/毒盒影视/",
+      "name": "毒盒"
+    },
+    "盒子迷": {
+      "api": "https://盒子迷.top/禁止贩卖",
+      "name": "盒子迷"
+    },
+    "放牛": {
+      "api": "http://tvbox.王二小放牛娃.top",
+      "name": "放牛"
+    },
+    "香雅情": {
+      "api": "https://gh-proxy.com/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/main/XYQTVBox.json",
+      "name": "香雅情"
+    },
+    "附马": {
+      "api": "http://fmys.top/fmys.json",
+      "name": "附马"
+    },
+    "俊于": {
+      "api": "http://home.jundie.top:81/top98.json",
+      "name": "俊于"
+    },
+    "👍荷城茶秀": {
+      "api": "https://hub.gitmirror.com/https://raw.githubusercontent.com/HeChengChaXiu/tvbox/main/hccx.json",
+      "name": "👍荷城茶秀"
+    },
+    "盒子4k": {
+      "api": "http://xhztv.top/4k.json",
+      "name": "盒子4K"
+    },
+    "刘备": {
+      "api": "https://raw.liucn.cc/box/m.json",
+      "name": "刘备"
+    },
+    "时光机": {
+      "api": "https://raw.gitmirror.com/bestpvp/tm/main/source/stable/main.json",
+      "name": "时光机"
+    },
+    "欧歌": {
+      "api": "https://xn--ckkc-rp5imh.v.nxog.top/api.php?id=3",
+      "name": "欧歌"
+    },
+    "玩偶": {
+      "api": "https://gitee.com/blssss/jk/raw/api/bls.json",
+      "name": "玩偶"
+    },
+    "挺好": {
+      "api": "http://ztha.top/TVBox/thdjk.json",
+      "name": "挺好"
+    },
+    "胜寒": {
+      "api": "https://raw.bgithub.xyz/hanhan8127/TVBox/main/hanXC.json",
+      "name": "胜寒"
+    },
+    "六王爷": {
+      "api": "http://www.0746lhl.top/box/lwytv.json",
+      "name": "六王爷"
+    },
+    "菜妮丝": {
+      "api": "https://tv.菜妮丝.top",
+      "name": "菜妮丝"
+    },
+    "️天微": {
+      "api": "https://7337.kstore.space/kjtv/%E8%87%AA%E7%94%A8%E6%B5%8B%E8%AF%95.json",
+      "name": "️天微"
+    },
+    "夜猫": {
+      "api": "https://jihulab.com/ymz1231/xymz/-/raw/main/ymz",
+      "name": "夜猫"
+    },
+    "dxawi": {
+      "api": "http://dxawi.github.io/0/0.json",
+      "name": "dxawi"
+    },
+    "不良帅": {
+      "api": "https://notabug.org/qizhen15800/My9394/raw/master/ProfessionalEdition.m3u8",
+      "name": "不良帅"
+    },
+    "多多": {
+      "api": "https://git.acwing.com/iduoduo/orange/-/raw/main/config.bin",
+      "name": "多多"
+    },
+    "小马": {
+      "api": "https://szyyds.cn/tv/x.json",
+      "name": "小马"
+    },
+    "candy": {
+      "api": "https://gitlab.com/noimank/tvbox/-/raw/main/tvbox1.json",
+      "name": "Candy"
+    },
+    "小虎斑": {
+      "api": "http://hb.小虎斑.site:25252/仅供测试",
+      "name": "小虎斑"
+    },
+    "卧龙": {
+      "api": "https://pastebin.com/raw/gtbKvnE1",
+      "name": "卧龙"
+    },
+    "小苹果": {
+      "api": "https://bitbucket.org/xduo/duoapi/raw/master/xpg.json",
+      "name": "小苹果"
+    },
+    "七夏": {
+      "api": "https://hub.gitmirror.com/https://raw.githubusercontent.com/xzwei528/qixia/main/qixia.json",
+      "name": "七夏"
+    },
+    "环宇轩": {
+      "api": "https://hub.gitmirror.com/https://raw.githubusercontent.com/xnftv/xnf/main/hyxuan.json",
+      "name": "环宇轩"
+    },
+    "小脑斧": {
+      "api": "https://6492.kstore.space/xnf/xnf.json",
+      "name": "小脑斧"
+    },
+    "宝盒vip": {
+      "api": "https://hub.gitmirror.com/https://raw.githubusercontent.com/guot55/YGBH/main/vip2.json",
+      "name": "宝盒VIP"
+    },
+    "宝盒4k": {
+      "api": "https://hub.gitmirror.com/https://raw.githubusercontent.com/guot55/YGBH/main/pro.json",
+      "name": "宝盒4K"
+    },
+    "月光宝盒": {
+      "api": "http://64.112.42.49:6688/https://raw.githubusercontent.com/guot55/yg/main/pg/jsm.json",
+      "name": "月光宝盒"
+    },
+    "盐枭": {
+      "api": "https://9xi4o.tk/tvbox.json",
+      "name": "盐枭"
+    },
+    "ok猫": {
+      "api": "http://ok321.top/ok",
+      "name": "OK猫"
+    },
+    "肥猫": {
+      "api": "http://肥猫.com",
+      "name": "肥猫"
+    },
+    "分享者": {
+      "api": "https://hub.gitmirror.com/https://raw.githubusercontent.com/maoystv/6/main/001.json",
+      "name": "分享者"
+    },
+    "高天流云": {
+      "api": "https://hub.gitmirror.com/https://raw.githubusercontent.com/gaotianliuyun/gao/master/0827.json",
+      "name": "高天流云"
+    },
+    "宝宝趣学": {
+      "api": "https://hub.gitmirror.com/https://raw.githubusercontent.com/hiboxs/b/main/bbqx/jf.json",
+      "name": "宝宝趣学"
+    },
+    "动漫": {
+      "api": "https://www.yingm.cc/dm/dm.json",
+      "name": "动漫"
+    },
+    "少儿": {
+      "api": "https://jihulab.com/ymz1231/xymz/-/raw/main/ymshaoer",
+      "name": "少儿"
+    },
+    "短剧1": {
+      "api": "http://74.120.175.78/JK/XYQTVBox/dj.json",
+      "name": "短剧1"
+    },
+    "短剧2": {
+      "api": "http://box.ufuzi.com/tv/qq/%E7%9F%AD%E5%89%A7%E9%A2%91%E9%81%93/api.json",
+      "name": "短剧2"
+    },
+    "短剧3": {
+      "api": "https://szyyds.cn/tv/x.json",
+      "name": "短剧3"
+    },
+    "以上接口长期维护，关注": {
+      "api": "https://9xi4o.tk/0725.json",
+      "name": "以上接口长期维护，关注"
+    },
+    "公众号【武志红的杂货铺】": {
+      "api": "https://dxawi.github.io/0/0.json",
+      "name": "公众号【武志红的杂货铺】"
+    },
+    "最后更新时间:20250830": {
+      "api": "https://ghfast.top/https://raw.githubusercontent.com/foxccs/tvbox/main/m.json",
+      "name": "最后更新时间:20250830"
+    }
+  }
+}
