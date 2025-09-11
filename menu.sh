@@ -65,7 +65,6 @@ else
   COMPOSE="docker compose"
 fi
 
-# Panso/zjsync 状态改为在主循环动态检测
 # ================== 子脚本路径 ==================
 WORKDIR_MOONTV="/opt/moontv"
 MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/mootvinstall.sh"
@@ -79,6 +78,9 @@ LIBRETV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/mai
 ZJSYNC_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/zjsync.sh"
 NGINX_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/nginx"
 
+# 新增 Subconverter 脚本路径
+SUB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/subconverter-api.sh"
+
 # ================== 调用子脚本 ==================
 moon_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${MOONTV_SCRIPT}?t=$(date +%s)"); }
 rustdesk_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
@@ -90,9 +92,13 @@ panso_menu() {
     bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 https://raw.githubusercontent.com/featherhao/test/refs/heads/main/pansou.sh)
 }
 
-
 zjsync_menu() {
   bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${ZJSYNC_SCRIPT}?t=$(date +%s)")
+}
+
+# 新增 Subconverter 菜单函数
+subconverter_menu() {
+    bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${SUB_SCRIPT}?t=$(date +%s)")
 }
 
 # ================== 勇哥ArgoSB菜单 ==================
@@ -267,20 +273,29 @@ while true; do
   else
     zjsync_status="❌ 未配置"
   fi
+  
+  # 新增 Subconverter 状态检测
+  if docker ps -a --filter "name=subconverter" --format "{{.Status}}" | grep -q "Up"; then
+    subconverter_status="✅ 运行中"
+  else
+    subconverter_status="❌ 未运行"
+  fi
+
   kejilion_status="⚡ 远程调用"
   nginx_status="⚡ 远程调用"
 
   render_menu "🚀 服务管理中心" \
-    "1) MoonTV 管理  $moon_status" \
-    "2) RustDesk 管理  $rustdesk_status" \
-    "3) LibreTV 安装  $libretv_status" \
-    "4) 甬哥Sing-box-yg管理  $singbox_status" \
-    "5) 勇哥ArgoSB脚本  $argosb_status" \
-    "6) Kejilion.sh 一键脚本工具箱  $kejilion_status" \
-    "7) zjsync（GitHub 文件自动同步）  $zjsync_status" \
-    "8) Panso 管理  $panso_status" \
-    "9) 域名绑定管理  $nginx_status" \
-    "10) 设置快捷键 Q / q" \
+    "1) MoonTV 安装          $moon_status" \
+    "2) RustDesk 安装          $rustdesk_status" \
+    "3) LibreTV 安装           $libretv_status" \
+    "4) 甬哥Sing-box-yg安装   $singbox_status" \
+    "5) 勇哥ArgoSB脚本         $argosb_status" \
+    "6) Kejilion.sh 一键脚本工具箱 $kejilion_status" \
+    "7) zjsync（GitHub 文件自动同步）$zjsync_status" \
+    "8) Pansou 网盘搜索            $panso_status" \
+    "9) 域名绑定管理           $nginx_status" \
+    "10) Subconverter- 订阅转换后端API $subconverter_status" \
+    "11) 设置快捷键 Q / q" \
     "U) 更新菜单脚本 menu.sh" \
     "0) 退出"
   read -rp "请输入选项: " main_choice
@@ -295,10 +310,10 @@ while true; do
     7) zjsync_menu ;;
     8) panso_menu ;;
     9) nginx_menu ;;
-    10) set_q_shortcut ;;
+    10) subconverter_menu ;; # 新增的选项
+    11) set_q_shortcut ;;
     U) update_menu_script ;;
     0) exit 0 ;;
     *) echo "❌ 无效输入"; sleep 1 ;;
-
   esac
 done
