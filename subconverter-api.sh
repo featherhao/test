@@ -16,9 +16,12 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# 获取公网 IP 地址
+# 获取公网 IP 地址 (同时获取 IPv4 和 IPv6)
 get_public_ip() {
-  curl -s ip.sb
+  # 优先获取 IPv4
+  IPV4_ADDRESS=$(curl -s -4 ip.sb)
+  # 尝试获取 IPv6
+  IPV6_ADDRESS=$(curl -s -6 ip.sb)
 }
 
 # 检查并安装 Docker 和 Docker Compose
@@ -58,7 +61,6 @@ configure_firewall() {
 deploy_service() {
   echo "--- 正在部署 subconverter 核心服务 ---"
   
-  # 直接生成最精简的 docker-compose.yml 文件，不包含额外的网络配置
   cat > "$COMPOSE_FILE" << EOF
 version: '3'
 services:
@@ -90,19 +92,36 @@ uninstall_service() {
 # 检查服务状态
 check_status() {
   echo "--- 正在检查服务状态 ---"
-  PUBLIC_IP=$(get_public_ip)
+  get_public_ip
   
   SUB_STATUS=$(docker ps --filter "name=$SUB_CONTAINER_NAME" --format "{{.Status}}")
   if [ -n "$SUB_STATUS" ]; then
     echo "✅ subconverter 容器状态: $SUB_STATUS"
-    IP_CHECK=$(curl -s --max-time 5 "http://$PUBLIC_IP:$SUB_PORT/version")
-    if [ -n "$IP_CHECK" ]; then
-      echo "✅ **通过 IP 地址访问成功**："
-      echo "   http://$PUBLIC_IP:$SUB_PORT/version"
-      echo "   版本信息：$IP_CHECK"
-    else
-      echo "❌ **通过 IP 地址访问失败**，请检查防火墙或服务日志。"
+    
+    # 优先使用 IPv4 进行测试
+    if [ -n "$IPV4_ADDRESS" ]; then
+      IP_CHECK=$(curl -s --max-time 5 "http://$IPV4_ADDRESS:$SUB_PORT/version")
+      if [ -n "$IP_CHECK" ]; then
+        echo "✅ **通过 IPv4 地址访问成功**："
+        echo "   http://$IPV4_ADDRESS:$SUB_PORT/version"
+        echo "   版本信息：$IP_CHECK"
+        return
+      fi
     fi
+
+    # 如果 IPv4 失败或不存在，使用 IPv6 进行测试
+    if [ -n "$IPV6_ADDRESS" ]; then
+      IP_CHECK=$(curl -s -g --max-time 5 "http://[$IPV6_ADDRESS]:$SUB_PORT/version")
+      if [ -n "$IP_CHECK" ]; then
+        echo "✅ **通过 IPv6 地址访问成功**："
+        echo "   http://[$IPV6_ADDRESS]:$SUB_PORT/version"
+        echo "   版本信息：$IP_CHECK"
+        return
+      fi
+    fi
+
+    # 如果 IPv4 和 IPv6 都失败
+    echo "❌ **通过 IP 地址访问失败**，请检查防火墙或服务日志。"
   else
     echo "❌ subconverter 容器未运行。"
   fi
