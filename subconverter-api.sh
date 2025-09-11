@@ -57,62 +57,20 @@ configure_firewall() {
 # 部署 Subconverter 核心服务
 deploy_service() {
   echo "--- 正在部署 subconverter 核心服务 ---"
-  echo "请选择网络模式："
-  echo "1) 仅使用 IPv4 (推荐，解决连接问题)"
-  echo "2) 仅使用 IPv6 (如果你的服务器支持并需要)"
-  read -p "请输入选项 [1-2]: " ip_choice
-
-  if [[ "$ip_choice" == "1" ]]; then
-    cat > "$COMPOSE_FILE" << EOF
-version: '3'
-services:
-  $SUB_CONTAINER_NAME:
-    image: $SUB_IMAGE_NAME
-    container_name: $SUB_CONTAINER_NAME
-    restart: always
-    # 新增: 强制禁用 IPv6 网络栈和使用 IPv4 DNS 服务器
-    sysctls:
-      net.ipv6.conf.all.disable_ipv6: 1
-    dns:
-      - 8.8.8.8
-    ports:
-      - "$SUB_PORT:$SUB_PORT"
-EOF
-    echo "✅ 已选择 **仅使用 IPv4** 模式。"
-  elif [[ "$ip_choice" == "2" ]]; then
-    cat > "$COMPOSE_FILE" << EOF
-version: '3'
-services:
-  $SUB_CONTAINER_NAME:
-    image: $SUB_IMAGE_NAME
-    container_name: $SUB_CONTAINER_NAME
-    restart: always
-    # 新增: 强制禁用 IPv4
-    sysctls:
-      net.ipv4.conf.all.disable_ipv4: 1
-    ports:
-      - "$SUB_PORT:$SUB_PORT"
-EOF
-    echo "✅ 已选择 **仅使用 IPv6** 模式。"
-  else
-    echo "⚠️ 无效选项，将默认使用 **仅使用 IPv4** 模式。"
-    cat > "$COMPOSE_FILE" << EOF
-version: '3'
-services:
-  $SUB_CONTAINER_NAME:
-    image: $SUB_IMAGE_NAME
-    container_name: $SUB_CONTAINER_NAME
-    restart: always
-    # 默认使用 IPv4 DNS 服务器并禁用 IPv6 网络栈
-    sysctls:
-      net.ipv6.conf.all.disable_ipv6: 1
-    dns:
-      - 8.8.8.8
-    ports:
-      - "$SUB_PORT:$SUB_PORT"
-EOF
-  fi
   
+  # 直接生成最精简的 docker-compose.yml 文件，不包含额外的网络配置
+  cat > "$COMPOSE_FILE" << EOF
+version: '3'
+services:
+  $SUB_CONTAINER_NAME:
+    image: $SUB_IMAGE_NAME
+    container_name: $SUB_CONTAINER_NAME
+    restart: always
+    ports:
+      - "$SUB_PORT:$SUB_PORT"
+EOF
+  echo "✅ 已生成最简配置，让容器使用默认网络设置。"
+
   configure_firewall
   docker-compose up -d --force-recreate
   echo "✅ subconverter 服务已部署完成。"
@@ -140,8 +98,8 @@ check_status() {
     IP_CHECK=$(curl -s --max-time 5 "http://$PUBLIC_IP:$SUB_PORT/version")
     if [ -n "$IP_CHECK" ]; then
       echo "✅ **通过 IP 地址访问成功**："
-      echo "    http://$PUBLIC_IP:$SUB_PORT/version"
-      echo "    版本信息：$IP_CHECK"
+      echo "   http://$PUBLIC_IP:$SUB_PORT/version"
+      echo "   版本信息：$IP_CHECK"
     else
       echo "❌ **通过 IP 地址访问失败**，请检查防火墙或服务日志。"
     fi
