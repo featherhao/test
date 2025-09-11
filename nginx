@@ -8,11 +8,14 @@ echo "🌐 正在获取公网 IP 地址..."
 VPS_IP=$(curl -4 -fsSL https://api.ipify.org)
 IP_VERSION="IPv4"
 
-# 询问用户是否切换到 IPv6
-read -rp "默认优先使用 IPv4。是否要切换到 IPv6？(y/n): " use_ipv6
-if [[ "$use_ipv6" =~ ^[Yy]$ ]]; then
+# 询问用户是否切换到 IPv6，如果用户直接回车则使用默认值
+read -rp "默认使用 IPv4。是否要切换到 IPv6？(y/n，回车默认): " user_choice
+if [[ "$user_choice" =~ ^[Yy]$ ]]; then
     VPS_IP=$(curl -6 -fsSL https://api64.ipify.org)
     IP_VERSION="IPv6"
+elif [[ -z "$user_choice" ]]; then
+    # 用户回车，保持默认值不变
+    echo "⚡ 保持使用 IPv4"
 fi
 
 if [[ -z "$VPS_IP" ]]; then
