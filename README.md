@@ -12,6 +12,9 @@ MOONTV安装：
 bash <(curl -fsSL "https://raw.githubusercontent.com/featherhao/test/refs/heads/main/mootvinstall.sh?$(date +%s)")
 
 
+subconverter -api后端安装：
+bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/refs/heads/main/subconverter-api.sh)
+
 
 https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh
 
