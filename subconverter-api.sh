@@ -34,6 +34,24 @@ install_docker_and_compose() {
   echo "--- 安装完成 ---"
 }
 
+# 配置防火墙
+configure_firewall() {
+  echo "--- 正在尝试自动配置防火墙 ---"
+  if command -v ufw &> /dev/null; then
+    echo "检测到 UFW 防火墙，正在放行端口 $SUB_PORT..."
+    sudo ufw allow $SUB_PORT/tcp comment "Allow subconverter traffic"
+    echo "UFW 端口 $SUB_PORT 已放行。"
+  elif command -v firewall-cmd &> /dev/null; then
+    echo "检测到 firewalld 防火墙，正在放行端口 $SUB_PORT..."
+    sudo firewall-cmd --zone=public --add-port=$SUB_PORT/tcp --permanent
+    sudo firewall-cmd --reload
+    echo "firewalld 端口 $SUB_PORT 已放行。"
+  else
+    echo "未检测到常见防火墙管理工具 (UFW 或 firewalld)。"
+    echo "请手动在你的云服务商控制台或服务器防火墙中放行 TCP 端口 $SUB_PORT。"
+  fi
+}
+
 # 部署 Subconverter 核心服务
 deploy_service() {
   echo "--- 正在部署 subconverter 核心服务 ---"
@@ -48,6 +66,7 @@ services:
       - "$SUB_PORT:$SUB_PORT"
 EOF
   
+  configure_firewall
   docker-compose up -d --force-recreate
   echo "✅ subconverter 服务已部署完成。"
   check_status
