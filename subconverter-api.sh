@@ -147,7 +147,6 @@ check_status() {
 
   NGINX_STATUS=$(docker ps --filter "name=$NGINX_CONTAINER_NAME" --format "{{.Status}}")
   if [ -n "$NGINX_STATUS" ]; then
-    echo "✅ Nginx 容器状态: $NGINX_STATUS"
     DOMAIN_CHECK=$(curl -s --max-time 5 "http://$DOMAIN/version")
     if [ -n "$DOMAIN_CHECK" ]; then
       echo "✅ **通过域名访问成功**："
