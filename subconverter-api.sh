@@ -3,9 +3,9 @@
 # ===============================================
 # subconverter 交互式控制脚本
 # 功能:
-# - 安装 subconverter 服务 (可选择是否立即绑定绑定域名)
+# - 安装 subconverter 服务 (可选择是否立即绑定域名)
 # - 卸载 subconverter 和 Caddy 服务
-# - 检查服务运行状态 (显示IP和域名)
+# - 检查服务运行状态 (显示IP、域名和可用性)
 # ===============================================
 
 # 定义 subconverter 和 Caddy 的参数
@@ -17,6 +17,7 @@ CADDY_CONTAINER_NAME="caddy_proxy"
 CADDY_IMAGE_NAME="caddy:latest"
 CADDY_DATA_PATH="/etc/caddy_data"
 CADDY_CONFIG_PATH="/etc/caddy/Caddyfile"
+DOMAIN_FILE="/etc/subconverter_domain"
 
 # 检查是否以 root 身份运行
 if [ "$EUID" -ne 0 ]; then
@@ -76,6 +77,9 @@ $DOMAIN {
 }
 EOF
 
+  # 保存域名到文件
+  echo "$DOMAIN" > "$DOMAIN_FILE"
+
   # 创建 Caddy 数据目录
   mkdir -p "$CADDY_DATA_PATH"
 
@@ -104,8 +108,9 @@ uninstall_service() {
   docker stop "$CADDY_CONTAINER_NAME" &> /dev/null
   docker rm "$CADDY_CONTAINER_NAME" &> /dev/null
   
-  # 强制递归删除 Caddyfile，以防它被错误创建成目录
+  # 强制递归删除 Caddyfile 和域名文件，以防它被错误创建成目录
   rm -rf "$CADDY_CONFIG_PATH"
+  rm -f "$DOMAIN_FILE"
   
   echo "服务已成功卸载。"
 }
@@ -115,18 +120,38 @@ check_status() {
   echo "--- 正在检查服务状态 ---"
   PUBLIC_IP=$(get_public_ip)
   
+  # 检查 subconverter 容器状态
   SUB_STATUS=$(docker ps --filter "name=$SUB_CONTAINER_NAME" --format "{{.Status}}")
   if [ -n "$SUB_STATUS" ]; then
     echo "✅ subconverter 容器状态: $SUB_STATUS"
-    echo "✅ 可通过 http://$PUBLIC_IP:$SUB_PORT 访问。"
+    IP_CHECK=$(curl -s --max-time 5 "http://$PUBLIC_IP:$SUB_PORT/version")
+    if [ -n "$IP_CHECK" ]; then
+        echo "✅ **通过 IP 地址访问成功**："
+        echo "   `http://$PUBLIC_IP:$SUB_PORT/version`"
+        echo "   版本信息：$IP_CHECK"
+    else
+        echo "❌ **通过 IP 地址访问失败**，请检查防火墙或服务日志。"
+    fi
   else
     echo "❌ subconverter 容器未运行。"
   fi
 
+  echo "---------------------------"
+
+  # 检查 Caddy 容器状态
   CADDY_STATUS=$(docker ps --filter "name=$CADDY_CONTAINER_NAME" --format "{{.Status}}")
   if [ -n "$CADDY_STATUS" ]; then
+    CADDY_DOMAIN=$(cat "$DOMAIN_FILE" 2>/dev/null)
     echo "✅ Caddy 容器状态: $CADDY_STATUS"
-    echo "✅ 可通过你绑定的域名访问。"
+    echo "✅ 绑定域名: $CADDY_DOMAIN"
+    DOMAIN_CHECK=$(curl -s --max-time 5 "https://$CADDY_DOMAIN/version")
+    if [ -n "$DOMAIN_CHECK" ]; then
+        echo "✅ **通过域名访问成功**："
+        echo "   `https://$CADDY_DOMAIN/version`"
+        echo "   版本信息：$DOMAIN_CHECK"
+    else
+        echo "❌ **通过域名访问失败**，请检查 DNS 解析或防火墙。"
+    fi
   else
     echo "❌ Caddy 容器未运行。"
   fi
