@@ -103,10 +103,6 @@ check_status() {
     else
       echo "❌ **通过 IP 地址访问失败**，请检查防火墙或服务日志。"
     fi
-    echo ""
-    echo "--- 容器日志 (最近10行) ---"
-    docker logs $SUB_CONTAINER_NAME --tail 10
-    echo "--- 日志结束 ---"
   else
     echo "❌ subconverter 容器未运行。"
   fi
