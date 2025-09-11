@@ -5,7 +5,7 @@
 # 功能:
 # - 安装 subconverter 服务 (可选择是否立即绑定域名)
 # - 卸载 subconverter 和 Caddy 服务
-# - 检查服务运行状态
+# - 检查服务运行状态 (显示IP和域名)
 # ===============================================
 
 # 定义 subconverter 和 Caddy 的参数
@@ -23,6 +23,11 @@ if [ "$EUID" -ne 0 ]; then
   echo "请使用 root 权限运行此脚本，例如：sudo sh $0"
   exit 1
 fi
+
+# 获取公网 IP 地址
+get_public_ip() {
+  curl -s ip.sb
+}
 
 # 检查 Docker 是否安装
 check_docker() {
@@ -108,10 +113,12 @@ uninstall_service() {
 # 检查服务状态
 check_status() {
   echo "--- 正在检查服务状态 ---"
+  PUBLIC_IP=$(get_public_ip)
+  
   SUB_STATUS=$(docker ps --filter "name=$SUB_CONTAINER_NAME" --format "{{.Status}}")
   if [ -n "$SUB_STATUS" ]; then
     echo "✅ subconverter 容器状态: $SUB_STATUS"
-    echo "✅ 可通过 http://<你的服务器IP>:$SUB_PORT 访问。"
+    echo "✅ 可通过 http://$PUBLIC_IP:$SUB_PORT 访问。"
   else
     echo "❌ subconverter 容器未运行。"
   fi
