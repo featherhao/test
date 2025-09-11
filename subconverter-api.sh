@@ -62,10 +62,7 @@ deploy_caddy() {
   echo "--- 正在部署 Caddy 反向代理 ---"
 
   # 确保 /etc/caddy 目录存在
-  if [ ! -d "/etc/caddy" ]; then
-      echo "创建目录 /etc/caddy..."
-      mkdir -p /etc/caddy
-  fi
+  mkdir -p /etc/caddy
 
   # 创建 Caddyfile 文件，用于反向代理
   cat > "$CADDY_CONFIG_PATH" << EOF
@@ -101,7 +98,10 @@ uninstall_service() {
   docker rm "$SUB_CONTAINER_NAME" &> /dev/null
   docker stop "$CADDY_CONTAINER_NAME" &> /dev/null
   docker rm "$CADDY_CONTAINER_NAME" &> /dev/null
-  rm -f "$CADDY_CONFIG_PATH"
+  
+  # 强制递归删除 Caddyfile，以防它被错误创建成目录
+  rm -rf "$CADDY_CONFIG_PATH"
+  
   echo "服务已成功卸载。"
 }
 
