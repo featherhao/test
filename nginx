@@ -59,7 +59,7 @@ if [[ -z "$EMAIL" ]]; then
     echo "⚡ 使用随机邮箱: $EMAIL"
 fi
 
-# ================== 写入 nginx 配置 ==================
+# ================== 写入初始 nginx 配置 ==================
 NGINX_CONF="/etc/nginx/sites-enabled/$DOMAIN"
 mkdir -p "$(dirname "$NGINX_CONF")"
 
@@ -69,6 +69,7 @@ else
     PROXY_PASS_IP="[::1]"
 fi
 
+# 写入临时的 HTTP 配置，用于 Certbot 验证
 cat > "$NGINX_CONF" <<EOF
 server {
     listen 80;
@@ -88,7 +89,7 @@ server {
 }
 EOF
 
-echo "✅ 配置已写入 $NGINX_CONF"
+echo "✅ 临时 HTTP 配置已写入 $NGINX_CONF"
 
 # ================== 测试并重载 nginx ==================
 if nginx -t; then
@@ -99,11 +100,13 @@ else
     exit 1
 fi
 
-# ================== 获取 HTTPS 证书 ==================
-if certbot --nginx -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive; then
-    echo "✅ HTTPS 证书获取成功"
+# ================== 获取 HTTPS 证书并自动配置 ==================
+if certbot --nginx -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive --redirect; then
+    echo "✅ HTTPS 证书获取成功并自动配置"
+    # Certbot 成功后，它会修改 Nginx 配置以添加 HTTPS 块和重定向
 else
     echo "⚠️ 证书获取失败，请检查域名解析和 nginx 配置"
+    # 如果证书获取失败，保留原始 HTTP 配置
 fi
 
 # ================== 最终输出 ==================
