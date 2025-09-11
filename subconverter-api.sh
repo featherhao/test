@@ -127,7 +127,7 @@ check_status() {
     IP_CHECK=$(curl -s --max-time 5 "http://$PUBLIC_IP:$SUB_PORT/version")
     if [ -n "$IP_CHECK" ]; then
         echo "✅ **通过 IP 地址访问成功**："
-        echo "   `http://$PUBLIC_IP:$SUB_PORT/version`"
+        echo "   http://$PUBLIC_IP:$SUB_PORT/version"
         echo "   版本信息：$IP_CHECK"
     else
         echo "❌ **通过 IP 地址访问失败**，请检查防火墙或服务日志。"
@@ -147,7 +147,7 @@ check_status() {
     DOMAIN_CHECK=$(curl -s --max-time 5 "https://$CADDY_DOMAIN/version")
     if [ -n "$DOMAIN_CHECK" ]; then
         echo "✅ **通过域名访问成功**："
-        echo "   `https://$CADDY_DOMAIN/version`"
+        echo "   https://$CADDY_DOMAIN/version"
         echo "   版本信息：$DOMAIN_CHECK"
     else
         echo "❌ **通过域名访问失败**，请检查 DNS 解析或防火墙。"
