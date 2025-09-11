@@ -13,6 +13,7 @@ NGINX_IMAGE_NAME="nginx:latest"
 COMPOSE_FILE="docker-compose.yml"
 NGINX_CONF_PATH="./nginx.conf"
 CERTBOT_DIR="./certbot"
+WEBROOT_DIR="./webroot"
 
 # 检查是否以 root 身份运行
 if [ "$EUID" -ne 0 ]; then
@@ -85,6 +86,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./webroot:/var/www/certbot
     depends_on:
       - $SUB_CONTAINER_NAME
 EOF
@@ -103,17 +105,18 @@ server {
 }
 EOF
   
+  # Ensure the webroot directory exists
+  mkdir -p "$WEBROOT_DIR"
+  
   docker-compose up -d --force-recreate
 
   echo "--- 正在停止 Nginx 容器以申请证书 ---"
   docker-compose stop $NGINX_CONTAINER_NAME
 
   echo "--- 正在为 $DOMAIN 申请 SSL 证书 ---"
-  mkdir -p "$CERTBOT_DIR"
   docker run -it --rm --name certbot \
     -v "$CERTBOT_DIR:/etc/letsencrypt" \
-    -v "$(pwd)/nginx.conf:/etc/nginx/conf.d/default.conf" \
-    -p 80:80 \
+    -v "$WEBROOT_DIR:/var/www/certbot" \
     certbot/certbot certonly --webroot -w /var/www/certbot \
     -d "$DOMAIN" --agree-tos --email your_email@example.com --no-eff-email
 
@@ -174,6 +177,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - $CERTBOT_DIR:/etc/letsencrypt
+      - $WEBROOT_DIR:/var/www/certbot
     depends_on:
       - $SUB_CONTAINER_NAME
 EOF
@@ -188,7 +192,7 @@ EOF
 uninstall_service() {
   echo "--- 正在卸载服务 ---"
   docker-compose down
-  rm -rf "$COMPOSE_FILE" "$NGINX_CONF_PATH" "$CERTBOT_DIR"
+  rm -rf "$COMPOSE_FILE" "$NGINX_CONF_PATH" "$CERTBOT_DIR" "$WEBROOT_DIR"
   echo "✅ 服务已成功卸载。"
 }
 
