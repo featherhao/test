@@ -70,8 +70,11 @@ services:
     image: $SUB_IMAGE_NAME
     container_name: $SUB_CONTAINER_NAME
     restart: always
-    # 新增: 强制使用 IPv4 DNS 服务器，以确保 DNS 解析只返回 IPv4 地址
-    dns: 8.8.8.8
+    # 新增: 强制禁用 IPv6 网络栈和使用 IPv4 DNS 服务器
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: 1
+    dns:
+      - 8.8.8.8
     ports:
       - "$SUB_PORT:$SUB_PORT"
 EOF
@@ -86,7 +89,7 @@ services:
     restart: always
     # 新增: 强制禁用 IPv4
     sysctls:
-      - net.ipv4.conf.all.disable_ipv4=1
+      net.ipv4.conf.all.disable_ipv4: 1
     ports:
       - "$SUB_PORT:$SUB_PORT"
 EOF
@@ -100,8 +103,11 @@ services:
     image: $SUB_IMAGE_NAME
     container_name: $SUB_CONTAINER_NAME
     restart: always
-    # 默认使用 IPv4 DNS 服务器
-    dns: 8.8.8.8
+    # 默认使用 IPv4 DNS 服务器并禁用 IPv6 网络栈
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: 1
+    dns:
+      - 8.8.8.8
     ports:
       - "$SUB_PORT:$SUB_PORT"
 EOF
