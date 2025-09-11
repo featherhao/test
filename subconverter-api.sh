@@ -6,7 +6,6 @@
 # - 安装 subconverter 服务 (可选择是否立即绑定域名)
 # - 卸载 subconverter 和 Caddy 服务
 # - 检查服务运行状态
-# - 脚本执行完毕后不退出
 # ===============================================
 
 # 定义 subconverter 和 Caddy 的参数
@@ -61,12 +60,24 @@ deploy_subconverter_only() {
 deploy_caddy() {
   DOMAIN=$1
   echo "--- 正在部署 Caddy 反向代理 ---"
+
+  # 确保 /etc/caddy 目录存在
+  if [ ! -d "/etc/caddy" ]; then
+      echo "创建目录 /etc/caddy..."
+      mkdir -p /etc/caddy
+  fi
+
+  # 创建 Caddyfile 文件，用于反向代理
   cat > "$CADDY_CONFIG_PATH" << EOF
 $DOMAIN {
     reverse_proxy localhost:$SUB_PORT
 }
 EOF
+
+  # 创建 Caddy 数据目录
   mkdir -p "$CADDY_DATA_PATH"
+
+  echo "--- 正在拉取并启动 Caddy 镜像 ---"
   docker pull "$CADDY_IMAGE_NAME"
   docker run -d \
     --name "$CADDY_CONTAINER_NAME" \
@@ -162,5 +173,4 @@ main_menu() {
 # 脚本主循环
 while true; do
   main_menu
-  echo "---"
 done
