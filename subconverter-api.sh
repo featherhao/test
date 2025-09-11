@@ -1,13 +1,7 @@
 #!/bin/bash
 
 # ===============================================
-# Nginx + Docker Compose 部署 Subconverter 脚本
-# 功能:
-# - 安装 Docker 和 Docker Compose
-# - 使用 Docker Compose 部署 subconverter 和 Nginx
-# - 自动配置 Nginx 反向代理
-# - 提供状态检查和卸载功能
-# - 部署完成后自动显示服务状态
+# Nginx + HTTPS 一键自动化部署 Subconverter 脚本
 # ===============================================
 
 # 定义容器和端口
@@ -18,6 +12,7 @@ NGINX_CONTAINER_NAME="nginx-proxy"
 NGINX_IMAGE_NAME="nginx:latest"
 COMPOSE_FILE="docker-compose.yml"
 NGINX_CONF_PATH="./nginx.conf"
+CERTBOT_DIR="./certbot"
 
 # 检查是否以 root 身份运行
 if [ "$EUID" -ne 0 ]; then
@@ -25,33 +20,17 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# 获取公网 IP 地址
-get_public_ip() {
-  curl -s ip.sb
-}
-
 # 检查并安装 Docker 和 Docker Compose
 install_docker_and_compose() {
+  echo "--- 正在检查和安装 Docker & Docker Compose ---"
   if ! command -v docker &> /dev/null; then
-    echo "Docker 未安装，正在自动安装..."
     curl -fsSL https://get.docker.com | bash
-    echo "Docker 安装完成。"
-  else
-    echo "Docker 已安装。"
   fi
-
   if ! command -v docker-compose &> /dev/null; then
-    echo "Docker Compose 未安装，正在自动安装..."
     sudo curl -L "https://github.com/docker/compose/releases/download/v2.5.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     sudo chmod +x /usr/local/bin/docker-compose
-    if ! command -v docker-compose &> /dev/null; then
-      echo "Docker Compose 安装失败，请手动安装后重试。"
-      exit 1
-    fi
-    echo "Docker Compose 安装完成。"
-  else
-    echo "Docker Compose 已安装。"
   fi
+  echo "--- 安装完成 ---"
 }
 
 # 部署服务
@@ -62,24 +41,8 @@ deploy_service() {
     exit 1
   fi
   
-  echo "--- 正在生成 Nginx 配置文件 ---"
-  cat > "$NGINX_CONF_PATH" << EOF
-server {
-    listen 80;
-    listen [::]:80;
-    server_name $DOMAIN;
-
-    location / {
-        proxy_pass http://subconverter:$SUB_PORT;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-}
-EOF
-
-  echo "--- 正在生成 docker-compose.yml 文件 ---"
+  echo "--- 正在部署 subconverter 和 Nginx (用于证书申请) ---"
+  # 创建临时 docker-compose.yml 用于 Certbot 验证
   cat > "$COMPOSE_FILE" << EOF
 version: '3'
 services:
@@ -102,67 +65,113 @@ services:
       - $SUB_CONTAINER_NAME
 EOF
 
-  echo "--- 正在启动服务 ---"
+  # 创建临时的 nginx.conf
+  cat > "$NGINX_CONF_PATH" << EOF
+server {
+    listen 80;
+    server_name $DOMAIN;
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
+EOF
+  
+  docker-compose up -d --force-recreate
+
+  echo "--- 正在为 $DOMAIN 申请 SSL 证书 ---"
+  mkdir -p "$CERTBOT_DIR"
+  docker run -it --rm --name certbot \
+    -v "$CERTBOT_DIR:/etc/letsencrypt" \
+    -v "./nginx.conf:/etc/nginx/conf.d/default.conf" \
+    -p 80:80 \
+    certbot/certbot certonly --webroot -w /var/www/certbot \
+    -d "$DOMAIN" --agree-tos --email your_email@example.com --no-eff-email
+
+  # 检查证书是否申请成功
+  if [ ! -d "$CERTBOT_DIR/live/$DOMAIN" ]; then
+    echo "❌ 证书申请失败，请检查域名解析和防火墙设置。"
+    exit 1
+  fi
+  echo "✅ 证书申请成功！"
+
+  echo "--- 正在更新 Nginx 配置以支持 HTTPS ---"
+  # 生成最终的 nginx.conf 文件
+  cat > "$NGINX_CONF_PATH" << EOF
+server {
+    listen 80;
+    server_name $DOMAIN;
+    return 301 https://\$host\$request_uri;
+}
+server {
+    listen 443 ssl http2;
+    server_name $DOMAIN;
+    ssl_certificate $CERTBOT_DIR/live/$DOMAIN/fullchain.pem;
+    ssl_certificate_key $CERTBOT_DIR/live/$DOMAIN/privkey.pem;
+    include $CERTBOT_DIR/options-ssl-nginx.conf;
+    ssl_dhparam $CERTBOT_DIR/ssl-dhparams.pem;
+
+    location / {
+        proxy_pass http://subconverter:$SUB_PORT;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+  
+  # 更新 docker-compose.yml 以挂载证书和 ssl 参数
+  cat > "$COMPOSE_FILE" << EOF
+version: '3'
+services:
+  $SUB_CONTAINER_NAME:
+    image: $SUB_IMAGE_NAME
+    container_name: $SUB_CONTAINER_NAME
+    restart: always
+    ports:
+      - "$SUB_PORT:$SUB_PORT"
+
+  $NGINX_CONTAINER_NAME:
+    image: $NGINX_IMAGE_NAME
+    container_name: $NGINX_CONTAINER_NAME
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - $CERTBOT_DIR:/etc/letsencrypt
+    depends_on:
+      - $SUB_CONTAINER_NAME
+EOF
+
+  echo "--- 正在重启服务 ---"
   docker-compose up -d
-  echo "服务已部署完成。"
-  echo "域名绑定成功: $DOMAIN"
-  echo "---"
-  check_status
+  echo "✅ 服务已完全部署完成！"
 }
 
 # 卸载服务
 uninstall_service() {
   echo "--- 正在卸载服务 ---"
-  if [ -f "$COMPOSE_FILE" ]; then
-    docker-compose down
-    rm "$COMPOSE_FILE"
-  fi
-  if [ -f "$NGINX_CONF_PATH" ]; then
-    rm "$NGINX_CONF_PATH"
-  fi
-  echo "服务已成功卸载。"
+  docker-compose down
+  rm -rf "$COMPOSE_FILE" "$NGINX_CONF_PATH" "$CERTBOT_DIR"
+  echo "✅ 服务已成功卸载。"
 }
 
 # 检查服务状态
 check_status() {
   echo "--- 正在检查服务状态 ---"
-  PUBLIC_IP=$(get_public_ip)
-  
-  SUB_STATUS=$(docker ps --filter "name=$SUB_CONTAINER_NAME" --format "{{.Status}}")
-  if [ -n "$SUB_STATUS" ]; then
-    echo "✅ subconverter 容器状态: $SUB_STATUS"
-    IP_CHECK=$(curl -s --max-time 5 "http://$PUBLIC_IP:$SUB_PORT/version")
-    if [ -n "$IP_CHECK" ]; then
-      echo "✅ **通过 IP 地址访问成功**："
-      echo "   http://$PUBLIC_IP:$SUB_PORT/version"
-      echo "   版本信息：$IP_CHECK"
-    else
-      echo "❌ **通过 IP 地址访问失败**，请检查防火墙或服务日志。"
-    fi
-  else
-    echo "❌ subconverter 容器未运行。"
-  fi
-
-  echo "---------------------------"
-
-  NGINX_STATUS=$(docker ps --filter "name=$NGINX_CONTAINER_NAME" --format "{{.Status}}")
-  if [ -n "$NGINX_STATUS" ]; then
-    DOMAIN_CHECK=$(curl -s --max-time 5 "http://$DOMAIN/version")
-    if [ -n "$DOMAIN_CHECK" ]; then
-      echo "✅ **通过域名访问成功**："
-      echo "   http://$DOMAIN/version"
-      echo "   版本信息：$DOMAIN_CHECK"
-    else
-      echo "❌ **通过域名访问失败**，请检查 DNS 解析或防火墙。"
-    fi
-  else
-    echo "❌ Nginx 容器未运行。"
-  fi
+  docker-compose ps
+  echo "---"
+  echo "请确保你的域名已正确解析到本服务器IP，且服务器防火墙已开放80和443端口。"
 }
 
 # 主菜单逻辑
 main_menu() {
-  echo "--- Nginx + Docker Compose 部署脚本 ---"
+  echo "--- Nginx + HTTPS 部署脚本 ---"
   echo "请选择一个操作："
   echo "1) 部署服务"
   echo "2) 卸载服务"
