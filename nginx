@@ -1,13 +1,26 @@
 #!/bin/bash
 set -e
 
-# ================== 获取 VPS 公网 IPv6 ==================
-VPS_IP=$(curl -6 -fsSL https://api64.ipify.org)
-if [[ -z "$VPS_IP" ]]; then
-    echo "⚠️ 获取 VPS 公网 IPv6 失败，请检查网络"
-    VPS_IP="::1"
+# ================== 获取公网 IP ==================
+echo "🌐 正在获取公网 IP 地址..."
+
+# 默认优先获取 IPv4
+VPS_IP=$(curl -4 -fsSL https://api.ipify.org)
+IP_VERSION="IPv4"
+
+# 询问用户是否切换到 IPv6
+read -rp "默认优先使用 IPv4。是否要切换到 IPv6？(y/n): " use_ipv6
+if [[ "$use_ipv6" =~ ^[Yy]$ ]]; then
+    VPS_IP=$(curl -6 -fsSL https://api64.ipify.org)
+    IP_VERSION="IPv6"
 fi
-echo "🌐 VPS 公网 IPv6: $VPS_IP"
+
+if [[ -z "$VPS_IP" ]]; then
+    echo "⚠️ 获取公网 IP 失败，请检查网络。"
+    VPS_IP="::1"
+    IP_VERSION="Loopback"
+fi
+echo "🌐 VPS 公网 $IP_VERSION: $VPS_IP"
 
 # ================== 检查并安装依赖 ==================
 install_deps() {
@@ -47,6 +60,12 @@ fi
 NGINX_CONF="/etc/nginx/sites-enabled/$DOMAIN"
 mkdir -p "$(dirname "$NGINX_CONF")"
 
+if [[ "$IP_VERSION" == "IPv4" ]]; then
+    PROXY_PASS_IP="127.0.0.1"
+else
+    PROXY_PASS_IP="[::1]"
+fi
+
 cat > "$NGINX_CONF" <<EOF
 server {
     listen 80;
@@ -54,7 +73,7 @@ server {
     server_name $DOMAIN;
 
     location / {
-        proxy_pass http://[::1]:$PORT;
+        proxy_pass http://$PROXY_PASS_IP:$PORT;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -86,9 +105,9 @@ fi
 
 # ================== 最终输出 ==================
 echo "=============================="
-echo "域名 $DOMAIN 已绑定到 http://[$VPS_IP]:$PORT"
+echo "域名 $DOMAIN 已绑定到本地端口: $PORT"
 echo "HTTPS 已开启，可通过 https://$DOMAIN 访问（如果证书获取成功）"
-echo "请确保 DNS AAAA 已解析到 VPS 公网 IPv6: $VPS_IP"
+echo "请确保 DNS **$IP_VERSION** 记录已解析到 VPS 公网 $IP_VERSION: $VPS_IP"
 echo "=============================="
 
 read -rp "按回车返回上一级菜单..." dummy
