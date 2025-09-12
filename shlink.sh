@@ -41,7 +41,7 @@ get_config() {
     read -p "请输入 MaxMind GeoLite2 许可证密钥: " GEOLITE_LICENSE_KEY
 
     PUBLIC_IP=$(curl -s http://ifconfig.me || curl -s https://api.ipify.org || curl -s https://ipinfo.io/ip)
-
+    
     if [ -z "$PUBLIC_IP" ]; then
         echo -e "${RED}自动获取公网IP失败，请手动输入。${NC}"
         read -p "请输入服务器公网 IP 或域名: " input_domain
@@ -50,7 +50,7 @@ get_config() {
         read -p "请输入服务器域名 (可选, 回车默认使用公网IP: ${PUBLIC_IP}): " input_domain
         DEFAULT_DOMAIN=${input_domain:-$PUBLIC_IP}
     fi
-
+    
     read -p "请设置 Shlink 后端访问端口 (回车默认 9040): " BACKEND_PORT
     read -p "请设置 Shlink 前端访问端口 (回车默认 9050): " FRONTEND_PORT
 
@@ -75,19 +75,18 @@ check_and_uninstall() {
         echo -e "当前后端端口: ${GREEN}${backend_port}${NC}"
         echo -e "当前前端端口: ${GREEN}${frontend_port}${NC}"
         echo -e "当前域名/IP: ${GREEN}${domain}${NC}"
-
+        
         read -p "是否要继续安装并覆盖现有配置？(y/n): " confirm_reinstall
         if [[ ! "$confirm_reinstall" =~ ^[Yy]$ ]]; then
             echo -e "${YELLOW}已取消安装。${NC}"
             return 1
         fi
-
+        
         uninstall_shlink_core
     fi
     return 0
 }
 
-# --- 修复后的状态显示 ---
 display_status() {
     local shlink_running=$(docker ps -a --format '{{.Names}}' | grep -q shlink; echo $?)
     if [ "$shlink_running" -eq 0 ]; then
@@ -107,11 +106,9 @@ display_status() {
     fi
 }
 
-# --- 功能函数 ---
-
 install_shlink() {
     get_config
-
+    
     echo -e "\n${YELLOW}--- 部署配置确认 ---${NC}"
     echo -e "公网IP/域名: ${GREEN}${DEFAULT_DOMAIN}${NC}"
     echo -e "后端端口: ${GREEN}${BACKEND_PORT}${NC}"
@@ -135,6 +132,7 @@ install_shlink() {
     echo -e "\n${YELLOW}正在运行数据库迁移...${NC}"
     sleep 5
     docker exec shlink shlink db:migrate --no-interaction
+    
     if [ $? -ne 0 ]; then
         echo -e "${RED}数据库迁移失败。${NC}"
         exit 1
@@ -143,6 +141,7 @@ install_shlink() {
 
     echo -e "\n${YELLOW}正在生成 API Key...${NC}"
     API_KEY=$(docker exec shlink shlink api-key:generate | grep -oP '(?<=Generated API key: ).*')
+    
     if [ -z "$API_KEY" ]; then
         echo -e "${RED}API Key 生成失败。${NC}"
         exit 1
@@ -178,21 +177,25 @@ uninstall_shlink() {
 
 update_shlink() {
     echo -e "${YELLOW}--- 正在更新 Shlink... ---${NC}"
+    
     echo -e "${YELLOW}1. 停止并移除现有容器...${NC}"
     uninstall_shlink_core
-
+    
     echo -e "${YELLOW}2. 拉取最新镜像...${NC}"
     docker pull shlinkio/shlink:latest
     docker pull shlinkio/shlink-web-client:latest
-
+    
     echo -e "${YELLOW}3. 重新部署新版本...${NC}"
+    
     get_config
+    
     install_shlink
-
+    
     echo -e "${GREEN}--- Shlink 更新完成！ ---${NC}"
 }
 
 # --- 主菜单 ---
+
 main_menu() {
     display_status
 
@@ -201,8 +204,8 @@ main_menu() {
         echo -e "1. ${GREEN}安装 Shlink${NC}"
         echo -e "2. ${YELLOW}更新 Shlink${NC}"
         echo -e "3. ${RED}卸载 Shlink${NC}"
-        echo -e "4. ${NC}退出"
-        read -p "请选择一个操作 (1-4): " choice
+        echo -e "0. ${NC}退出"
+        read -p "请选择一个操作 (0-3): " choice
 
         case "$choice" in
             1)
@@ -227,7 +230,7 @@ main_menu() {
                 clear
                 display_status
                 ;;
-            4)
+            0)
                 echo -e "${GREEN}再见！${NC}"
                 exit 0
                 ;;
