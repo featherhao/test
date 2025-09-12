@@ -42,33 +42,28 @@ install_shlink() {
     check_docker
     echo "--- 开始部署 Shlink 短链服务 ---"
 
-    # 检查并生成或读取 API Key
-    if [ ! -f "$CONFIG_FILE" ]; then
-        SHLINK_API_KEY=$(cat /proc/sys/kernel/random/uuid)
-        echo "${SHLINK_API_KEY}" > "$CONFIG_FILE"
-        echo "首次运行，已生成新的 API Key 并保存到 ${CONFIG_FILE} 文件。"
-    else
-        SHLINK_API_KEY=$(cat "$CONFIG_FILE")
-        echo "已找到配置文件，使用已有的 API Key: ${SHLINK_API_KEY}"
-    fi
+    # 生成或读取 API Key
+    SHLINK_API_KEY=$(cat /proc/sys/kernel/random/uuid)
+    echo "${SHLINK_API_KEY}" > "$CONFIG_FILE"
+    echo "已生成新的 API Key 并保存到 ${CONFIG_FILE} 文件。"
+
+    # 停止并移除旧容器，确保干净部署
+    docker stop shlink shlink-web-client &> /dev/null
+    docker rm shlink shlink-web-client &> /dev/null
 
     # 部署后端容器
     echo "正在部署 Shlink 后端容器..."
-    docker stop shlink &> /dev/null
-    docker rm shlink &> /dev/null
     docker run --name shlink -d --restart=always \
         -v shlink-data:/var/www/html/data \
         -p ${SHLINK_API_PORT}:8080 \
         -e IS_HTTPS_ENABLED=false \
         -e GEOLITE_LICENSE_KEY="" \
-        -e NEW_API_KEYS="${SHLINK_API_KEY}" \
+        -e INITIAL_API_KEYS="${SHLINK_API_KEY}" \
         shlinkio/shlink:latest
     echo "Shlink 后端容器部署完成。"
 
     # 部署前端容器
     echo "正在部署 Shlink 前端容器..."
-    docker stop shlink-web-client &> /dev/null
-    docker rm shlink-web-client &> /dev/null
     docker run -d --name shlink-web-client --restart=always -p ${SHLINK_WEB_PORT}:8080 \
         -e SHLINK_API_URL="http://${PUBLIC_IP}:${SHLINK_API_PORT}" \
         -e SHLINK_API_KEY="${SHLINK_API_KEY}" \
@@ -107,12 +102,8 @@ update_shlink() {
     echo "正在拉取最新镜像..."
     docker pull shlinkio/shlink:latest
     docker pull shlinkio/shlink-web-client:latest
-
-    echo "正在停止并移除旧容器..."
-    docker stop shlink shlink-web-client &> /dev/null
-    docker rm shlink shlink-web-client &> /dev/null
     
-    echo "正在使用最新镜像重新部署..."
+    # 直接调用 install_shlink 来重新部署，它会处理停止和移除旧容器
     install_shlink
 
     echo "--- 更新完成！ ---"
@@ -124,7 +115,7 @@ show_info() {
     if [ -f "$CONFIG_FILE" ]; then
         SHLINK_API_KEY=$(cat "$CONFIG_FILE")
     else
-        SHLINK_API_KEY="未找到配置文件，可能未安装"
+        SHLINK_API_KEY="未找到配置文件，请先运行安装或更新"
     fi
 
     echo "--- Shlink 服务信息 ---"
