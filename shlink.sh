@@ -79,7 +79,7 @@ install_shlink() {
 # 卸载服务
 uninstall_shlink() {
     echo "--- 开始卸载 Shlink 服务 ---"
-    read -p "此操作将永久删除容器和数据卷。确定要继续吗? (y/n): " confirm
+    read -p "此操作将永久删除容器、数据卷和配置文件。确定要继续吗? (y/n): " confirm
     if [[ $confirm != "y" ]]; then
         echo "操作已取消。"
         return
