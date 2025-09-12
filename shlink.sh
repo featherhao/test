@@ -42,15 +42,16 @@ install_shlink() {
     check_docker
     echo "--- 开始部署 Shlink 短链服务 ---"
 
+    # 强制清理旧容器和数据卷，确保干净部署
+    echo "正在彻底清理旧的 Shlink 容器和数据卷..."
+    docker stop shlink shlink-web-client &> /dev/null
+    docker rm shlink shlink-web-client &> /dev/null
+    docker volume rm shlink-data &> /dev/null
+
     # 生成 API Key 并保存到本地文件
     SHLINK_API_KEY=$(cat /proc/sys/kernel/random/uuid)
     echo "${SHLINK_API_KEY}" > "$CONFIG_FILE"
     echo "已生成新的 API Key 并保存到 ${CONFIG_FILE} 文件。"
-
-    # 停止并移除旧容器，确保干净部署
-    echo "正在清理旧的 Shlink 容器..."
-    docker stop shlink shlink-web-client &> /dev/null
-    docker rm shlink shlink-web-client &> /dev/null
 
     # 部署后端容器
     echo "正在部署 Shlink 后端容器..."
@@ -103,8 +104,8 @@ update_shlink() {
     echo "正在拉取最新镜像..."
     docker pull shlinkio/shlink:latest
     docker pull shlinkio/shlink-web-client:latest
-
-    # 直接调用 install_shlink 来重新部署，它会处理停止和移除旧容器
+    
+    # 直接调用 install_shlink 来重新部署，它会处理停止和移除旧容器和数据卷
     install_shlink
 
     echo "--- 更新完成！ ---"
