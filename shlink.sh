@@ -54,14 +54,14 @@ install_shlink() {
     check_prerequisites
     echo "--- 开始部署 Shlink 短链服务 (Docker Compose) ---"
 
-    # 创建独立的部署目录
+    # 创建独立的部署目录并进入
     mkdir -p "${CONFIG_DIR}"
     cd "${CONFIG_DIR}"
 
     # 强制清理旧容器和数据卷，确保干净部署
     echo "正在彻底清理旧的 Shlink 容器和数据卷..."
     docker-compose down --volumes --rmi local &> /dev/null
-    rm -f "${COMPOSE_FILE}"
+    rm -f "${COMPOSE_FILE}" "${CONFIG_FILE}"
 
     # 生成 API Key 并保存到本地文件
     SHLINK_API_KEY=$(cat /proc/sys/kernel/random/uuid)
@@ -105,6 +105,7 @@ EOF
     docker-compose up -d
 
     echo "--- 部署完成！ ---"
+    cd ..
     show_info
 }
 
@@ -153,14 +154,14 @@ update_shlink() {
 show_info() {
     # 尝试从配置文件读取 API Key
     if [ -f "${CONFIG_FILE}" ]; then
-        SHLINK_API_KEY=$(cat "$CONFIG_FILE")
+        SHLINK_API_KEY=$(cat "${CONFIG_FILE}")
     else
         SHLINK_API_KEY="未找到配置文件，请先运行安装或更新"
     fi
 
     echo "--- Shlink 服务信息 ---"
-    echo "Frontend 地址: http://${PUBLIC_IP}:${SHLINK_WEB_PORT}"
-    echo "Backend API 地址: http://${PUBLIC_IP}:${SHLINK_API_PORT}"
+    echo "前端地址: http://${PUBLIC_IP}:${SHLINK_WEB_PORT}"
+    echo "后端 API 地址: http://${PUBLIC_IP}:${SHLINK_API_PORT}"
     echo "默认 API Key: ${SHLINK_API_KEY}"
     echo "--------------------------"
     echo "请使用以上信息登录 Shlink 面板。"
