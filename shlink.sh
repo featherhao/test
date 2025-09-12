@@ -106,6 +106,12 @@ display_status() {
 install_shlink() {
     get_config
     
+    echo -e "\n${YELLOW}--- 部署配置确认 ---${NC}"
+    echo -e "公网IP/域名: ${GREEN}${DEFAULT_DOMAIN}${NC}"
+    echo -e "后端端口: ${GREEN}${BACKEND_PORT}${NC}"
+    echo -e "前端端口: ${GREEN}${FRONTEND_PORT}${NC}"
+    read -p "请确认配置无误后按任意键继续... (Ctrl+C 取消)"
+
     echo -e "\n${GREEN}--- 正在部署 Shlink 后端 (Server)... ---${NC}"
     docker run --name shlink -d --restart=always \
       -p ${BACKEND_PORT}:8080 \
@@ -187,8 +193,9 @@ update_shlink() {
 # --- 主菜单 ---
 
 main_menu() {
+    display_status
+
     while true; do
-        clear
         echo -e "\n${YELLOW}--- Shlink 管理脚本 ---${NC}"
         echo -e "1. ${GREEN}安装 Shlink${NC}"
         echo -e "2. ${YELLOW}更新 Shlink${NC}"
@@ -203,15 +210,21 @@ main_menu() {
                     install_shlink
                 fi
                 read -p "按任意键返回主菜单..."
+                clear
+                display_status
                 ;;
             2)
                 check_docker
                 update_shlink
                 read -p "按任意键返回主菜单..."
+                clear
+                display_status
                 ;;
             3)
                 uninstall_shlink
                 read -p "按任意键返回主菜单..."
+                clear
+                display_status
                 ;;
             4)
                 echo -e "${GREEN}再见！${NC}"
@@ -220,6 +233,8 @@ main_menu() {
             *)
                 echo -e "${RED}无效选项，请重新选择。${NC}"
                 read -p "按任意键继续..."
+                clear
+                display_status
                 ;;
         esac
     done
