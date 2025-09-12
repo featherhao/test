@@ -51,9 +51,9 @@ get_config() {
 check_existing_shlink() {
     if docker ps -a --format '{{.Names}}' | grep -q shlink; then
         echo -e "\n${YELLOW}--- 检测到已安装的 Shlink ---${NC}"
-        local backend_port=$(docker port shlink 8080 | awk -F':' '{print $2}')
-        local frontend_port=$(docker port shlink-web-client 8080 | awk -F':' '{print $2}')
-        local domain=$(docker inspect shlink --format '{{.Config.Env}}' | grep -oP 'DEFAULT_DOMAIN=\K[^ ]*')
+        local backend_port=$(docker inspect shlink --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}')
+        local frontend_port=$(docker inspect shlink-web-client --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}')
+        local domain=$(docker inspect shlink --format '{{range .Config.Env}}{{if contains . "DEFAULT_DOMAIN"}}{{printf "%s" .}}{{end}}{{end}}' | cut -d'=' -f2)
 
         echo -e "当前后端端口: ${GREEN}${backend_port}${NC}"
         echo -e "当前前端端口: ${GREEN}${frontend_port}${NC}"
@@ -66,8 +66,7 @@ check_existing_shlink() {
         fi
         
         echo -e "${YELLOW}正在卸载旧版本...${NC}"
-        docker stop shlink shlink-web-client &>/dev/null
-        docker rm shlink shlink-web-client &>/dev/null
+        uninstall_shlink_core
     fi
     return 0
 }
@@ -123,6 +122,13 @@ install_shlink() {
     echo -e "后端API地址：${YELLOW}http://${DEFAULT_DOMAIN}:${BACKEND_PORT}${NC}"
 }
 
+uninstall_shlink_core() {
+    echo -e "${YELLOW}正在停止并删除 Shlink 容器...${NC}"
+    docker stop shlink shlink-web-client &>/dev/null
+    docker rm -v shlink shlink-web-client &>/dev/null
+    echo -e "${GREEN}Shlink 容器已成功删除。${NC}"
+}
+
 uninstall_shlink() {
     echo -e "${RED}--- 警告：这将永久删除 Shlink 相关的所有 Docker 容器和数据。 ---${NC}"
     read -p "你确定要卸载 Shlink 吗？(y/n): " confirm
@@ -130,10 +136,7 @@ uninstall_shlink() {
         echo -e "${YELLOW}取消卸载。${NC}"
         return
     fi
-
-    echo -e "${YELLOW}正在停止并删除 Shlink 容器...${NC}"
-    docker stop shlink shlink-web-client &>/dev/null
-    docker rm shlink shlink-web-client &>/dev/null
+    uninstall_shlink_core
     echo -e "${GREEN}Shlink 已成功卸载。${NC}"
 }
 
@@ -141,8 +144,7 @@ update_shlink() {
     echo -e "${YELLOW}--- 正在更新 Shlink... ---${NC}"
     
     echo -e "${YELLOW}1. 停止并移除现有容器...${NC}"
-    docker stop shlink shlink-web-client &>/dev/null
-    docker rm shlink shlink-web-client &>/dev/null
+    uninstall_shlink_core
     
     echo -e "${YELLOW}2. 拉取最新镜像...${NC}"
     docker pull shlinkio/shlink:latest
@@ -157,21 +159,6 @@ update_shlink() {
     echo -e "${GREEN}--- Shlink 更新完成！ ---${NC}"
 }
 
-# --- 新增的清理函数 ---
-cleanup_all() {
-    echo -e "${RED}--- 警告：此操作将删除所有未使用的 Docker 镜像、容器、网络和数据卷！${NC}"
-    echo -e "${RED}这会影响到服务器上所有其他 Docker 服务。请谨慎操作！${NC}"
-    read -p "你确定要进行彻底清理吗？(y/n): " confirm_cleanup
-    if [[ ! "$confirm_cleanup" =~ ^[Yy]$ ]]; then
-        echo -e "${YELLOW}已取消清理操作。${NC}"
-        return
-    fi
-    
-    echo -e "${YELLOW}正在清理...${NC}"
-    docker system prune -a --volumes --force
-    echo -e "${GREEN}清理完成。${NC}"
-}
-
 main_menu() {
     while true; do
         clear
@@ -179,9 +166,8 @@ main_menu() {
         echo -e "1. ${GREEN}安装 Shlink${NC}"
         echo -e "2. ${YELLOW}更新 Shlink${NC}"
         echo -e "3. ${RED}卸载 Shlink${NC}"
-        echo -e "4. ${YELLOW}彻底清理 Docker 环境 (谨慎操作)${NC}"
-        echo -e "5. ${NC}退出"
-        read -p "请选择一个操作 (1-5): " choice
+        echo -e "4. ${NC}退出"
+        read -p "请选择一个操作 (1-4): " choice
 
         case "$choice" in
             1)
@@ -201,10 +187,6 @@ main_menu() {
                 read -p "按任意键返回主菜单..."
                 ;;
             4)
-                cleanup_all
-                read -p "按任意键返回主菜单..."
-                ;;
-            5)
                 echo -e "${GREEN}再见！${NC}"
                 exit 0
                 ;;
