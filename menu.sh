@@ -151,11 +151,13 @@ while true; do
     else
         subconverter_status="❌ 未运行"
     fi
-    if docker ps -a --format '{{.Names}}' | grep -q 'shlink'; then
-        shlink_status="✅ 已安装"
-    else
-        shlink_status="❌ 未安装"
-    fi
+    
+    # 移除 Shlink 状态检测
+    # if docker ps -a --format '{{.Names}}' | grep -q 'shlink'; then
+    #    shlink_status="✅ 已安装"
+    # else
+    #    shlink_status="❌ 未安装"
+    # fi
 
     kejilion_status="⚡ 远程调用"
     nginx_status="⚡ 远程调用"
@@ -172,7 +174,6 @@ while true; do
         "9) 域名绑定管理             $nginx_status" \
         "10) Subconverter- 订阅转换后端API $subconverter_status" \
         "11) 设置快捷键 Q / q" \
-        "12) Shlink 短链服务         $shlink_status" \
         "U) 更新菜单脚本 menu.sh" \
         "0) 退出"
     read -rp "请输入选项: " main_choice
@@ -189,7 +190,6 @@ while true; do
         9) nginx_menu ;;
         10) subconverter_menu ;;
         11) set_q_shortcut ;;
-        12) shlink_menu ;;
         U) update_menu_script ;;
         0) exit 0 ;;
         *) echo "❌ 无效输入"; sleep 1 ;;
