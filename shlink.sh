@@ -70,7 +70,7 @@ check_and_uninstall() {
         echo -e "\n${YELLOW}--- 检测到已安装的 Shlink ---${NC}"
         local backend_port=$(docker inspect shlink --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' 2>/dev/null)
         local frontend_port=$(docker inspect shlink-web-client --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' 2>/dev/null)
-        local domain=$(docker inspect shlink --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^DEFAULT_DOMAIN=' | cut -d'=' -f2)
+        local domain=$(docker inspect shlink | grep DEFAULT_DOMAIN | cut -d'"' -f2 | cut -d'=' -f2)
 
         echo -e "当前后端端口: ${GREEN}${backend_port}${NC}"
         echo -e "当前前端端口: ${GREEN}${frontend_port}${NC}"
@@ -96,8 +96,7 @@ display_status() {
         local frontend_status=$(docker inspect --format='{{.State.Status}}' shlink-web-client 2>/dev/null)
         local backend_host_port=$(docker port shlink 8080/tcp | cut -d: -f2)
         local frontend_host_port=$(docker port shlink-web-client 8080/tcp | cut -d: -f2)
-        local domain=$(docker inspect shlink --format '{{range .Config.Env}}{{println .}}{{end}}' \
-          | grep '^DEFAULT_DOMAIN=' | cut -d'=' -f2)
+        local domain=$(docker inspect shlink | grep DEFAULT_DOMAIN | cut -d'"' -f2 | cut -d'=' -f2)
 
         echo -e "Shlink 后端状态: ${GREEN}${backend_status}${NC}"
         echo -e "Shlink 前端状态: ${GREEN}${frontend_status}${NC}"
