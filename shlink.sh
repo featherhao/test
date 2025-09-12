@@ -3,13 +3,15 @@
 # 定义端口和配置文件
 SHLINK_WEB_PORT=9050
 SHLINK_API_PORT=9040
-CONFIG_FILE="shlink_config.txt"
+CONFIG_DIR="shlink_deploy"
+CONFIG_FILE="${CONFIG_DIR}/shlink_config.txt"
+COMPOSE_FILE="${CONFIG_DIR}/docker-compose.yml"
 
 # 获取服务器公网 IP
 PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
 
-# 检查 Docker 是否安装
-check_docker() {
+# 检查 Docker 和 Docker Compose 是否安装
+check_prerequisites() {
     if ! command -v docker &> /dev/null; then
         echo "Docker 未安装，正在为您安装..."
         curl -fsSL https://get.docker.com | sh
@@ -21,6 +23,16 @@ check_docker() {
     fi
     systemctl start docker
     systemctl enable docker
+
+    if ! command -v docker-compose &> /dev/null; then
+        echo "Docker Compose 未安装，正在为您安装..."
+        apt-get update && apt-get install -y docker-compose
+        if [ $? -ne 0 ]; then
+            echo "Docker Compose 安装失败，请手动安装后重试。"
+            exit 1
+        fi
+        echo "Docker Compose 安装成功！"
+    fi
 }
 
 # 检查容器状态
@@ -39,38 +51,58 @@ check_container_status() {
 
 # 部署服务
 install_shlink() {
-    check_docker
-    echo "--- 开始部署 Shlink 短链服务 ---"
+    check_prerequisites
+    echo "--- 开始部署 Shlink 短链服务 (Docker Compose) ---"
+
+    # 创建独立的部署目录
+    mkdir -p "${CONFIG_DIR}"
+    cd "${CONFIG_DIR}"
 
     # 强制清理旧容器和数据卷，确保干净部署
     echo "正在彻底清理旧的 Shlink 容器和数据卷..."
-    docker stop shlink shlink-web-client &> /dev/null
-    docker rm shlink shlink-web-client &> /dev/null
-    docker volume rm shlink-data &> /dev/null
+    docker-compose down --volumes --rmi local &> /dev/null
+    rm -f "${COMPOSE_FILE}"
 
     # 生成 API Key 并保存到本地文件
     SHLINK_API_KEY=$(cat /proc/sys/kernel/random/uuid)
-    echo "${SHLINK_API_KEY}" > "$CONFIG_FILE"
+    echo "${SHLINK_API_KEY}" > "${CONFIG_FILE}"
     echo "已生成新的 API Key 并保存到 ${CONFIG_FILE} 文件。"
 
-    # 部署后端容器
-    echo "正在部署 Shlink 后端容器..."
-    docker run --name shlink -d --restart=always \
-        -v shlink-data:/var/www/html/data \
-        -p ${SHLINK_API_PORT}:8080 \
-        -e IS_HTTPS_ENABLED=false \
-        -e GEOLITE_LICENSE_KEY="" \
-        -e INITIAL_API_KEYS="${SHLINK_API_KEY}" \
-        shlinkio/shlink:latest
-    echo "Shlink 后端容器部署完成。"
+    # 生成 docker-compose.yml 文件
+    echo "正在生成 docker-compose.yml 文件..."
+    cat << EOF > "${COMPOSE_FILE}"
+services:
+  shlink:
+    image: shlinkio/shlink:latest
+    container_name: shlink
+    restart: always
+    ports:
+      - "${SHLINK_API_PORT}:8080"
+    volumes:
+      - shlink-data:/var/www/html/data
+    environment:
+      - IS_HTTPS_ENABLED=false
+      - GEOLITE_LICENSE_KEY=
+      - INITIAL_API_KEYS=${SHLINK_API_KEY}
 
-    # 部署前端容器
-    echo "正在部署 Shlink 前端容器..."
-    docker run -d --name shlink-web-client --restart=always -p ${SHLINK_WEB_PORT}:8080 \
-        -e SHLINK_API_URL="http://${PUBLIC_IP}:${SHLINK_API_PORT}" \
-        -e SHLINK_API_KEY="${SHLINK_API_KEY}" \
-        shlinkio/shlink-web-client
-    echo "Shlink 前端容器部署完成。"
+  shlink-web-client:
+    image: shlinkio/shlink-web-client
+    container_name: shlink-web-client
+    restart: always
+    ports:
+      - "${SHLINK_WEB_PORT}:8080"
+    environment:
+      - SHLINK_API_URL=http://${PUBLIC_IP}:${SHLINK_API_PORT}
+      - SHLINK_API_KEY=${SHLINK_API_KEY}
+
+volumes:
+  shlink-data:
+EOF
+    echo "docker-compose.yml 文件已生成。"
+
+    # 使用 Docker Compose 启动服务
+    echo "正在使用 Docker Compose 启动服务..."
+    docker-compose up -d
 
     echo "--- 部署完成！ ---"
     show_info
@@ -85,15 +117,13 @@ uninstall_shlink() {
         return
     fi
 
-    echo "正在停止并移除 Shlink 容器..."
-    docker stop shlink shlink-web-client &> /dev/null
-    docker rm shlink shlink-web-client &> /dev/null
-
-    echo "正在移除数据卷 shlink-data..."
-    docker volume rm shlink-data &> /dev/null
-
-    echo "正在删除配置文件..."
-    rm -f "${CONFIG_FILE}"
+    echo "正在使用 Docker Compose 停止并移除服务..."
+    if [ -d "${CONFIG_DIR}" ]; then
+        cd "${CONFIG_DIR}"
+        docker-compose down --volumes --rmi local &> /dev/null
+        cd ..
+        rm -rf "${CONFIG_DIR}"
+    fi
 
     echo "--- 卸载完成！ ---"
 }
@@ -101,20 +131,28 @@ uninstall_shlink() {
 # 更新服务
 update_shlink() {
     echo "--- 开始更新 Shlink 服务 ---"
-    echo "正在拉取最新镜像..."
-    docker pull shlinkio/shlink:latest
-    docker pull shlinkio/shlink-web-client:latest
     
-    # 直接调用 install_shlink 来重新部署，它会处理停止和移除旧容器和数据卷
-    install_shlink
+    if [ ! -d "${CONFIG_DIR}" ]; then
+        echo "未找到 Shlink 部署目录，请先安装服务。"
+        return
+    fi
+
+    cd "${CONFIG_DIR}"
+    echo "正在拉取最新镜像..."
+    docker-compose pull
+    
+    echo "正在使用 Docker Compose 重新启动服务..."
+    docker-compose up -d --force-recreate
 
     echo "--- 更新完成！ ---"
+    cd ..
+    show_info
 }
 
 # 查看服务信息
 show_info() {
     # 尝试从配置文件读取 API Key
-    if [ -f "$CONFIG_FILE" ]; then
+    if [ -f "${CONFIG_FILE}" ]; then
         SHLINK_API_KEY=$(cat "$CONFIG_FILE")
     else
         SHLINK_API_KEY="未找到配置文件，请先运行安装或更新"
