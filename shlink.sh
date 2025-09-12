@@ -34,15 +34,22 @@ check_docker() {
 
 get_config() {
     echo -e "\n${YELLOW}--- 请输入配置信息 ---${NC}"
-    read -p "请输入服务器 IP 或域名 (例如: example.com): " DEFAULT_DOMAIN
     read -p "请输入 MaxMind GeoLite2 许可证密钥: " GEOLITE_LICENSE_KEY
-    read -p "请设置 Shlink 后端访问端口 (默认为 9040): " BACKEND_PORT
+    read -p "请输入服务器 IP 或域名 (回车默认使用服务器IP): " DEFAULT_DOMAIN
+    read -p "请设置 Shlink 后端访问端口 (回车默认 9040): " BACKEND_PORT
+    read -p "请设置 Shlink 前端访问端口 (回车默认 9050): " FRONTEND_PORT
+
+    # 自动获取服务器 IP
+    if [ -z "$DEFAULT_DOMAIN" ]; then
+        DEFAULT_DOMAIN=$(hostname -I | awk '{print $1}')
+        echo -e "${GREEN}已自动检测到服务器IP：${DEFAULT_DOMAIN}${NC}"
+    fi
+
+    # 设置默认端口
     BACKEND_PORT=${BACKEND_PORT:-9040}
-    read -p "请设置 Shlink 前端访问端口 (默认为 9050): " FRONTEND_PORT
     FRONTEND_PORT=${FRONTEND_PORT:-9050}
 }
 
-# --- 功能函数 ---
 install_shlink() {
     get_config
     
@@ -112,10 +119,10 @@ update_shlink() {
     
     echo -e "${YELLOW}3. 重新部署新版本...${NC}"
     
-    # 重新获取配置信息，因为更新可能需要新配置
+    # 重新获取配置信息
     get_config
     
-    install_shlink_core
+    install_shlink
     
     echo -e "${GREEN}--- Shlink 更新完成！ ---${NC}"
 }
