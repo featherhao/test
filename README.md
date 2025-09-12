@@ -17,8 +17,10 @@ bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/refs/heads/m
 
 
 https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh
+shLINK订阅转换安装
 
-
+bash <(curl -fsSL "https://raw.githubusercontent.com/featherhao/test/refs/heads/main/shlink.sh?$(date +%s)")
+https://raw.githubusercontent.com/featherhao/test/refs/heads/main/shlink.sh
 
 
   更新：mtv：
