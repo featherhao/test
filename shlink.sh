@@ -1,6 +1,12 @@
 #!/bin/bash
 
-# --- 变量和颜色设置 ---
+# --- 全局变量 ---
+# 用于在函数间传递配置信息，确保显示正确
+DEFAULT_DOMAIN=""
+BACKEND_PORT=""
+FRONTEND_PORT=""
+
+# --- 颜色设置 ---
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -37,15 +43,14 @@ get_config() {
     echo -e "\n${YELLOW}--- 请输入配置信息 ---${NC}"
     read -p "请输入 MaxMind GeoLite2 许可证密钥: " GEOLITE_LICENSE_KEY
 
-    # 尝试自动获取公网 IP
     PUBLIC_IP=$(curl -s http://ifconfig.me || curl -s https://api.ipify.org || curl -s https://ipinfo.io/ip)
     
     if [ -z "$PUBLIC_IP" ]; then
         echo -e "${RED}自动获取公网IP失败，请手动输入。${NC}"
         read -p "请输入服务器公网 IP 或域名: " DEFAULT_DOMAIN
     else
-        read -p "请输入服务器域名 (可选, 回车默认使用公网IP: ${PUBLIC_IP}): " DEFAULT_DOMAIN
-        DEFAULT_DOMAIN=${DEFAULT_DOMAIN:-$PUBLIC_IP}
+        read -p "请输入服务器域名 (可选, 回车默认使用公网IP: ${PUBLIC_IP}): " input_domain
+        DEFAULT_DOMAIN=${input_domain:-$PUBLIC_IP}
     fi
     
     read -p "请设置 Shlink 后端访问端口 (回车默认 9040): " BACKEND_PORT
@@ -88,17 +93,22 @@ check_and_uninstall() {
 
 # 检查容器状态并显示信息
 display_status() {
-    echo -e "\n${YELLOW}--- Shlink 部署状态 ---${NC}"
-    local backend_status=$(docker inspect --format='{{.State.Status}}' shlink 2>/dev/null)
-    local frontend_status=$(docker inspect --format='{{.State.Status}}' shlink-web-client 2>/dev/null)
-    local backend_port=$(docker inspect shlink --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' 2>/dev/null)
-    local frontend_port=$(docker inspect shlink-web-client --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' 2>/dev/null)
-    local domain=$(docker inspect shlink --format '{{range .Config.Env}}{{if contains . "DEFAULT_DOMAIN"}}{{printf "%s" .}}{{end}}{{end}}' 2>/dev/null | cut -d'=' -f2)
-
-    echo -e "Shlink 后端状态: ${GREEN}${backend_status}${NC}"
-    echo -e "Shlink 前端状态: ${GREEN}${frontend_status}${NC}"
-    echo -e "访问地址：${YELLOW}http://${domain}:${frontend_port}${NC}"
-    echo -e "后端API地址：${YELLOW}http://${domain}:${backend_port}${NC}"
+    local shlink_running=$(docker ps -a --format '{{.Names}}' | grep -q shlink; echo $?)
+    if [ "$shlink_running" -eq 0 ]; then
+        echo -e "\n${GREEN}--- Shlink 已安装 ---${NC}"
+        local backend_status=$(docker inspect --format='{{.State.Status}}' shlink 2>/dev/null)
+        local frontend_status=$(docker inspect --format='{{.State.Status}}' shlink-web-client 2>/dev/null)
+        local backend_port=$(docker inspect shlink --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' 2>/dev/null)
+        local frontend_port=$(docker inspect shlink-web-client --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' 2>/dev/null)
+        local domain=$(docker inspect shlink --format '{{range .Config.Env}}{{if contains . "DEFAULT_DOMAIN"}}{{printf "%s" .}}{{end}}{{end}}' 2>/dev/null | cut -d'=' -f2)
+        
+        echo -e "Shlink 后端状态: ${GREEN}${backend_status}${NC}"
+        echo -e "Shlink 前端状态: ${GREEN}${frontend_status}${NC}"
+        echo -e "访问地址：${YELLOW}http://${domain}:${frontend_port}${NC}"
+        echo -e "后端API地址：${YELLOW}http://${domain}:${backend_port}${NC}"
+    else
+        echo -e "\n${YELLOW}--- Shlink 未安装 ---${NC}"
+    fi
 }
 
 # --- 功能函数 ---
@@ -157,7 +167,7 @@ install_shlink() {
     fi
     echo -e "${GREEN}Shlink 前端部署成功！${NC}"
 
-    display_status
+    echo -e "\n${GREEN}--- 部署完成！ ---${NC}"
 }
 
 uninstall_shlink() {
