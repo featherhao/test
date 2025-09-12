@@ -103,7 +103,7 @@ update_shlink() {
     echo "正在拉取最新镜像..."
     docker pull shlinkio/shlink:latest
     docker pull shlinkio/shlink-web-client:latest
-    
+
     # 直接调用 install_shlink 来重新部署，它会处理停止和移除旧容器
     install_shlink
 
