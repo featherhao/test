@@ -39,15 +39,37 @@ get_config() {
     read -p "请设置 Shlink 后端访问端口 (回车默认 9040): " BACKEND_PORT
     read -p "请设置 Shlink 前端访问端口 (回车默认 9050): " FRONTEND_PORT
 
-    # 自动获取服务器 IP
     if [ -z "$DEFAULT_DOMAIN" ]; then
         DEFAULT_DOMAIN=$(hostname -I | awk '{print $1}')
         echo -e "${GREEN}已自动检测到服务器IP：${DEFAULT_DOMAIN}${NC}"
     fi
 
-    # 设置默认端口
     BACKEND_PORT=${BACKEND_PORT:-9040}
     FRONTEND_PORT=${FRONTEND_PORT:-9050}
+}
+
+check_existing_shlink() {
+    if docker ps -a --format '{{.Names}}' | grep -q shlink; then
+        echo -e "\n${YELLOW}--- 检测到已安装的 Shlink ---${NC}"
+        local backend_port=$(docker port shlink 8080 | awk -F':' '{print $2}')
+        local frontend_port=$(docker port shlink-web-client 8080 | awk -F':' '{print $2}')
+        local domain=$(docker inspect shlink --format '{{.Config.Env}}' | grep -oP 'DEFAULT_DOMAIN=\K[^ ]*')
+
+        echo -e "当前后端端口: ${GREEN}${backend_port}${NC}"
+        echo -e "当前前端端口: ${GREEN}${frontend_port}${NC}"
+        echo -e "当前域名/IP: ${GREEN}${domain}${NC}"
+        
+        read -p "是否要继续安装并覆盖现有配置？(y/n): " confirm_reinstall
+        if [[ ! "$confirm_reinstall" =~ ^[Yy]$ ]]; then
+            echo -e "${YELLOW}已取消安装。${NC}"
+            return 1
+        fi
+        
+        echo -e "${YELLOW}正在卸载旧版本...${NC}"
+        docker stop shlink shlink-web-client &>/dev/null
+        docker rm shlink shlink-web-client &>/dev/null
+    fi
+    return 0
 }
 
 install_shlink() {
@@ -66,6 +88,15 @@ install_shlink() {
         exit 1
     fi
     echo -e "${GREEN}Shlink 后端部署成功！${NC}"
+
+    echo -e "\n${YELLOW}正在运行数据库迁移...${NC}"
+    docker exec shlink shlink db:migrate --no-interaction
+    
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}数据库迁移失败。${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}数据库迁移完成！${NC}"
 
     echo -e "\n${YELLOW}正在生成 API Key...${NC}"
     API_KEY=$(docker exec shlink shlink api-key:generate | grep -oP '(?<=Generated API key: ).*')
@@ -119,7 +150,6 @@ update_shlink() {
     
     echo -e "${YELLOW}3. 重新部署新版本...${NC}"
     
-    # 重新获取配置信息
     get_config
     
     install_shlink
@@ -140,7 +170,9 @@ main_menu() {
         case "$choice" in
             1)
                 check_docker
-                install_shlink
+                if check_existing_shlink; then
+                    install_shlink
+                fi
                 read -p "按任意键返回主菜单..."
                 ;;
             2)
@@ -164,5 +196,4 @@ main_menu() {
     done
 }
 
-# --- 脚本启动入口 ---
 main_menu
