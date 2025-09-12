@@ -1,9 +1,8 @@
 #!/bin/bash
 
+# 定义端口和配置文件
 SHLINK_WEB_PORT=9050
 SHLINK_API_PORT=9040
-
-# 定义配置文件路径
 CONFIG_FILE="shlink_config.txt"
 
 # 获取服务器公网 IP
@@ -44,42 +43,37 @@ install_shlink() {
     echo "--- 开始部署 Shlink 短链服务 ---"
 
     # 检查并生成或读取 API Key
-    if [ -f "$CONFIG_FILE" ]; then
-        SHLINK_API_KEY=$(cat "$CONFIG_FILE")
-        echo "已找到配置文件，使用已有的 API Key: ${SHLINK_API_KEY}"
-    else
+    if [ ! -f "$CONFIG_FILE" ]; then
         SHLINK_API_KEY=$(cat /proc/sys/kernel/random/uuid)
         echo "${SHLINK_API_KEY}" > "$CONFIG_FILE"
         echo "首次运行，已生成新的 API Key 并保存到 ${CONFIG_FILE} 文件。"
-    fi
-    
-    # 部署后端容器
-    if ! docker ps -a --format "{{.Names}}" | grep -Eq "^shlink$"; then
-        echo "正在部署 Shlink 后端容器..."
-        docker run --name shlink -d --restart=always \
-            -v shlink-data:/var/www/html/data \
-            -p ${SHLINK_API_PORT}:8080 \
-            -e IS_HTTPS_ENABLED=false \
-            -e GEOLITE_LICENSE_KEY="" \
-            -e DEFAULT_DOMAIN="${PUBLIC_IP}" \
-            -e NEW_API_KEYS="${SHLINK_API_KEY}" \
-            shlinkio/shlink:latest
-        echo "Shlink 后端容器部署完成。"
     else
-        echo "Shlink 后端容器已存在，跳过部署。"
+        SHLINK_API_KEY=$(cat "$CONFIG_FILE")
+        echo "已找到配置文件，使用已有的 API Key: ${SHLINK_API_KEY}"
     fi
 
+    # 部署后端容器
+    echo "正在部署 Shlink 后端容器..."
+    docker stop shlink &> /dev/null
+    docker rm shlink &> /dev/null
+    docker run --name shlink -d --restart=always \
+        -v shlink-data:/var/www/html/data \
+        -p ${SHLINK_API_PORT}:8080 \
+        -e IS_HTTPS_ENABLED=false \
+        -e GEOLITE_LICENSE_KEY="" \
+        -e NEW_API_KEYS="${SHLINK_API_KEY}" \
+        shlinkio/shlink:latest
+    echo "Shlink 后端容器部署完成。"
+
     # 部署前端容器
-    if ! docker ps -a --format "{{.Names}}" | grep -Eq "^shlink-web-client$"; then
-        echo "正在部署 Shlink 前端容器..."
-        docker run -d --name shlink-web-client --restart=always -p ${SHLINK_WEB_PORT}:8080 \
-            -e SHLINK_API_URL="http://${PUBLIC_IP}:${SHLINK_API_PORT}" \
-            -e SHLINK_API_KEY="${SHLINK_API_KEY}" \
-            shlinkio/shlink-web-client
-        echo "Shlink 前端容器部署完成。"
-    else
-        echo "Shlink 前端容器已存在，跳过部署。"
-    fi
+    echo "正在部署 Shlink 前端容器..."
+    docker stop shlink-web-client &> /dev/null
+    docker rm shlink-web-client &> /dev/null
+    docker run -d --name shlink-web-client --restart=always -p ${SHLINK_WEB_PORT}:8080 \
+        -e SHLINK_API_URL="http://${PUBLIC_IP}:${SHLINK_API_PORT}" \
+        -e SHLINK_API_KEY="${SHLINK_API_KEY}" \
+        shlinkio/shlink-web-client
+    echo "Shlink 前端容器部署完成。"
 
     echo "--- 部署完成！ ---"
     show_info
