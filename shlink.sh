@@ -54,23 +54,27 @@ install_shlink() {
     check_prerequisites
     echo "--- 开始部署 Shlink 短链服务 (Docker Compose) ---"
 
+    # 强制清理旧容器和数据卷，确保干净部署
+    echo "正在彻底清理旧的 Shlink 容器和数据卷..."
+    if [ -d "${CONFIG_DIR}" ]; then
+        cd "${CONFIG_DIR}"
+        docker-compose down --volumes --rmi local &> /dev/null
+        cd ..
+        rm -rf "${CONFIG_DIR}"
+    fi
+
     # 创建独立的部署目录并进入
     mkdir -p "${CONFIG_DIR}"
     cd "${CONFIG_DIR}"
 
-    # 强制清理旧容器和数据卷，确保干净部署
-    echo "正在彻底清理旧的 Shlink 容器和数据卷..."
-    docker-compose down --volumes --rmi local &> /dev/null
-    rm -f "${COMPOSE_FILE}" "${CONFIG_FILE}"
-
     # 生成 API Key 并保存到本地文件
     SHLINK_API_KEY=$(cat /proc/sys/kernel/random/uuid)
-    echo "${SHLINK_API_KEY}" > "${CONFIG_FILE}"
-    echo "已生成新的 API Key 并保存到 ${CONFIG_FILE} 文件。"
+    echo "${SHLINK_API_KEY}" > "shlink_config.txt"
+    echo "已生成新的 API Key 并保存到 shlink_config.txt 文件。"
 
     # 生成 docker-compose.yml 文件
     echo "正在生成 docker-compose.yml 文件..."
-    cat << EOF > "${COMPOSE_FILE}"
+    cat << EOF > "docker-compose.yml"
 services:
   shlink:
     image: shlinkio/shlink:latest
