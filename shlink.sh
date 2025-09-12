@@ -40,17 +40,38 @@ get_config() {
     echo -e "\n${YELLOW}--- 请输入配置信息 ---${NC}"
     read -p "请输入 MaxMind GeoLite2 许可证密钥: " GEOLITE_LICENSE_KEY
 
-    PUBLIC_IP=$(curl -s http://ifconfig.me || curl -s https://api.ipify.org || curl -s https://ipinfo.io/ip)
-    
-    if [ -z "$PUBLIC_IP" ]; then
+    PUBLIC_IPV4=$(curl -s4 http://ifconfig.me || curl -s4 https://api.ipify.org)
+    PUBLIC_IPV6=$(curl -s6 http://ifconfig.me || curl -s6 https://api.ipify.org)
+
+    if [[ -n "$PUBLIC_IPV4" && -n "$PUBLIC_IPV6" ]]; then
+        echo -e "\n${GREEN}检测到 IPv4 和 IPv6 地址：${NC}"
+        echo -e "  1) IPv4: ${PUBLIC_IPV4}"
+        echo -e "  2) IPv6: ${PUBLIC_IPV6}"
+        read -p "请选择一个作为默认访问地址 (回车默认使用 IPv4): " ip_choice
+        case "$ip_choice" in
+            1|"")
+                DEFAULT_DOMAIN=${PUBLIC_IPV4}
+                ;;
+            2)
+                DEFAULT_DOMAIN=${PUBLIC_IPV6}
+                ;;
+            *)
+                echo -e "${RED}输入无效，默认使用 IPv4 地址。${NC}"
+                DEFAULT_DOMAIN=${PUBLIC_IPV4}
+                ;;
+        esac
+    elif [[ -n "$PUBLIC_IPV4" ]]; then
+        read -p "请输入服务器域名 (可选, 回车默认使用公网IPv4: ${PUBLIC_IPV4}): " input_domain
+        DEFAULT_DOMAIN=${input_domain:-$PUBLIC_IPV4}
+    elif [[ -n "$PUBLIC_IPV6" ]]; then
+        read -p "请输入服务器域名 (可选, 回车默认使用公网IPv6: ${PUBLIC_IPV6}): " input_domain
+        DEFAULT_DOMAIN=${input_domain:-$PUBLIC_IPV6}
+    else
         echo -e "${RED}自动获取公网IP失败，请手动输入。${NC}"
         read -p "请输入服务器公网 IP 或域名: " input_domain
         DEFAULT_DOMAIN=$input_domain
-    else
-        read -p "请输入服务器域名 (可选, 回车默认使用公网IP: ${PUBLIC_IP}): " input_domain
-        DEFAULT_DOMAIN=${input_domain:-$PUBLIC_IP}
     fi
-    
+
     read -p "请设置 Shlink 后端访问端口 (回车默认 9040): " BACKEND_PORT
     read -p "请设置 Shlink 前端访问端口 (回车默认 9050): " FRONTEND_PORT
 
@@ -61,8 +82,10 @@ get_config() {
 uninstall_shlink_core() {
     echo -e "${YELLOW}正在停止并删除 Shlink 容器...${NC}"
     docker stop shlink shlink-web-client &>/dev/null
-    docker rm -v shlink shlink-web-client &>/dev/null
+    docker rm shlink shlink-web-client &>/dev/null
     echo -e "${GREEN}Shlink 容器已成功删除。${NC}"
+    echo -e "${YELLOW}数据卷 (shlink-data) 已保留。如果您想完全删除数据，请运行以下命令：${NC}"
+    echo -e "  ${RED}docker volume rm shlink-data${NC}"
 }
 
 check_and_uninstall() {
@@ -117,6 +140,7 @@ install_shlink() {
 
     echo -e "\n${GREEN}--- 正在部署 Shlink 后端 (Server)... ---${NC}"
     docker run --name shlink -d --restart=always \
+      -v shlink-data:/var/www/html/data \
       -p ${BACKEND_PORT}:8080 \
       -e DEFAULT_DOMAIN="${DEFAULT_DOMAIN}" \
       -e IS_HTTPS_ENABLED=false \
@@ -165,7 +189,8 @@ install_shlink() {
 }
 
 uninstall_shlink() {
-    echo -e "${RED}--- 警告：这将永久删除 Shlink 相关的所有 Docker 容器和数据。 ---${NC}"
+    echo -e "${RED}--- 警告：这将永久删除 Shlink 相关的所有 Docker 容器。 ---${NC}"
+    echo -e "${YELLOW}注意：您的短链接数据将保留在数据卷 shlink-data 中。${NC}"
     read -p "你确定要卸载 Shlink 吗？(y/n): " confirm
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
         echo -e "${YELLOW}取消卸载。${NC}"
@@ -186,8 +211,6 @@ update_shlink() {
     docker pull shlinkio/shlink-web-client:latest
     
     echo -e "${YELLOW}3. 重新部署新版本...${NC}"
-    
-    get_config
     
     install_shlink
     
