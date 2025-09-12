@@ -88,6 +88,9 @@ install_shlink() {
     fi
     echo -e "${GREEN}Shlink 后端部署成功！${NC}"
 
+    echo -e "\n${YELLOW}正在创建数据库...${NC}"
+    docker exec shlink shlink db:create --no-interaction
+    
     echo -e "\n${YELLOW}正在运行数据库迁移...${NC}"
     docker exec shlink shlink db:migrate --no-interaction
     
