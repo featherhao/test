@@ -45,11 +45,11 @@ check_docker() {
             if [ $? -eq 0 ]; then
                 echo -e "${GREEN}Docker 和 Docker-compose 安装成功！${NC}"
             else
-                echo -e "${RED}安装失败，请手动安装后重试。${NC}"
+                echo -e "${RED}Docker 和 Docker-compose 安装失败，请手动安装后重试。${NC}"
                 exit 1
             fi
         else
-            echo -e "${RED}请先手动安装 Docker，然后再次运行脚本。${NC}"
+            echo -e "${RED}请先手动安装 Docker 和 Docker-compose，然后再次运行脚本。${NC}"
             exit 1
         fi
     fi
@@ -128,15 +128,14 @@ display_status() {
         echo -e "访问地址：${YELLOW}http://${domain}:${frontend_host_port}${NC}"
         echo -e "后端API地址：${YELLOW}http://${domain}:${backend_host_port}${NC}"
 
-        if [ -n "$API_KEY" ]; then
-            echo -e "Shlink API Key：${GREEN}${API_KEY}${NC}"
+        # 获取 API Key
+        local api_key=$(docker exec shlink shlink api-key:list --no-interaction 2>/dev/null | grep -oP '^[0-9a-f-]{36}' | head -n 1)
+        if [ -n "$api_key" ]; then
+            echo -e "Shlink API Key：${GREEN}${api_key}${NC}"
+            API_KEY=$api_key
+            save_config
         else
-            local api_key=$(docker exec shlink shlink api-key:list --no-interaction 2>/dev/null | grep -oP '^[0-9a-f-]{36}' | head -n 1)
-            if [ -n "$api_key" ]; then
-                echo -e "Shlink API Key：${GREEN}${api_key}${NC}"
-            else
-                echo -e "Shlink API Key：${RED}获取失败，请运行 docker exec shlink shlink api-key:list${NC}"
-            fi
+            echo -e "Shlink API Key：${RED}获取失败，请运行 docker exec shlink shlink api-key:list${NC}"
         fi
     else
         echo -e "\n${YELLOW}--- Shlink 未安装 ---${NC}"
@@ -161,31 +160,20 @@ install_shlink() {
       -e GEOLITE_LICENSE_KEY="${GEOLITE_LICENSE_KEY}" \
       shlinkio/shlink:latest
 
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Shlink 后端部署失败。${NC}"
-        exit 1
-    fi
-    echo -e "${GREEN}Shlink 后端部署成功！${NC}"
-
     echo -e "\n${YELLOW}正在运行数据库迁移...${NC}"
     sleep 5
     docker exec shlink shlink db:migrate --no-interaction
 
     echo -e "\n${YELLOW}正在生成 API Key...${NC}"
-    API_KEY=$(docker exec shlink shlink api-key:generate --no-interaction 2>/dev/null | grep -oP '^[0-9a-f-]{36}' | head -n 1)
-    if [ -z "$API_KEY" ]; then
-        API_KEY=$(docker exec shlink shlink api-key:list --no-interaction 2>/dev/null | grep -oP '^[0-9a-f-]{36}' | head -n 1)
-    fi
+    API_KEY=$(docker exec shlink shlink api-key:generate | grep -oP '(?<=Generated API key: ).*')
 
     echo -e "\n${GREEN}--- 正在部署 Shlink 前端 (Web-Client)... ---${NC}"
-    docker run -d --name shlink-web-client --restart=always \
-      -p ${FRONTEND_PORT}:8080 \
-      -e SHLINK_SERVER_URL="http://${DEFAULT_DOMAIN}:${BACKEND_PORT}" \
-      -e SHLINK_SERVER_API_KEY="${API_KEY}" \
-      shlinkio/shlink-web-client:latest
+    docker run -d --name shlink-web-client --restart=always -p ${FRONTEND_PORT}:8080 \
+      -e SHLINK_API_URL="http://${DEFAULT_DOMAIN}:${BACKEND_PORT}" \
+      -e SHLINK_API_KEY="${API_KEY}" \
+      shlinkio/shlink-web-client
 
     echo -e "\n${GREEN}--- 部署完成！ ---${NC}"
-
     save_config
     display_status
 }
@@ -225,40 +213,3 @@ main_menu() {
         read -p "请选择一个操作 (1-4): " choice
 
         case "$choice" in
-            1)
-                check_docker
-                if check_and_uninstall; then
-                    install_shlink
-                fi
-                read -p "按任意键返回主菜单..."
-                clear
-                display_status
-                ;;
-            2)
-                check_docker
-                update_shlink
-                read -p "按任意键返回主菜单..."
-                clear
-                display_status
-                ;;
-            3)
-                uninstall_shlink
-                read -p "按任意键返回主菜单..."
-                clear
-                display_status
-                ;;
-            4)
-                echo -e "${GREEN}再见！${NC}"
-                exit 0
-                ;;
-            *)
-                echo -e "${RED}无效选项，请重新选择。${NC}"
-                read -p "按任意键继续..."
-                clear
-                display_status
-                ;;
-        esac
-    done
-}
-
-main_menu
