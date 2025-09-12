@@ -157,6 +157,21 @@ update_shlink() {
     echo -e "${GREEN}--- Shlink 更新完成！ ---${NC}"
 }
 
+# --- 新增的清理函数 ---
+cleanup_all() {
+    echo -e "${RED}--- 警告：此操作将删除所有未使用的 Docker 镜像、容器、网络和数据卷！${NC}"
+    echo -e "${RED}这会影响到服务器上所有其他 Docker 服务。请谨慎操作！${NC}"
+    read -p "你确定要进行彻底清理吗？(y/n): " confirm_cleanup
+    if [[ ! "$confirm_cleanup" =~ ^[Yy]$ ]]; then
+        echo -e "${YELLOW}已取消清理操作。${NC}"
+        return
+    fi
+    
+    echo -e "${YELLOW}正在清理...${NC}"
+    docker system prune -a --volumes --force
+    echo -e "${GREEN}清理完成。${NC}"
+}
+
 main_menu() {
     while true; do
         clear
@@ -164,8 +179,9 @@ main_menu() {
         echo -e "1. ${GREEN}安装 Shlink${NC}"
         echo -e "2. ${YELLOW}更新 Shlink${NC}"
         echo -e "3. ${RED}卸载 Shlink${NC}"
-        echo -e "4. ${NC}退出"
-        read -p "请选择一个操作 (1-4): " choice
+        echo -e "4. ${YELLOW}彻底清理 Docker 环境 (谨慎操作)${NC}"
+        echo -e "5. ${NC}退出"
+        read -p "请选择一个操作 (1-5): " choice
 
         case "$choice" in
             1)
@@ -185,6 +201,10 @@ main_menu() {
                 read -p "按任意键返回主菜单..."
                 ;;
             4)
+                cleanup_all
+                read -p "按任意键返回主菜单..."
+                ;;
+            5)
                 echo -e "${GREEN}再见！${NC}"
                 exit 0
                 ;;
