@@ -36,13 +36,13 @@ check_docker() {
 get_config() {
     echo -e "\n${YELLOW}--- 请输入配置信息 ---${NC}"
     read -p "请输入 MaxMind GeoLite2 许可证密钥: " GEOLITE_LICENSE_KEY
-    read -p "请输入服务器 IP 或域名 (回车默认使用服务器IP): " DEFAULT_DOMAIN
+    read -p "请输入服务器域名 (可选, 回车默认使用服务器公网IP): " DEFAULT_DOMAIN
     read -p "请设置 Shlink 后端访问端口 (回车默认 9040): " BACKEND_PORT
     read -p "请设置 Shlink 前端访问端口 (回车默认 9050): " FRONTEND_PORT
 
     if [ -z "$DEFAULT_DOMAIN" ]; then
-        DEFAULT_DOMAIN=$(hostname -I | awk '{print $1}')
-        echo -e "${GREEN}已自动检测到服务器IP：${DEFAULT_DOMAIN}${NC}"
+        DEFAULT_DOMAIN=$(curl -s ifconfig.me)
+        echo -e "${GREEN}已自动检测到服务器公网IP：${DEFAULT_DOMAIN}${NC}"
     fi
 
     BACKEND_PORT=${BACKEND_PORT:-9040}
@@ -100,7 +100,6 @@ install_shlink() {
     echo -e "${GREEN}Shlink 后端部署成功！${NC}"
 
     echo -e "\n${YELLOW}正在运行数据库迁移...${NC}"
-    # 等待容器完全启动
     sleep 5
     docker exec shlink shlink db:migrate --no-interaction
     
