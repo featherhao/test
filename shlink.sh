@@ -1,15 +1,35 @@
 #!/bin/bash
 
 # --- 全局变量 ---
+CONFIG_FILE="./shlink.conf"
 DEFAULT_DOMAIN=""
 BACKEND_PORT=""
 FRONTEND_PORT=""
+GEOLITE_LICENSE_KEY=""
+API_KEY=""
 
 # --- 颜色设置 ---
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
+
+# --- 配置文件加载 ---
+load_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        source "$CONFIG_FILE"
+    fi
+}
+
+save_config() {
+    cat > "$CONFIG_FILE" <<EOF
+DEFAULT_DOMAIN=$DEFAULT_DOMAIN
+BACKEND_PORT=$BACKEND_PORT
+FRONTEND_PORT=$FRONTEND_PORT
+GEOLITE_LICENSE_KEY=$GEOLITE_LICENSE_KEY
+API_KEY=$API_KEY
+EOF
+}
 
 # --- 辅助函数 ---
 
@@ -38,38 +58,24 @@ check_docker() {
 
 get_config() {
     echo -e "\n${YELLOW}--- 请输入配置信息 ---${NC}"
-    read -p "请输入 MaxMind GeoLite2 许可证密钥: " GEOLITE_LICENSE_KEY
 
-    PUBLIC_IPV4=$(curl -s4 http://ifconfig.me || curl -s4 https://api.ipify.org)
-    PUBLIC_IPV6=$(curl -s6 http://ifconfig.me || curl -s6 https://api.ipify.org)
-
-    if [[ -n "$PUBLIC_IPV4" && -n "$PUBLIC_IPV6" ]]; then
-        echo -e "\n${GREEN}检测到 IPv4 和 IPv6 地址：${NC}"
-        echo -e "  1) IPv4: ${PUBLIC_IPV4}"
-        echo -e "  2) IPv6: ${PUBLIC_IPV6}"
-        read -p "请选择一个作为默认访问地址 (回车默认使用 IPv4): " ip_choice
-        case "$ip_choice" in
-            1|"")
-                DEFAULT_DOMAIN=${PUBLIC_IPV4}
-                ;;
-            2)
-                DEFAULT_DOMAIN=${PUBLIC_IPV6}
-                ;;
-            *)
-                echo -e "${RED}输入无效，默认使用 IPv4 地址。${NC}"
-                DEFAULT_DOMAIN=${PUBLIC_IPV4}
-                ;;
-        esac
-    elif [[ -n "$PUBLIC_IPV4" ]]; then
-        read -p "请输入服务器域名 (可选, 回车默认使用公网IPv4: ${PUBLIC_IPV4}): " input_domain
-        DEFAULT_DOMAIN=${input_domain:-$PUBLIC_IPV4}
-    elif [[ -n "$PUBLIC_IPV6" ]]; then
-        read -p "请输入服务器域名 (可选, 回车默认使用公网IPv6: ${PUBLIC_IPV6}): " input_domain
-        DEFAULT_DOMAIN=${input_domain:-$PUBLIC_IPV6}
+    if [ -z "$GEOLITE_LICENSE_KEY" ]; then
+        read -p "请输入 MaxMind GeoLite2 许可证密钥 (可回车跳过): " GEOLITE_LICENSE_KEY
     else
-        echo -e "${RED}自动获取公网IP失败，请手动输入。${NC}"
-        read -p "请输入服务器公网 IP 或域名: " input_domain
-        DEFAULT_DOMAIN=$input_domain
+        echo -e "已加载 GeoLite2 Key: ${GREEN}${GEOLITE_LICENSE_KEY}${NC}"
+    fi
+
+    PUBLIC_IPv4=$(curl -s https://api.ipify.org)
+    PUBLIC_IPv6=$(curl -s -6 https://api64.ipify.org)
+
+    echo "测到 IPv4: ${PUBLIC_IPv4:-无}"
+    echo "测到 IPv6: ${PUBLIC_IPv6:-无}"
+    read -p "请选择一个作为默认访问地址 (回车默认使用 IPv4): " input_domain
+
+    if [ -n "$input_domain" ]; then
+        DEFAULT_DOMAIN="$input_domain"
+    else
+        DEFAULT_DOMAIN="${PUBLIC_IPv4:-$PUBLIC_IPv6}"
     fi
 
     read -p "请设置 Shlink 后端访问端口 (回车默认 9040): " BACKEND_PORT
@@ -82,10 +88,8 @@ get_config() {
 uninstall_shlink_core() {
     echo -e "${YELLOW}正在停止并删除 Shlink 容器...${NC}"
     docker stop shlink shlink-web-client &>/dev/null
-    docker rm shlink shlink-web-client &>/dev/null
+    docker rm -v shlink shlink-web-client &>/dev/null
     echo -e "${GREEN}Shlink 容器已成功删除。${NC}"
-    echo -e "${YELLOW}数据卷 (shlink-data) 已保留。如果您想完全删除数据，请运行以下命令：${NC}"
-    echo -e "  ${RED}docker volume rm shlink-data${NC}"
 }
 
 check_and_uninstall() {
@@ -93,18 +97,18 @@ check_and_uninstall() {
         echo -e "\n${YELLOW}--- 检测到已安装的 Shlink ---${NC}"
         local backend_port=$(docker inspect shlink --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' 2>/dev/null)
         local frontend_port=$(docker inspect shlink-web-client --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' 2>/dev/null)
-        local domain=$(docker inspect shlink | grep DEFAULT_DOMAIN | cut -d'"' -f2 | cut -d'=' -f2)
+        local domain=$(docker inspect shlink --format '{{range .Config.Env}}{{if contains . "DEFAULT_DOMAIN"}}{{printf "%s" .}}{{end}}{{end}}' 2>/dev/null | cut -d'=' -f2)
 
         echo -e "当前后端端口: ${GREEN}${backend_port}${NC}"
         echo -e "当前前端端口: ${GREEN}${frontend_port}${NC}"
         echo -e "当前域名/IP: ${GREEN}${domain}${NC}"
-        
+
         read -p "是否要继续安装并覆盖现有配置？(y/n): " confirm_reinstall
         if [[ ! "$confirm_reinstall" =~ ^[Yy]$ ]]; then
             echo -e "${YELLOW}已取消安装。${NC}"
             return 1
         fi
-        
+
         uninstall_shlink_core
     fi
     return 0
@@ -118,30 +122,33 @@ display_status() {
         local frontend_status=$(docker inspect --format='{{.State.Status}}' shlink-web-client 2>/dev/null)
         local backend_host_port=$(docker port shlink 8080/tcp | cut -d: -f2)
         local frontend_host_port=$(docker port shlink-web-client 8080/tcp | cut -d: -f2)
-        local domain=$(docker inspect shlink | grep DEFAULT_DOMAIN | cut -d'"' -f2 | cut -d'=' -f2)
-        
-        # 从容器中获取并显示 API Key
-        local API_KEY_DISPLAY=$(docker exec shlink shlink api-key:list --no-headers 2>/dev/null | awk '{print $2}')
+        local domain=$(docker inspect shlink --format '{{range .Config.Env}}{{if contains . "DEFAULT_DOMAIN"}}{{printf "%s" .}}{{end}}{{end}}' 2>/dev/null | cut -d'=' -f2)
 
         echo -e "Shlink 后端状态: ${GREEN}${backend_status}${NC}"
         echo -e "Shlink 前端状态: ${GREEN}${frontend_status}${NC}"
         echo -e "访问地址：${YELLOW}http://${domain}:${frontend_host_port}${NC}"
         echo -e "后端API地址：${YELLOW}http://${domain}:${backend_host_port}${NC}"
-        
-        if [ -n "$API_KEY_DISPLAY" ]; then
-            echo -e "Shlink API Key: ${GREEN}${API_KEY_DISPLAY}${NC}"
-        else
-            echo -e "Shlink API Key: ${RED}获取失败，可能未生成或容器未运行。${NC}"
-        fi
 
+        if [ -n "$API_KEY" ]; then
+            echo -e "Shlink API Key：${GREEN}${API_KEY}${NC}"
+        else
+            local api_key=$(docker exec shlink shlink api-key:list --no-interaction 2>/dev/null | grep -oP '^[0-9a-f-]{36}' | head -n 1)
+            if [ -n "$api_key" ]; then
+                echo -e "Shlink API Key：${GREEN}${api_key}${NC}"
+            else
+                echo -e "Shlink API Key：${RED}获取失败，请运行 docker exec shlink shlink api-key:list${NC}"
+            fi
+        fi
     else
         echo -e "\n${YELLOW}--- Shlink 未安装 ---${NC}"
     fi
 }
 
+# --- 功能函数 ---
+
 install_shlink() {
     get_config
-    
+
     echo -e "\n${YELLOW}--- 部署配置确认 ---${NC}"
     echo -e "公网IP/域名: ${GREEN}${DEFAULT_DOMAIN}${NC}"
     echo -e "后端端口: ${GREEN}${BACKEND_PORT}${NC}"
@@ -150,7 +157,6 @@ install_shlink() {
 
     echo -e "\n${GREEN}--- 正在部署 Shlink 后端 (Server)... ---${NC}"
     docker run --name shlink -d --restart=always \
-      -v shlink-data:/var/www/html/data \
       -p ${BACKEND_PORT}:8080 \
       -e DEFAULT_DOMAIN="${DEFAULT_DOMAIN}" \
       -e IS_HTTPS_ENABLED=false \
@@ -158,7 +164,7 @@ install_shlink() {
       shlinkio/shlink:latest
 
     if [ $? -ne 0 ]; then
-        echo -e "${RED}Shlink 后端部署失败。请检查端口是否被占用或配置是否正确。${NC}"
+        echo -e "${RED}Shlink 后端部署失败。${NC}"
         exit 1
     fi
     echo -e "${GREEN}Shlink 后端部署成功！${NC}"
@@ -166,21 +172,9 @@ install_shlink() {
     echo -e "\n${YELLOW}正在运行数据库迁移...${NC}"
     sleep 5
     docker exec shlink shlink db:migrate --no-interaction
-    
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}数据库迁移失败。${NC}"
-        exit 1
-    fi
-    echo -e "${GREEN}数据库迁移完成！${NC}"
 
     echo -e "\n${YELLOW}正在生成 API Key...${NC}"
     API_KEY=$(docker exec shlink shlink api-key:generate | grep -oP '(?<=Generated API key: ).*')
-    
-    if [ -z "$API_KEY" ]; then
-        echo -e "${RED}API Key 生成失败。${NC}"
-        exit 1
-    fi
-    echo -e "${GREEN}API Key 已生成：${API_KEY}${NC}"
 
     echo -e "\n${GREEN}--- 正在部署 Shlink 前端 (Web-Client)... ---${NC}"
     docker run -d --name shlink-web-client --restart=always -p ${FRONTEND_PORT}:8080 \
@@ -188,48 +182,37 @@ install_shlink() {
       -e SHLINK_API_KEY="${API_KEY}" \
       shlinkio/shlink-web-client
 
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Shlink 前端部署失败。请检查端口是否被占用。${NC}"
-        exit 1
-    fi
-    echo -e "${GREEN}Shlink 前端部署成功！${NC}"
-
     echo -e "\n${GREEN}--- 部署完成！ ---${NC}"
+
+    save_config
     display_status
 }
 
 uninstall_shlink() {
-    echo -e "${RED}--- 警告：这将永久删除 Shlink 相关的所有 Docker 容器。 ---${NC}"
-    echo -e "${YELLOW}注意：您的短链接数据将保留在数据卷 shlink-data 中。${NC}"
+    echo -e "${RED}--- 警告：这将永久删除 Shlink 相关的所有 Docker 容器和数据。 ---${NC}"
     read -p "你确定要卸载 Shlink 吗？(y/n): " confirm
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
         echo -e "${YELLOW}取消卸载。${NC}"
         return
     fi
     uninstall_shlink_core
+    rm -f "$CONFIG_FILE"
     echo -e "${GREEN}Shlink 已成功卸载。${NC}"
 }
 
 update_shlink() {
     echo -e "${YELLOW}--- 正在更新 Shlink... ---${NC}"
-    
-    echo -e "${YELLOW}1. 停止并移除现有容器...${NC}"
     uninstall_shlink_core
-    
-    echo -e "${YELLOW}2. 拉取最新镜像...${NC}"
     docker pull shlinkio/shlink:latest
     docker pull shlinkio/shlink-web-client:latest
-    
-    echo -e "${YELLOW}3. 重新部署新版本...${NC}"
-    
     install_shlink
-    
     echo -e "${GREEN}--- Shlink 更新完成！ ---${NC}"
 }
 
 # --- 主菜单 ---
 
 main_menu() {
+    load_config
     display_status
 
     while true; do
@@ -237,8 +220,8 @@ main_menu() {
         echo -e "1. ${GREEN}安装 Shlink${NC}"
         echo -e "2. ${YELLOW}更新 Shlink${NC}"
         echo -e "3. ${RED}卸载 Shlink${NC}"
-        echo -e "0. ${NC}退出"
-        read -p "请选择一个操作 (0-3): " choice
+        echo -e "4. ${NC}退出"
+        read -p "请选择一个操作 (1-4): " choice
 
         case "$choice" in
             1)
@@ -263,7 +246,7 @@ main_menu() {
                 clear
                 display_status
                 ;;
-            0)
+            4)
                 echo -e "${GREEN}再见！${NC}"
                 exit 0
                 ;;
