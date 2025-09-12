@@ -7,16 +7,16 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # --- 辅助函数 ---
+
+# 检查 Docker 是否已安装
 check_docker() {
     if ! command -v docker &> /dev/null; then
         echo -e "${RED}错误：未检测到 Docker。请先安装 Docker。${NC}"
         read -p "是否要安装 Docker 和 Docker-compose？(y/n): " install_docker
         if [[ "$install_docker" =~ ^[Yy]$ ]]; then
             echo -e "${YELLOW}正在安装 Docker...${NC}"
-            # 适用于 Ubuntu/Debian 的 Docker 安装命令
             curl -fsSL https://get.docker.com -o get-docker.sh
             sudo sh get-docker.sh
-            # 安装 Docker-compose
             sudo apt-get update
             sudo apt-get install -y docker-compose
             if [ $? -eq 0 ]; then
@@ -32,6 +32,7 @@ check_docker() {
     fi
 }
 
+# 交互式获取配置信息
 get_config() {
     echo -e "\n${YELLOW}--- 请输入配置信息 ---${NC}"
     read -p "请输入 MaxMind GeoLite2 许可证密钥: " GEOLITE_LICENSE_KEY
@@ -48,12 +49,21 @@ get_config() {
     FRONTEND_PORT=${FRONTEND_PORT:-9050}
 }
 
-check_existing_shlink() {
+# 核心卸载功能，停止并删除容器和数据卷
+uninstall_shlink_core() {
+    echo -e "${YELLOW}正在停止并删除 Shlink 容器...${NC}"
+    docker stop shlink shlink-web-client &>/dev/null
+    docker rm -v shlink shlink-web-client &>/dev/null
+    echo -e "${GREEN}Shlink 容器已成功删除。${NC}"
+}
+
+# 检查现有安装，并提示用户是否覆盖
+check_and_uninstall() {
     if docker ps -a --format '{{.Names}}' | grep -q shlink; then
         echo -e "\n${YELLOW}--- 检测到已安装的 Shlink ---${NC}"
-        local backend_port=$(docker inspect shlink --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}')
-        local frontend_port=$(docker inspect shlink-web-client --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}')
-        local domain=$(docker inspect shlink --format '{{range .Config.Env}}{{if contains . "DEFAULT_DOMAIN"}}{{printf "%s" .}}{{end}}{{end}}' | cut -d'=' -f2)
+        local backend_port=$(docker inspect shlink --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' 2>/dev/null)
+        local frontend_port=$(docker inspect shlink-web-client --format '{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' 2>/dev/null)
+        local domain=$(docker inspect shlink --format '{{range .Config.Env}}{{if contains . "DEFAULT_DOMAIN"}}{{printf "%s" .}}{{end}}{{end}}' 2>/dev/null | cut -d'=' -f2)
 
         echo -e "当前后端端口: ${GREEN}${backend_port}${NC}"
         echo -e "当前前端端口: ${GREEN}${frontend_port}${NC}"
@@ -65,11 +75,12 @@ check_existing_shlink() {
             return 1
         fi
         
-        echo -e "${YELLOW}正在卸载旧版本...${NC}"
         uninstall_shlink_core
     fi
     return 0
 }
+
+# --- 功能函数 ---
 
 install_shlink() {
     get_config
@@ -88,10 +99,9 @@ install_shlink() {
     fi
     echo -e "${GREEN}Shlink 后端部署成功！${NC}"
 
-    echo -e "\n${YELLOW}正在创建数据库...${NC}"
-    docker exec shlink shlink db:create --no-interaction
-    
     echo -e "\n${YELLOW}正在运行数据库迁移...${NC}"
+    # 等待容器完全启动
+    sleep 5
     docker exec shlink shlink db:migrate --no-interaction
     
     if [ $? -ne 0 ]; then
@@ -125,13 +135,6 @@ install_shlink() {
     echo -e "后端API地址：${YELLOW}http://${DEFAULT_DOMAIN}:${BACKEND_PORT}${NC}"
 }
 
-uninstall_shlink_core() {
-    echo -e "${YELLOW}正在停止并删除 Shlink 容器...${NC}"
-    docker stop shlink shlink-web-client &>/dev/null
-    docker rm -v shlink shlink-web-client &>/dev/null
-    echo -e "${GREEN}Shlink 容器已成功删除。${NC}"
-}
-
 uninstall_shlink() {
     echo -e "${RED}--- 警告：这将永久删除 Shlink 相关的所有 Docker 容器和数据。 ---${NC}"
     read -p "你确定要卸载 Shlink 吗？(y/n): " confirm
@@ -162,6 +165,8 @@ update_shlink() {
     echo -e "${GREEN}--- Shlink 更新完成！ ---${NC}"
 }
 
+# --- 主菜单 ---
+
 main_menu() {
     while true; do
         clear
@@ -175,7 +180,7 @@ main_menu() {
         case "$choice" in
             1)
                 check_docker
-                if check_existing_shlink; then
+                if check_and_uninstall; then
                     install_shlink
                 fi
                 read -p "按任意键返回主菜单..."
