@@ -42,12 +42,13 @@ install_shlink() {
     check_docker
     echo "--- 开始部署 Shlink 短链服务 ---"
 
-    # 生成或读取 API Key
+    # 生成 API Key 并保存到本地文件
     SHLINK_API_KEY=$(cat /proc/sys/kernel/random/uuid)
     echo "${SHLINK_API_KEY}" > "$CONFIG_FILE"
     echo "已生成新的 API Key 并保存到 ${CONFIG_FILE} 文件。"
 
     # 停止并移除旧容器，确保干净部署
+    echo "正在清理旧的 Shlink 容器..."
     docker stop shlink shlink-web-client &> /dev/null
     docker rm shlink shlink-web-client &> /dev/null
 
