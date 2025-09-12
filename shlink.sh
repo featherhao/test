@@ -119,11 +119,21 @@ display_status() {
         local backend_host_port=$(docker port shlink 8080/tcp | cut -d: -f2)
         local frontend_host_port=$(docker port shlink-web-client 8080/tcp | cut -d: -f2)
         local domain=$(docker inspect shlink | grep DEFAULT_DOMAIN | cut -d'"' -f2 | cut -d'=' -f2)
+        
+        # 从容器中获取并显示 API Key
+        local API_KEY_DISPLAY=$(docker exec shlink shlink api-key:list --no-headers 2>/dev/null | awk '{print $2}')
 
         echo -e "Shlink 后端状态: ${GREEN}${backend_status}${NC}"
         echo -e "Shlink 前端状态: ${GREEN}${frontend_status}${NC}"
         echo -e "访问地址：${YELLOW}http://${domain}:${frontend_host_port}${NC}"
         echo -e "后端API地址：${YELLOW}http://${domain}:${backend_host_port}${NC}"
+        
+        if [ -n "$API_KEY_DISPLAY" ]; then
+            echo -e "Shlink API Key: ${GREEN}${API_KEY_DISPLAY}${NC}"
+        else
+            echo -e "Shlink API Key: ${RED}获取失败，可能未生成或容器未运行。${NC}"
+        fi
+
     else
         echo -e "\n${YELLOW}--- Shlink 未安装 ---${NC}"
     fi
