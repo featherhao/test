@@ -34,7 +34,8 @@ generate_compose_file() {
     cat > "$COMPOSE_FILE" << EOF
 services:
   posteio:
-    image: posteio/posteio:latest
+    # 修复: 使用完整的官方镜像名称，确保正常拉取
+    image: docker.io/posteio/posteio:latest
     container_name: poste.io
     restart: always
     hostname: mailserver.example.com  # <-- 请修改为你的域名
@@ -60,6 +61,7 @@ install_poste() {
     check_dependencies
     
     # 新增: 自动检查和修复旧的 docker-compose 文件
+    # 检查是否包含错误的镜像名称，如果包含则删除并重新生成
     if [ -f "$COMPOSE_FILE" ]; then
         if grep -q "posteio/poste.io:latest" "$COMPOSE_FILE"; then
             echo "警告：检测到旧的 Docker Compose 文件，正在自动修复..."
