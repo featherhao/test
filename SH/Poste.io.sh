@@ -41,17 +41,18 @@ check_dependencies() {
     fi
 }
 
-# 查找可用端口
-find_available_port() {
-    local start_port=80
-    local current_port=$start_port
-    while true; do
-        if ! lsof -i :$current_port &> /dev/null && ! lsof -i :$((current_port + 443 - 80)) &> /dev/null; then
-            echo "$current_port"
-            return
+# 检查端口是否被占用，并返回占用该端口的服务名
+get_port_owner() {
+    local port=$1
+    local owner_pid=$(lsof -t -i:$port 2>/dev/null || true)
+    if [ -n "$owner_pid" ]; then
+        local service_name=$(systemctl status "$owner_pid" 2>/dev/null | grep -Po 'Loaded: .*service; \K(.+)(?=\))' | cut -d'.' -f1 || true)
+        if [ -n "$service_name" ]; then
+            echo "$service_name"
+        else
+            echo "UNKNOWN_PID_$owner_pid"
         fi
-        ((current_port++))
-    done
+    fi
 }
 
 # 获取公网IP地址
@@ -83,9 +84,18 @@ generate_compose_file() {
         exit 1
     fi
 
-    local http_port=$(find_available_port)
-    local https_port=$((http_port + 443 - 80))
+    local port_owner_80=$(get_port_owner 80)
+    local port_owner_443=$(get_port_owner 443)
 
+    local web_ports_mapping='- "80:80"\n      - "443:443"'
+    if [[ "$port_owner_80" == "nginx" || "$port_owner_80" == "openresty" || "$port_owner_443" == "nginx" || "$port_owner_443" == "openresty" ]]; then
+        echo "ℹ️  检测到 OpenResty 或 Nginx 正在使用 80/443 端口。"
+        echo "    将跳过端口映射，并自动生成反向代理配置。"
+        web_ports_mapping=""
+    else
+        echo "✅ 端口 80/443 未被占用，将直接映射。"
+    fi
+    
     cat > "$COMPOSE_FILE" << EOF
 services:
   posteio:
@@ -95,8 +105,6 @@ services:
     hostname: ${DOMAIN}
     ports:
       - "25:25"
-      - "${http_port}:80"
-      - "${https_port}:443"
       - "110:110"
       - "143:143"
       - "465:465"
@@ -109,19 +117,83 @@ services:
       - "$DATA_DIR:/data"
     platform: linux/amd64
 EOF
-    echo "已生成 Docker Compose 文件：$COMPOSE_FILE"
-    if [ "$http_port" -ne 80 ]; then
-        echo "注意：由于默认端口被占用，已自动选择备用端口："
-        echo "HTTP 端口: ${http_port}"
-        echo "HTTPS 端口: ${https_port}"
+    # 在 ports 块中插入 web 端口映射
+    if [ -n "$web_ports_mapping" ]; then
+        sed -i "/- \"25:25\"/a \ \ \ \ \ \ $web_ports_mapping" "$COMPOSE_FILE"
     fi
+
+    echo "已生成 Docker Compose 文件：$COMPOSE_FILE"
+}
+
+# 配置 Nginx/OpenResty 反向代理
+configure_reverse_proxy() {
+    local domain=$(grep -Po '^\s*hostname:\s*\K(.+)' "$COMPOSE_FILE" || echo "未设置")
+    if [ "$domain" == "未设置" ]; then
+        echo "警告：未设置域名，无法配置反向代理。"
+        return 1
+    fi
+
+    local proxy_service=$(get_port_owner 80)
+    if [[ "$proxy_service" != "nginx" && "$proxy_service" != "openresty" ]]; then
+        echo "ℹ️  未检测到 Nginx/OpenResty，跳过反向代理配置。"
+        return 0
+    fi
+    
+    echo "=== 开始自动配置反向代理 ==="
+    echo "正在等待 Poste.io 容器启动..."
+    sleep 5 # 等待容器获取IP
+    
+    local posteio_ip=$(docker inspect -f '{{.NetworkSettings.IPAddress}}' poste.io 2>/dev/null || true)
+    if [ -z "$posteio_ip" ]; then
+        echo "错误：无法获取 Poste.io 容器内部IP，请手动配置反向代理。"
+        return 1
+    fi
+
+    echo "✅ 获取到 Poste.io 容器内部IP: $posteio_ip"
+    local proxy_config_file="/etc/$proxy_service/sites-available/$domain.conf"
+    local proxy_config_link="/etc/$proxy_service/sites-enabled/$domain.conf"
+
+    echo "正在生成反向代理配置文件: $proxy_config_file"
+    cat > "$proxy_config_file" << EOF
+server {
+    listen 80;
+    server_name $domain;
+    
+    location / {
+        proxy_pass http://$posteio_ip:80;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        client_max_body_size 0;
+    }
+}
+EOF
+
+    echo "正在创建配置文件链接: $proxy_config_link"
+    if [ -L "$proxy_config_link" ]; then
+        rm "$proxy_config_link"
+    fi
+    sudo ln -s "$proxy_config_file" "$proxy_config_link"
+
+    echo "正在重载 $proxy_service 服务..."
+    if sudo systemctl reload "$proxy_service" || sudo openresty -s reload; then
+        echo "🎉 反向代理配置成功！"
+    else
+        echo "警告：无法重载 $proxy_service 服务，请手动检查配置文件并重启服务。"
+    fi
+    return 0
 }
 
 # 显示安装信息
 show_installed_info() {
-    # 尝试从 docker-compose.yml 文件中获取端口和域名信息
-    local http_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:80")' "$COMPOSE_FILE" || echo "未知")
-    local https_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:443")' "$COMPOSE_FILE" || echo "未知")
+    local web_ports_info=""
+    local port_owner_80=$(get_port_owner 80)
+
+    if [[ "$port_owner_80" == "nginx" || "$port_owner_80" == "openresty" ]]; then
+        web_ports_info="（通过 $port_owner_80 反向代理）"
+    fi
+
     local domain=$(grep -Po '^\s*hostname:\s*\K(.+)' "$COMPOSE_FILE" || echo "未设置")
     local container_status=$(docker ps --filter "name=poste.io" --format "{{.Status}}" || echo "未运行")
     
@@ -134,40 +206,25 @@ show_installed_info() {
     echo "容器状态: ${container_status}"
     echo "数据目录: $(pwd)/$DATA_DIR"
     echo "--------------------------"
-    echo "访问地址："
-
-    local chosen_ip=""
-    if [ -n "$ipv4" ] && [ -n "$ipv6" ]; then
-        echo "检测到 IPv4 和 IPv6 地址。请选择您希望使用的主要访问方式："
-        echo "1) 使用 IPv4: $ipv4"
-        echo "2) 使用 IPv6: $ipv6"
-        read -rp "请输入选项 (1/2): " ip_choice
-        if [ "$ip_choice" == "2" ]; then
-            chosen_ip="[$ipv6]" # 加上中括号
-        else
-            chosen_ip="$ipv4"
-        fi
-    elif [ -n "$ipv4" ]; then
-        chosen_ip="$ipv4"
-    elif [ -n "$ipv6" ]; then
-        chosen_ip="[$ipv6]" # 加上中括号
+    echo "访问地址：$web_ports_info"
+    
+    if [ -n "$ipv4" ]; then
+        echo "  - IPv4访问: http://${ipv4}:80"
+        echo "            https://${ipv4}:443"
     fi
-
-    if [ -n "$chosen_ip" ]; then
-        echo "  - 使用IP访问 (请注意防火墙设置)："
-        echo "    HTTP  : http://${chosen_ip}:${http_port}"
-        echo "    HTTPS : https://${chosen_ip}:${https_port}"
+    if [ -n "$ipv6" ]; then
+        echo "  - IPv6访问: http://[${ipv6}]:80"
+        echo "            https://[${ipv6}]:443"
     fi
 
     if [ "$domain" != "未设置" ]; then
-        echo "  - 使用域名访问 (请确保DNS已解析到你的服务器IP)："
-        echo "    HTTP  : http://${domain}:${http_port}"
-        echo "    HTTPS : https://${domain}:${https_port}"
+        echo "  - 域名访问: http://${domain}"
+        echo "            https://${domain}"
     fi
     
     echo "--------------------------"
     echo "后续步骤："
-    echo "1. 访问上述 HTTP 地址来完成管理员账户设置。"
+    echo "1. 访问上述地址来完成管理员账户设置。"
     echo "2. 在你的域名服务商后台，将以下DNS记录指向你的服务器IP："
     if [ -n "$ipv4" ]; then
         echo "   - A记录: $domain -> $ipv4"
@@ -182,11 +239,10 @@ install_poste() {
     echo "=== 开始安装 Poste.io ==="
     check_dependencies
 
-    # 检查是否已安装
     if docker ps -a --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io"; then
         echo "ℹ️  检测到 Poste.io 容器已存在。正在显示当前信息..."
         show_installed_info
-        return # 使用 return 代替 exit，返回到主菜单
+        return
     fi
 
     if [ -f "$COMPOSE_FILE" ]; then
@@ -208,6 +264,9 @@ install_poste() {
 
     if [ $? -eq 0 ]; then
         echo "恭喜！Poste.io 安装成功！"
+        if [ -n "$(get_port_owner 80)" ] || [ -n "$(get_port_owner 443)" ]; then
+            configure_reverse_proxy
+        fi
         show_installed_info
     else
         echo "安装失败，请检查上面的错误信息。"
@@ -221,7 +280,7 @@ uninstall_poste() {
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         echo "已取消卸载。"
-        return # 使用 return 代替 exit
+        return
     fi
 
     echo "正在停止和删除容器..."
@@ -234,6 +293,17 @@ uninstall_poste() {
     echo "正在删除 Docker Compose 文件和数据..."
     rm -rf "$COMPOSE_FILE" "$DATA_DIR"
 
+    # 清理反向代理配置
+    local domain=$(grep -Po '^\s*hostname:\s*\K(.+)' "$COMPOSE_FILE" || echo "未设置")
+    local proxy_service=$(get_port_owner 80)
+    if [[ "$proxy_service" == "nginx" || "$proxy_service" == "openresty" ]]; then
+        echo "正在清理反向代理配置..."
+        local proxy_config_file="/etc/$proxy_service/sites-available/$domain.conf"
+        local proxy_config_link="/etc/$proxy_service/sites-enabled/$domain.conf"
+        rm -f "$proxy_config_file" "$proxy_config_link"
+        sudo systemctl reload "$proxy_service" || sudo openresty -s reload
+    fi
+
     echo "卸载完成。"
 }
 
@@ -244,7 +314,7 @@ update_poste() {
     
     if [ ! -f "$COMPOSE_FILE" ]; then
         echo "错误：找不到 Docker Compose 文件。请先执行安装。"
-        return # 使用 return 代替 exit
+        return
     fi
 
     echo "正在拉取最新的 Poste.io 镜像..."
@@ -308,7 +378,6 @@ show_main_menu() {
 main() {
     check_dependencies
     
-    # 启动时检查状态，如果已安装则显示信息，然后继续执行菜单逻辑
     if docker ps --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io" && [ -f "$COMPOSE_FILE" ]; then
         echo "✅ Poste.io 容器正在运行，显示当前信息..."
         show_installed_info
