@@ -1,273 +1,201 @@
 #!/bin/bash
-set -e
 
-# =======================================================
-# Poste.io Docker 邮件服务器 一键安装/管理脚本
-# =======================================================
+# 定义端口和配置文件
+SHLINK_WEB_PORT=9050
+SHLINK_API_PORT=9040
+CONFIG_DIR="shlink_deploy"
+CONFIG_FILE="${CONFIG_DIR}/shlink_config.txt"
+COMPOSE_FILE="${CONFIG_DIR}/docker-compose.yml"
 
-# 脚本配置
-WORKDIR="/root"
-DATADIR="$WORKDIR/posteio_data"
-COMPOSE_FILE="$WORKDIR/poste.io.docker-compose.yml"
-CONTAINER_NAME="poste.io"
-IMAGE="analogic/poste.io"
+# 获取服务器公网 IP
+PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
 
-# -------------------------------------------------------
-# 辅助函数
-# -------------------------------------------------------
+# 检查 Docker 和 Docker Compose 是否安装
+check_prerequisites() {
+    if ! command -v docker &> /dev/null; then
+        echo "Docker 未安装，正在为您安装..."
+        curl -fsSL https://get.docker.com | sh
+        if [ $? -ne 0 ]; then
+            echo "Docker 安装失败，请手动安装后重试。"
+            exit 1
+        fi
+        echo "Docker 安装成功！"
+    fi
+    systemctl start docker
+    systemctl enable docker
 
-# Docker Compose 命令包装器，兼容新旧版本
-DOCKER_COMPOSE() {
-  if command -v docker-compose >/dev/null 2>&1; then
-    docker-compose "$@"
-  else
-    docker compose "$@"
-  fi
+    if ! command -v docker-compose &> /dev/null; then
+        echo "Docker Compose 未安装，正在为您安装..."
+        apt-get update && apt-get install -y docker-compose
+        if [ $? -ne 0 ]; then
+            echo "Docker Compose 安装失败，请手动安装后重试。"
+            exit 1
+        fi
+        echo "Docker Compose 安装成功！"
+    fi
 }
 
-# 检查 Docker 是否安装
-ensure_docker() {
-  if ! command -v docker >/dev/null 2>&1; then
-    echo "❌ 错误: 未检测到 Docker。请先安装 Docker 后重试。"
-    exit 1
-  fi
+# 检查容器状态
+check_container_status() {
+    local container_name=$1
+    if docker ps -a --format "{{.Names}}" | grep -Eq "^${container_name}$"; then
+        if docker ps --format "{{.Names}}" | grep -Eq "^${container_name}$"; then
+            echo -e "✅ \033[32m${container_name}\033[0m 容器正在运行"
+        else
+            echo -e "⚠️ \033[33m${container_name}\033[0m 容器已停止"
+        fi
+    else
+        echo -e "❌ \033[31m${container_name}\033[0m 容器未安装"
+    fi
 }
 
-# 检查 Poste.io 容器是否已存在
-check_installed() {
-  docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
-}
+# 部署服务
+install_shlink() {
+    check_prerequisites
+    echo "--- 开始部署 Shlink 短链服务 (Docker Compose) ---"
 
-# 从 compose 文件中读取配置信息
-read_compose_info() {
-  DOMAIN=""
-  HTTP_PORT="80"
-  HTTPS_PORT="443"
-  ADMIN_EMAIL=""
-  if [ -f "$COMPOSE_FILE" ]; then
-    DOMAIN=$(grep -m1 -E 'HOSTNAME=' "$COMPOSE_FILE" 2>/dev/null | sed -E 's/.*HOSTNAME=//;s/\s*$//' || true)
-    ADMIN_EMAIL=$(grep -m1 -E 'POSTMASTER_ADDRESS=' "$COMPOSE_FILE" 2>/dev/null | sed -E 's/.*POSTMASTER_ADDRESS=//;s/\s*$//' || true)
-
-    if grep -q ':80"' "$COMPOSE_FILE" 2>/dev/null; then
-      HTTP_PORT=$(grep -Po '^\s*-\s*"\K(\d+)(?=:80")' "$COMPOSE_FILE" 2>/dev/null || echo "80")
-    elif grep -q ':80' "$COMPOSE_FILE" 2>/dev/null; then
-      HTTP_PORT=$(grep -Po '^\s*-\s*\K(\d+)(?=:80)' "$COMPOSE_FILE" 2>/dev/null || echo "80")
+    # 强制清理旧容器和数据卷，确保干净部署
+    echo "正在彻底清理旧的 Shlink 容器和数据卷..."
+    if [ -d "${CONFIG_DIR}" ]; then
+        cd "${CONFIG_DIR}"
+        docker-compose down --volumes --rmi local &> /dev/null
+        cd ..
+        rm -rf "${CONFIG_DIR}"
     fi
 
-    if grep -q ':443"' "$COMPOSE_FILE" 2>/dev/null; then
-      HTTPS_PORT=$(grep -Po '^\s*-\s*"\K(\d+)(?=:443")' "$COMPOSE_FILE" 2>/dev/null || echo "443")
-    elif grep -q ':443' "$COMPOSE_FILE" 2>/dev/null; then
-      HTTPS_PORT=$(grep -Po '^\s*-\s*\K(\d+)(?=:443)' "$COMPOSE_FILE" 2>/dev/null || echo "443")
-    fi
-  fi
-}
+    # 创建独立的部署目录并进入
+    mkdir -p "${CONFIG_DIR}"
+    cd "${CONFIG_DIR}"
 
-# 获取服务器 IP 地址
-get_server_ip() {
-  local ip
-  ip=$(hostname -I 2>/dev/null | awk '{print $1}')
-  if [ -z "$ip" ]; then
-    if command -v curl >/dev/null 2>&1; then
-      ip=$(curl -s4 https://api.ipify.org || true)
-    fi
-  fi
-  echo "$ip"
-}
+    # 生成 API Key 并保存到本地文件
+    SHLINK_API_KEY=$(cat /proc/sys/kernel/random/uuid)
+    echo "${SHLINK_API_KEY}" > "shlink_config.txt"
+    echo "已生成新的 API Key 并保存到 shlink_config.txt 文件。"
 
-# 显示运行信息
-show_info() {
-  read_compose_info
-  local server_ip
-  server_ip=$(get_server_ip)
-
-  echo "------------------------------------"
-  echo " Poste.io 运行信息"
-  echo "------------------------------------"
-  echo "容器名称: ${CONTAINER_NAME}"
-  echo "容器状态: $(docker inspect -f '{{.State.Status}}' ${CONTAINER_NAME} 2>/dev/null || echo '未运行')"
-  echo "数据目录: ${DATADIR}"
-  [ -n "$ADMIN_EMAIL" ] && echo "管理员邮箱: ${ADMIN_EMAIL}"
-  echo ""
-  echo "访问地址："
-
-  # 域名访问地址
-  if [ -n "$DOMAIN" ]; then
-    echo "  - 域名 (不带端口):"
-    echo "      http : http://${DOMAIN}"
-    echo "      https: https://${DOMAIN}"
-    if [ "${HTTP_PORT}" != "80" ] || [ "${HTTPS_PORT}" != "443" ]; then
-      echo "    ⚠️ 注意: 宿主端口映射为 HTTP=${HTTP_PORT}, HTTPS=${HTTPS_PORT}。"
-      echo "      若未通过反向代理或 DNS 端口转发，直接访问域名可能需要额外配置。"
-    fi
-  else
-    echo "  - 域名: 未设置或未在 Compose 文件中检测到 HOSTNAME"
-  fi
-
-  # IP 访问地址
-  if [ -n "$server_ip" ]; then
-    local http_ip_url="http://${server_ip}"
-    local https_ip_url="https://${server_ip}"
-    if [ "${HTTP_PORT}" != "80" ]; then
-      http_ip_url="${http_ip_url}:${HTTP_PORT}"
-    fi
-    if [ "${HTTPS_PORT}" != "443" ]; then
-      https_ip_url="${https_ip_url}:${HTTPS_PORT}"
-    fi
-    echo ""
-    echo "  - IP (带端口):"
-    echo "      ${http_ip_url}"
-    echo "      ${https_ip_url}"
-  else
-    echo "  - 无可用本机 IP 用于显示"
-  fi
-
-  echo "------------------------------------"
-}
-
-# -------------------------------------------------------
-# 功能操作函数
-# -------------------------------------------------------
-
-# 安装 Poste.io
-install_poste() {
-  ensure_docker
-
-  if check_installed; then
-    echo "ℹ️  检测到 Poste.io 已存在，正在显示当前信息..."
-    show_info
-    return
-  fi
-
-  echo "=== 开始安装 Poste.io ==="
-  read -p "请输入您要使用的域名 (例如: mail.example.com): " DOMAIN
-  read -p "请输入管理员邮箱 (例如: admin@$DOMAIN): " ADMIN_EMAIL
-  read -s -p "请输入管理员密码: " ADMIN_PASS
-  echo ""
-
-  mkdir -p "$DATADIR"
-
-  # 检查端口占用，优先 80/443，否则备用 81/444
-  HTTP_PORT=80
-  HTTPS_PORT=443
-  if command -v ss >/dev/null 2>&1; then
-    if ss -ltn "( sport = :80 )" | grep -q ':80'; then HTTP_PORT=81; fi
-    if ss -ltn "( sport = :443 )" | grep -q ':443'; then HTTPS_PORT=444; fi
-  elif command -v lsof >/dev/null 2>&1; then
-    if lsof -i :80 >/dev/null 2>&1; then HTTP_PORT=81; fi
-    if lsof -i :443 >/dev/null 2>&1; then HTTPS_PORT=444; fi
-  fi
-
-  # 生成 compose 文件
-  cat > "$COMPOSE_FILE" <<EOF
-version: '3.3'
+    # 生成 docker-compose.yml 文件
+    echo "正在生成 docker-compose.yml 文件..."
+    cat << EOF > "docker-compose.yml"
 services:
-  posteio:
-    image: ${IMAGE}
-    container_name: ${CONTAINER_NAME}
+  shlink:
+    image: shlinkio/shlink:latest
+    container_name: shlink
     restart: always
     ports:
-      - "${HTTP_PORT}:80"
-      - "${HTTPS_PORT}:443"
-      - "25:25"
-      - "465:465"
-      - "587:587"
-      - "110:110"
-      - "995:995"
-      - "143:143"
-      - "993:993"
+      - "${SHLINK_API_PORT}:8080"
     volumes:
-      - ${DATADIR}:/data
+      - shlink-data:/var/www/html/data
     environment:
-      - HTTPS=OFF
-      - DISABLE_CLAMAV=TRUE
-      - DISABLE_SPAMASSASSIN=TRUE
-      - LETSENCRYPT_EMAIL=${ADMIN_EMAIL}
-      - POSTMASTER_ADDRESS=${ADMIN_EMAIL}
-      - PASSWORD=${ADMIN_PASS}
-      - HOSTNAME=${DOMAIN}
+      - IS_HTTPS_ENABLED=false
+      - GEOLITE_LICENSE_KEY=
+      - INITIAL_API_KEYS=${SHLINK_API_KEY}
+
+  shlink-web-client:
+    image: shlinkio/shlink-web-client
+    container_name: shlink-web-client
+    restart: always
+    ports:
+      - "${SHLINK_WEB_PORT}:8080"
+    environment:
+      - SHLINK_API_URL=http://${PUBLIC_IP}:${SHLINK_API_PORT}
+      - SHLINK_API_KEY=${SHLINK_API_KEY}
+
+volumes:
+  shlink-data:
 EOF
+    echo "docker-compose.yml 文件已生成。"
 
-  echo "✅ 已生成 Docker Compose 文件: ${COMPOSE_FILE}"
-  echo "正在启动 Poste.io 容器..."
-  DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
+    # 使用 Docker Compose 启动服务
+    echo "正在使用 Docker Compose 启动服务..."
+    docker-compose up -d
 
-  echo "✅ Poste.io 安装并初始化完成!"
-  show_info
+    echo "--- 部署完成！ ---"
+    cd ..
+    show_info
 }
 
-# 更新 Poste.io
-update_poste() {
-  ensure_docker
-  if ! check_installed; then
-    echo "❌ 错误: 未检测到 Poste.io 容器，无法更新。请先安装。"
-    return
-  fi
-  echo "=== 开始更新 Poste.io ==="
-  DOCKER_COMPOSE -f "$COMPOSE_FILE" pull
-  DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
-  echo "✅ 更新完成。"
-  show_info
+# 卸载服务
+uninstall_shlink() {
+    echo "--- 开始卸载 Shlink 服务 ---"
+    read -p "此操作将永久删除容器、数据卷和配置文件。确定要继续吗? (y/n): " confirm
+    if [[ $confirm != "y" ]]; then
+        echo "操作已取消。"
+        return
+    fi
+
+    echo "正在使用 Docker Compose 停止并移除服务..."
+    if [ -d "${CONFIG_DIR}" ]; then
+        cd "${CONFIG_DIR}"
+        docker-compose down --volumes --rmi local &> /dev/null
+        cd ..
+        rm -rf "${CONFIG_DIR}"
+    fi
+
+    echo "--- 卸载完成！ ---"
 }
 
-# 卸载 Poste.io
-uninstall_poste() {
-  ensure_docker
-  if ! check_installed; then
-    echo "ℹ️  未检测到 Poste.io 容器，无需卸载。"
-    return
-  fi
-  echo "⚠️ 警告: 卸载将停止并删除容器，数据目录 ${DATADIR} 也可能被删除。"
-  read -p "是否继续卸载? (y/N): " confirm
-  if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
-    echo "已取消卸载。"
-    return
-  fi
+# 更新服务
+update_shlink() {
+    echo "--- 开始更新 Shlink 服务 ---"
+    
+    if [ ! -d "${CONFIG_DIR}" ]; then
+        echo "未找到 Shlink 部署目录，请先安装服务。"
+        return
+    fi
 
-  DOCKER_COMPOSE -f "$COMPOSE_FILE" down || true
-  read -p "是否同时删除数据目录 ${DATADIR} ? (y/N): " deldata
-  if [[ "${deldata}" =~ ^[Yy]$ ]]; then
-    rm -rf "${DATADIR}"
-    echo "✅ 已删除数据目录。"
-  fi
-  rm -f "${COMPOSE_FILE}"
-  echo "✅ 卸载完成。"
+    cd "${CONFIG_DIR}"
+    echo "正在拉取最新镜像..."
+    docker-compose pull
+    
+    echo "正在使用 Docker Compose 重新启动服务..."
+    docker-compose up -d --force-recreate
+
+    echo "--- 更新完成！ ---"
+    cd ..
+    show_info
 }
 
-# -------------------------------------------------------
-# 主菜单
-# -------------------------------------------------------
+# 查看服务信息
+show_info() {
+    # 尝试从配置文件读取 API Key
+    if [ -f "${CONFIG_FILE}" ]; then
+        SHLINK_API_KEY=$(cat "${CONFIG_FILE}")
+    else
+        SHLINK_API_KEY="未找到配置文件，请先运行安装或更新"
+    fi
 
-# 主菜单循环
-while true; do
-  echo "===================================="
-  echo " Poste.io 管理脚本"
-  echo "===================================="
+    echo "--- Shlink 服务信息 ---"
+    echo "前端地址: http://${PUBLIC_IP}:${SHLINK_WEB_PORT}"
+    echo "后端 API 地址: http://${PUBLIC_IP}:${SHLINK_API_PORT}"
+    echo "默认 API Key: ${SHLINK_API_KEY}"
+    echo "--------------------------"
+    echo "请使用以上信息登录 Shlink 面板。"
+}
 
-  if check_installed; then
-    echo "检测到 Poste.io 已安装。"
-    echo "1) 显示信息"
-    echo "2) 更新 Poste.io"
-    echo "3) 卸载 Poste.io"
-    echo "0) 退出"
-    read -p "请输入选项: " choice
-    case "$choice" in
-      1) show_info ;;
-      2) update_poste ;;
-      3) uninstall_poste ;;
-      0) exit 0 ;;
-      *) echo "无效选项，请重新输入。" ;;
-    esac
-  else
-    echo "尚未安装 Poste.io。"
-    echo "1) 安装 Poste.io"
-    echo "0) 退出"
-    read -p "请输入选项: " choice
-    case "$choice" in
-      1) install_poste ;;
-      0) exit 0 ;;
-      *) echo "无效选项，请重新输入。" ;;
-    esac
-  fi
+# 显示主菜单
+show_menu() {
+    while true; do
+        echo "--- Shlink 短链服务管理 ---"
+        check_container_status "shlink"
+        check_container_status "shlink-web-client"
+        echo "--------------------------"
+        echo "1) 安装 Shlink 服务"
+        echo "2) 卸载 Shlink 服务"
+        echo "3) 更新 Shlink 服务"
+        echo "4) 查看服务信息"
+        echo "0) 退出"
+        echo "--------------------------"
+        read -p "请输入选项: " option
 
-  echo ""
-done
+        case $option in
+            1) install_shlink ;;
+            2) uninstall_shlink ;;
+            3) update_shlink ;;
+            4) show_info ;;
+            0) echo "脚本已退出。"; exit 0 ;;
+            *) echo "无效选项，请重新输入。" ;;
+        esac
+        echo ""
+    done
+}
+
+show_menu
