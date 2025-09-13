@@ -23,6 +23,7 @@ check_dependencies() {
         echo "错误：未安装 Docker。请先安装 Docker。"
         exit 1
     fi
+    # 兼容新旧版本的 docker-compose
     if ! command -v docker-compose &> /dev/null && ! command -v docker compose &> /dev/null; then
         echo "错误：未安装 Docker Compose。请先安装 Docker Compose。"
         echo "你可以使用以下命令安装：sudo apt-get install docker-compose"
@@ -77,12 +78,39 @@ EOF
         echo "HTTP 端口: ${http_port}"
         echo "HTTPS 端口: ${https_port}"
     fi
+    # 返回找到的端口，供后续使用
+    echo "$http_port" > /tmp/posteio_http_port
+    echo "$https_port" > /tmp/posteio_https_port
+}
+
+# 显示安装信息
+show_installed_info() {
+    local http_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:80")' "$COMPOSE_FILE" || echo "未知")
+    local https_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:443")' "$COMPOSE_FILE" || echo "未知")
+
+    echo "--- Poste.io 已安装 ---"
+    echo "容器名称: poste.io"
+    echo "容器状态: $(docker ps --filter "name=poste.io" --format "{{.Status}}")"
+    echo "数据目录: $(pwd)/$DATA_DIR"
+    echo "--------------------------"
+    echo "访问地址："
+    echo "HTTP  : http://<你的服务器IP>:${http_port}"
+    echo "HTTPS : https://<你的服务器IP>:${https_port}"
+    echo "--------------------------"
+    echo "提示: 请将 docker-compose.yml 中的 'mailserver.example.com' 替换为你的域名，并重启容器以生效。"
 }
 
 # 安装 Poste.io
 install_poste() {
     echo "=== 开始安装 Poste.io ==="
     check_dependencies
+
+    # 检查是否已安装
+    if docker ps -a --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io"; then
+        echo "ℹ️  检测到 Poste.io 容器已存在。正在显示当前信息..."
+        show_installed_info
+        exit 0
+    fi
 
     if [ -f "$COMPOSE_FILE" ]; then
         echo "警告：检测到旧的 Docker Compose 文件，正在自动删除..."
@@ -103,8 +131,7 @@ install_poste() {
 
     if [ $? -eq 0 ]; then
         echo "恭喜！Poste.io 安装成功！"
-        echo "请将 $COMPOSE_FILE 中的 'mailserver.example.com' 替换为你的域名。"
-        echo "你可以在浏览器中访问你的服务器IP或域名来完成最后的设置。"
+        show_installed_info
     else
         echo "安装失败，请检查上面的错误信息。"
     fi
