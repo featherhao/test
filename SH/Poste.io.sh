@@ -2,8 +2,13 @@
 set -Eeuo pipefail
 
 # ==============================================================================
-# Poste.io 最终一键安装脚本
-# 该脚本通过用户选择来解决架构兼容性问题。
+# Poste.io 安装/卸载/更新管理脚本 (交互式菜单版)
+# 作者：AI助手
+# ------------------------------------------------------------------------------
+# 脚本使用说明：
+# 脚本启动时会自动检测安装状态。
+# 如果已安装，会直接显示服务信息，然后回到主菜单。
+# 如果未安装，会直接显示菜单并引导用户安装。
 # ==============================================================================
 
 # 定义变量
@@ -16,16 +21,37 @@ trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) a
 
 # 检查依赖项
 check_dependencies() {
-    echo "=== 正在检查依赖项... ==="
     if ! command -v docker &> /dev/null; then
         echo "错误：未安装 Docker。请先安装 Docker。"
         exit 1
     fi
+    # 兼容新旧版本的 docker-compose
     if ! command -v docker-compose &> /dev/null && ! command -v docker compose &> /dev/null; then
         echo "错误：未安装 Docker Compose。请先安装 Docker Compose。"
+        echo "你可以使用以下命令安装：sudo apt-get install docker-compose"
         exit 1
     fi
-    echo "✅ Docker 和 Docker Compose 已安装。"
+    if ! command -v curl &> /dev/null; then
+        echo "警告：未安装 curl，可能无法自动获取公网IP。"
+        echo "你可以使用以下命令安装：sudo apt-get install curl"
+    fi
+    if ! command -v dig &> /dev/null; then
+        echo "警告：未安装 dig，可能无法自动获取公网IP。"
+        echo "你可以使用以下命令安装：sudo apt-get install dnsutils"
+    fi
+}
+
+# 查找可用端口
+find_available_port() {
+    local start_port=80
+    local current_port=$start_port
+    while true; do
+        if ! lsof -i :$current_port &> /dev/null && ! lsof -i :$((current_port + 443 - 80)) &> /dev/null; then
+            echo "$current_port"
+            return
+        fi
+        ((current_port++))
+    done
 }
 
 # 获取公网IP地址
@@ -38,61 +64,39 @@ get_public_ip() {
         ipv6=$(curl -s6 http://icanhazip.com || curl -s6 https://api.ipify.org)
     fi
     
+    if [ -z "$ipv4" ] && command -v dig &> /dev/null; then
+        ipv4=$(dig @resolver4.opendns.com myip.opendns.com +short -4)
+    fi
+    
+    if [ -z "$ipv6" ] && command -v dig &> /dev/null; then
+        ipv6=$(dig @resolver4.opendns.com myip.opendns.com +short -6)
+    fi
+    
     echo "$ipv4" "$ipv6"
 }
 
-# 最终安装逻辑
-install_poste_final() {
-    echo "=== 开始安装 Poste.io ==="
-    
-    # 清理之前的安装
-    echo "ℹ️  正在清理之前的安装文件和容器..."
-    sudo docker-compose down --remove-orphans &> /dev/null || true
-    rm -f "$COMPOSE_FILE"
-    
-    # 让用户选择平台
-    echo "请选择您的 VPS 平台架构："
-    echo "1) AMD64 (Intel 或 AMD 处理器，最常见)"
-    echo "2) ARM64 (如甲骨文云、树莓派等)"
-    read -rp "请输入选项 (1 或 2): " ARCH_CHOICE
-    
-    local PLATFORM_ARCH=""
-    case "$ARCH_CHOICE" in
-        1)
-            PLATFORM_ARCH="linux/amd64"
-            echo "✅ 已选择 AMD64 平台。"
-            ;;
-        2)
-            PLATFORM_ARCH="linux/arm64"
-            echo "✅ 已选择 ARM64 平台。"
-            ;;
-        *)
-            echo "无效选项，已退出。"
-            exit 1
-            ;;
-    esac
-    
-    # 获取域名
+# 生成 Docker Compose 文件
+generate_compose_file() {
     read -rp "请输入您要使用的域名 (例如: mail.example.com): " DOMAIN
     if [ -z "$DOMAIN" ]; then
-        echo "域名不能为空，已退出。"
+        echo "域名不能为空，请重新运行脚本并输入有效的域名。"
         exit 1
     fi
-    
-    echo "ℹ️  已选择反向代理模式，将跳过 80/443 端口映射。"
-    
-    # 生成 Docker Compose 文件并指定平台
-    echo "正在生成 Docker Compose 文件：$COMPOSE_FILE"
+
+    local http_port=$(find_available_port)
+    local https_port=$((http_port + 443 - 80))
+
     cat > "$COMPOSE_FILE" << EOF
 services:
   posteio:
-    image: ${POSTEIO_IMAGE}:latest
+    image: ${POSTEIO_IMAGE}
     container_name: poste.io
     restart: always
     hostname: ${DOMAIN}
-    platform: ${PLATFORM_ARCH}
     ports:
       - "25:25"
+      - "${http_port}:80"
+      - "${https_port}:443"
       - "110:110"
       - "143:143"
       - "465:465"
@@ -103,92 +107,217 @@ services:
       - TZ=Asia/Shanghai
     volumes:
       - "$DATA_DIR:/data"
+    platform: linux/amd64
 EOF
-    
-    # 创建数据目录
-    echo "正在创建数据目录：$DATA_DIR"
-    mkdir -p "$DATA_DIR"
-    
-    # 启动容器
-    echo "正在启动 Poste.io 容器..."
-    if command -v docker-compose &> /dev/null; then
-        sudo docker-compose up -d --pull always
-    else
-        sudo docker compose up -d --pull always
+    echo "已生成 Docker Compose 文件：$COMPOSE_FILE"
+    if [ "$http_port" -ne 80 ]; then
+        echo "注意：由于默认端口被占用，已自动选择备用端口："
+        echo "HTTP 端口: ${http_port}"
+        echo "HTTPS 端口: ${https_port}"
     fi
-    
-    if [ $? -ne 0 ]; then
-        echo "安装失败，请检查上面的错误信息。"
-        exit 1
-    fi
-    
-    echo "恭喜！Poste.io 容器已成功启动！"
-    
-    # 强制配置反向代理
-    echo "=== 开始强制配置反向代理 ==="
-    echo "正在等待容器获取内部IP..."
-    sleep 5 
-    
-    local posteio_ip=$(sudo docker inspect -f '{{.NetworkSettings.IPAddress}}' poste.io 2>/dev/null || true)
-    if [ -z "$posteio_ip" ]; then
-        echo "错误：无法获取 Poste.io 容器内部IP，请手动完成最后一步。"
-        echo "请运行以下命令："
-        echo "POSTEIO_IP=\$(sudo docker inspect -f '{{.NetworkSettings.IPAddress}}' poste.io) && sudo bash -c \"echo 'server { listen 80; server_name ${DOMAIN}; location / { proxy_pass http://\${POSTEIO_IP}:80; proxy_set_header Host \$host; proxy_set_header X-Real-IP \$remote_addr; proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for; proxy_set_header X-Forwarded-Proto \$scheme; client_max_body_size 0; } }' > /etc/openresty/sites-available/${DOMAIN}.conf\" && sudo ln -s /etc/openresty/sites-available/${DOMAIN}.conf /etc/openresty/sites-enabled/${DOMAIN}.conf && sudo openresty -s reload"
-        exit 1
-    fi
-    
-    echo "✅ 获取到 Poste.io 容器内部IP: $posteio_ip"
-    local proxy_service="openresty"
-    local proxy_config_file="/etc/$proxy_service/sites-available/$DOMAIN.conf"
-    local proxy_config_link="/etc/$proxy_service/sites-enabled/$DOMAIN.conf"
-    
-    echo "正在生成反向代理配置文件: $proxy_config_file"
-    cat > "$proxy_config_file" << EOF
-server {
-    listen 80;
-    server_name ${DOMAIN};
-    
-    location / {
-        proxy_pass http://${posteio_ip}:80;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        client_max_body_size 0;
-    }
 }
-EOF
-    
-    echo "正在创建配置文件链接: $proxy_config_link"
-    if [ -L "$proxy_config_link" ]; then
-        sudo rm "$proxy_config_link"
-    fi
-    sudo ln -s "$proxy_config_file" "$proxy_config_link"
-    
-    echo "正在重载 ${proxy_service} 服务..."
-    if sudo openresty -s reload; then
-        echo "🎉 反向代理配置成功！"
-    else
-        echo "警告：无法重载 ${proxy_service} 服务，请手动检查配置文件并重启服务。"
-    fi
 
-    echo ""
-    echo "--- Poste.io 安装成功 ---"
+# 显示安装信息
+show_installed_info() {
+    # 尝试从 docker-compose.yml 文件中获取端口和域名信息
+    local http_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:80")' "$COMPOSE_FILE" || echo "未知")
+    local https_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:443")' "$COMPOSE_FILE" || echo "未知")
+    local domain=$(grep -Po '^\s*hostname:\s*\K(.+)' "$COMPOSE_FILE" || echo "未设置")
+    local container_status=$(docker ps --filter "name=poste.io" --format "{{.Status}}" || echo "未运行")
+    
     local ip_addresses=($(get_public_ip))
     local ipv4=${ip_addresses[0]}
     local ipv6=${ip_addresses[1]}
-    echo "访问地址：https://${DOMAIN}"
+
+    echo "--- Poste.io 运行信息 ---"
+    echo "容器名称: poste.io"
+    echo "容器状态: ${container_status}"
     echo "数据目录: $(pwd)/$DATA_DIR"
-    echo "后续步骤：在你的域名服务商后台，将以下DNS记录指向你的服务器IP："
+    echo "--------------------------"
+    echo "访问地址："
+
+    local chosen_ip=""
+    if [ -n "$ipv4" ] && [ -n "$ipv6" ]; then
+        echo "检测到 IPv4 和 IPv6 地址。请选择您希望使用的主要访问方式："
+        echo "1) 使用 IPv4: $ipv4"
+        echo "2) 使用 IPv6: $ipv6"
+        read -rp "请输入选项 (1/2): " ip_choice
+        if [ "$ip_choice" == "2" ]; then
+            chosen_ip="[$ipv6]" # 加上中括号
+        else
+            chosen_ip="$ipv4"
+        fi
+    elif [ -n "$ipv4" ]; then
+        chosen_ip="$ipv4"
+    elif [ -n "$ipv6" ]; then
+        chosen_ip="[$ipv6]" # 加上中括号
+    fi
+
+    if [ -n "$chosen_ip" ]; then
+        echo "  - 使用IP访问 (请注意防火墙设置)："
+        echo "    HTTP  : http://${chosen_ip}:${http_port}"
+        echo "    HTTPS : https://${chosen_ip}:${https_port}"
+    fi
+
+    if [ "$domain" != "未设置" ]; then
+        echo "  - 使用域名访问 (请确保DNS已解析到你的服务器IP)："
+        echo "    HTTP  : http://${domain}:${http_port}"
+        echo "    HTTPS : https://${domain}:${https_port}"
+    fi
+    
+    echo "--------------------------"
+    echo "后续步骤："
+    echo "1. 访问上述 HTTP 地址来完成管理员账户设置。"
+    echo "2. 在你的域名服务商后台，将以下DNS记录指向你的服务器IP："
     if [ -n "$ipv4" ]; then
-        echo "  - A记录: ${DOMAIN} -> ${ipv4}"
+        echo "   - A记录: $domain -> $ipv4"
     fi
     if [ -n "$ipv6" ]; then
-        echo "  - AAAA记录: ${DOMAIN} -> ${ipv6}"
+        echo "   - AAAA记录: $domain -> $ipv6"
     fi
-    echo "--------------------------"
 }
 
-# 运行安装
-check_dependencies
-install_poste_final
+# 安装 Poste.io
+install_poste() {
+    echo "=== 开始安装 Poste.io ==="
+    check_dependencies
+
+    # 检查是否已安装
+    if docker ps -a --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io"; then
+        echo "ℹ️  检测到 Poste.io 容器已存在。正在显示当前信息..."
+        show_installed_info
+        exit 0
+    fi
+
+    if [ -f "$COMPOSE_FILE" ]; then
+        echo "警告：检测到旧的 Docker Compose 文件，正在自动删除..."
+        rm "$COMPOSE_FILE"
+    fi
+
+    generate_compose_file
+
+    echo "正在创建数据目录：$DATA_DIR"
+    mkdir -p "$DATA_DIR"
+
+    echo "正在启动 Poste.io 容器..."
+    if command -v docker-compose &> /dev/null; then
+        docker-compose up -d --pull always
+    else
+        docker compose up -d --pull always
+    fi
+
+    if [ $? -eq 0 ]; then
+        echo "恭喜！Poste.io 安装成功！"
+        show_installed_info
+    else
+        echo "安装失败，请检查上面的错误信息。"
+    fi
+}
+
+# 卸载 Poste.io
+uninstall_poste() {
+    echo "=== 开始卸载 Poste.io ==="
+    read -p "警告：卸载将永久删除所有容器、镜像和数据。你确定要继续吗？(y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "已取消卸载。"
+        exit 1
+    fi
+
+    echo "正在停止和删除容器..."
+    if command -v docker-compose &> /dev/null; then
+        docker-compose down
+    else
+        docker compose down
+    fi
+
+    echo "正在删除 Docker Compose 文件和数据..."
+    rm -rf "$COMPOSE_FILE" "$DATA_DIR"
+
+    echo "卸载完成。"
+}
+
+# 更新 Poste.io
+update_poste() {
+    echo "=== 开始更新 Poste.io ==="
+    check_dependencies
+    
+    if [ ! -f "$COMPOSE_FILE" ]; then
+        echo "错误：找不到 Docker Compose 文件。请先执行安装。"
+        exit 1
+    fi
+
+    echo "正在拉取最新的 Poste.io 镜像..."
+    if command -v docker-compose &> /dev/null; then
+        docker-compose pull
+    else
+        docker compose pull
+    fi
+
+    echo "正在重新创建和启动容器..."
+    if command -v docker-compose &> /dev/null; then
+        docker-compose up -d
+    else
+        docker compose up -d
+    fi
+
+    if [ $? -eq 0 ]; then
+        echo "Poste.io 已成功更新到最新版本！"
+    else
+        echo "更新失败，请检查上面的错误信息。"
+    fi
+}
+
+# 菜单主逻辑
+show_main_menu() {
+    while true; do
+        echo "=============================="
+        echo "   Poste.io 管理菜单"
+        echo "=============================="
+        echo "1) 安装 Poste.io"
+        echo "2) 卸载 Poste.io"
+        echo "3) 更新 Poste.io"
+        echo "0) 退出"
+        echo "=============================="
+        read -rp "请输入选项: " choice
+        echo
+
+        case "$choice" in
+            1)
+                install_poste
+                break
+                ;;
+            2)
+                uninstall_poste
+                break
+                ;;
+            3)
+                update_poste
+                break
+                ;;
+            0)
+                echo "退出脚本。"
+                exit 0
+                ;;
+            *)
+                echo "无效选项，请重新输入。"
+                sleep 1
+                ;;
+        esac
+    done
+}
+
+# 主入口
+main() {
+    check_dependencies
+    
+    if docker ps --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io" && [ -f "$COMPOSE_FILE" ]; then
+        echo "✅ Poste.io 容器正在运行，显示当前信息..."
+        show_installed_info
+    fi
+    
+    show_main_menu
+}
+
+# 启动主逻辑
+main
