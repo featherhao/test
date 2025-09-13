@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 # ==============================================================================
 # Poste.io 最终一键安装脚本
-# 该脚本专为解决 Oracle 云服务器 ARM 架构兼容性问题而设计。
+# 该脚本通过用户选择来解决架构兼容性问题。
 # ==============================================================================
 
 # 定义变量
@@ -50,6 +50,28 @@ install_poste_final() {
     sudo docker-compose down --remove-orphans &> /dev/null || true
     rm -f "$COMPOSE_FILE"
     
+    # 让用户选择平台
+    echo "请选择您的 VPS 平台架构："
+    echo "1) AMD64 (Intel 或 AMD 处理器，最常见)"
+    echo "2) ARM64 (如甲骨文云、树莓派等)"
+    read -rp "请输入选项 (1 或 2): " ARCH_CHOICE
+    
+    local PLATFORM_ARCH=""
+    case "$ARCH_CHOICE" in
+        1)
+            PLATFORM_ARCH="linux/amd64"
+            echo "✅ 已选择 AMD64 平台。"
+            ;;
+        2)
+            PLATFORM_ARCH="linux/arm64"
+            echo "✅ 已选择 ARM64 平台。"
+            ;;
+        *)
+            echo "无效选项，已退出。"
+            exit 1
+            ;;
+    esac
+    
     # 获取域名
     read -rp "请输入您要使用的域名 (例如: mail.example.com): " DOMAIN
     if [ -z "$DOMAIN" ]; then
@@ -68,8 +90,7 @@ services:
     container_name: poste.io
     restart: always
     hostname: ${DOMAIN}
-    # 强制指定为 linux/amd64 平台以解决 'exec format error'
-    platform: linux/amd64
+    platform: ${PLATFORM_ARCH}
     ports:
       - "25:25"
       - "110:110"
