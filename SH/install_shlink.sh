@@ -4,6 +4,9 @@ set -e
 WORKDIR="/opt/shlink"
 COMPOSE_FILE="$WORKDIR/docker-compose.yml"
 
+# ========================
+# 菜单函数
+# ========================
 menu() {
   clear
   echo "============================"
@@ -27,11 +30,14 @@ menu() {
   esac
 }
 
+# ========================
+# 安装函数
+# ========================
 install_shlink() {
   echo "--- 开始部署 Shlink 短链服务 ---"
   mkdir -p "$WORKDIR"
 
-  # 仅当 docker-compose.yml 存在时才停止旧容器
+  # 停止旧容器（仅当文件存在）
   if [[ -f "$COMPOSE_FILE" ]]; then
     docker compose -f "$COMPOSE_FILE" down -v || true
   fi
@@ -44,7 +50,7 @@ install_shlink() {
   CLIENT_PORT=${CLIENT_PORT:-9050}
   read -p "请输入 GeoLite2 的 License Key (可选，留空则不启用地理统计): " GEO_KEY
 
-  # 生成 docker-compose.yml
+  # 生成 docker-compose.yml，严格使用 mapping
   cat > "$COMPOSE_FILE" <<EOF
 version: "3.8"
 
@@ -67,16 +73,16 @@ services:
     depends_on:
       - shlink_db
     environment:
-      DEFAULT_DOMAIN: "${SHLINK_DOMAIN}"
+      DEFAULT_DOMAIN: "$SHLINK_DOMAIN"
       IS_HTTPS_ENABLED: "true"
-      GEOLITE_LICENSE_KEY: "${GEO_KEY}"
+      GEOLITE_LICENSE_KEY: "$GEO_KEY"
       DB_DRIVER: "postgres"
       DB_USER: "shlink"
       DB_PASSWORD: "shlinkpass"
       DB_HOST: "shlink_db"
       DB_NAME: "shlink"
     ports:
-      - "${API_PORT}:8080"
+      - "$API_PORT:8080"
 
 volumes:
   db_data:
@@ -108,6 +114,9 @@ EOF
   menu
 }
 
+# ========================
+# 卸载函数
+# ========================
 uninstall_shlink() {
   echo "--- 卸载 Shlink 服务 ---"
   if [[ -f "$COMPOSE_FILE" ]]; then
@@ -122,6 +131,9 @@ uninstall_shlink() {
   menu
 }
 
+# ========================
+# 更新函数
+# ========================
 update_shlink() {
   echo "--- 更新 Shlink 服务 ---"
   if [[ -f "$COMPOSE_FILE" ]]; then
@@ -135,6 +147,9 @@ update_shlink() {
   menu
 }
 
+# ========================
+# 查看信息函数
+# ========================
 info_shlink() {
   echo "--- Shlink 服务信息 ---"
   if [[ -f "$COMPOSE_FILE" ]]; then
