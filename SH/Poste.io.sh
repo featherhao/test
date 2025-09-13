@@ -29,7 +29,7 @@ check_dependencies() {
     fi
 }
 
-# 生成 Docker Compose 文件，使用正确的镜像名称
+# 生成 Docker Compose 文件，使用正确的、可公开访问的镜像名称
 generate_compose_file() {
     cat > "$COMPOSE_FILE" << EOF
 services:
