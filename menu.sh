@@ -5,7 +5,7 @@ set -Eeuo pipefail
 trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
 
 # ================== 基础配置 ==================
-SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh"
+SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/menu.sh"
 SCRIPT_PATH="$HOME/menu.sh"
 
 # ================== 彩色与日志 ==================
@@ -63,28 +63,28 @@ else
     COMPOSE="docker compose"
 fi
 
-# ================== 子脚本路径 ==================
+# ================== 子脚本路径 (已更新为 SH 目录) ==================
 WORKDIR_MOONTV="/opt/moontv"
-MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/mootvinstall.sh"
+MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/mootvinstall.sh"
 WORKDIR_RUSTDESK="/opt/rustdesk"
-RUSTDESK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_rustdesk.sh"
+RUSTDESK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_rustdesk.sh"
 WORKDIR_LIBRETV="/opt/libretv"
-LIBRETV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/install_libretv.sh"
-ZJSYNC_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/zjsync.sh"
-NGINX_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/nginx"
-SUB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/subconverter-api.sh"
-SHLINK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/shlink.sh"
-# 新增 ArgoSB 脚本路径
-ARGOSB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/argosb.sh"
+LIBRETV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_libretv.sh"
+ZJSYNC_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/zjsync.sh"
+NGINX_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/nginx"
+SUB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/subconverter-api.sh"
+SHLINK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/shlink.sh"
+ARGOSB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/argosb.sh"
+PANSO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/pansou.sh"
 
-# ================== 调用子脚本 ==================
+# ================== 调用子脚本 (已更新为 SH 目录) ==================
 moon_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${MOONTV_SCRIPT}?t=$(date +%s)"); }
 rustdesk_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
 libretv_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
 singbox_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh); }
 nginx_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${NGINX_SCRIPT}?t=$(date +%s)"); }
 panso_menu() {
-    bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 https://raw.githubusercontent.com/featherhao/test/refs/heads/main/pansou.sh)
+    bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${PANSO_SCRIPT}?t=$(date +%s)")
 }
 zjsync_menu() {
     bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${ZJSYNC_SCRIPT}?t=$(date +%s)")
@@ -95,7 +95,6 @@ subconverter_menu() {
 shlink_menu() {
     bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${SHLINK_SCRIPT}?t=$(date +%s)")
 }
-# 新增 ArgoSB 菜单函数 (调用外部脚本)
 argosb_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${ARGOSB_SCRIPT}?t=$(date +%s)"); }
 
 # ================== 更新菜单脚本 ==================
