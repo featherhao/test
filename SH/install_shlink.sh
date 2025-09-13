@@ -137,7 +137,7 @@ volumes:
 EOF
 
     echo "--- 部署完成！ ---"
-    echo "所有服务已在后台启动。您可以随时使用 '查看服务信息' 选项来获取 IP 和端口。"
+    echo "所有服务已在后台启动。您可以使用 '查看服务信息' 选项来获取 API Key 和其他信息。"
     
     read -p "按任意键返回主菜单..."
 }
@@ -169,6 +169,11 @@ update_shlink() {
     echo "✅ 镜像更新完成！"
 
     echo "正在重建并启动容器..."
+    # 动态获取配置，然后重建
+    local DEFAULT_DOMAIN=$(docker exec ${SHLINK_API_CONTAINER} printenv DEFAULT_DOMAIN 2>/dev/null)
+    local GEOLITE_LICENSE_KEY=$(docker exec ${SHLINK_API_CONTAINER} printenv GEOLITE_LICENSE_KEY 2>/dev/null)
+    local DB_PASSWORD=$(docker exec shlink_db printenv MYSQL_PASSWORD 2>/dev/null)
+    
     DOCKER_COMPOSE -f - up -d --force-recreate << EOF
 version: '3.8'
 services:
@@ -177,11 +182,30 @@ services:
       container_name: ${SHLINK_API_CONTAINER}
       ports:
         - "127.0.0.1:9040:8080"
+      environment:
+        - DEFAULT_DOMAIN=${DEFAULT_DOMAIN}
+        - IS_HTTPS_ENABLED=true
+        - GEOLITE_LICENSE_KEY=${GEOLITE_LICENSE_KEY}
+        - DB_DRIVER=maria
+        - DB_NAME=shlink
+        - DB_USER=shlink
+        - DB_PASSWORD=${DB_PASSWORD}
+        - DB_HOST=db
+        - DB_PORT=3306
+        - TIMEZONE=UTC
+        - REDIRECT_STATUS_CODE=301
       restart: always
     
     db:
       image: mariadb:10.11
       container_name: shlink_db
+      environment:
+        - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+        - MYSQL_DATABASE=shlink
+        - MYSQL_USER=shlink
+        - MYSQL_PASSWORD=${DB_PASSWORD}
+      volumes:
+        - shlink_data:/var/lib/mysql
       restart: always
 
     shlink-web-client:
