@@ -7,8 +7,8 @@ set -Eeuo pipefail
 # ------------------------------------------------------------------------------
 # 脚本使用说明：
 # 脚本启动时会自动检测安装状态。
-# 如果已安装，会直接显示服务信息。
-# 如果未安装，会显示菜单并引导用户安装。
+# 如果已安装，会直接显示服务信息，然后回到主菜单。
+# 如果未安装，会直接显示菜单并引导用户安装。
 # ==============================================================================
 
 # 定义变量
@@ -119,6 +119,7 @@ EOF
 
 # 显示安装信息
 show_installed_info() {
+    # 尝试从 docker-compose.yml 文件中获取端口和域名信息
     local http_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:80")' "$COMPOSE_FILE" || echo "未知")
     local https_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:443")' "$COMPOSE_FILE" || echo "未知")
     local domain=$(grep -Po '^\s*hostname:\s*\K(.+)' "$COMPOSE_FILE" || echo "未设置")
@@ -267,19 +268,8 @@ update_poste() {
     fi
 }
 
-# 新增：主逻辑入口
-main() {
-    check_dependencies
-
-    # 检查是否已安装且容器正在运行
-    if docker ps --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io" && [ -f "$COMPOSE_FILE" ]; then
-        # 如果已安装，则直接显示信息并退出
-        echo "✅ Poste.io 容器正在运行，显示当前信息..."
-        show_installed_info
-        exit 0
-    fi
-    
-    # 如果未安装，显示菜单并引导用户安装
+# 菜单主逻辑
+show_main_menu() {
     while true; do
         echo "=============================="
         echo "   Poste.io 管理菜单"
@@ -315,6 +305,18 @@ main() {
                 ;;
         esac
     done
+}
+
+# 主入口
+main() {
+    check_dependencies
+    
+    if docker ps --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io" && [ -f "$COMPOSE_FILE" ]; then
+        echo "✅ Poste.io 容器正在运行，显示当前信息..."
+        show_installed_info
+    fi
+    
+    show_main_menu
 }
 
 # 启动主逻辑
