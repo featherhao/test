@@ -11,7 +11,7 @@ set -Eeuo pipefail
 # 如果未安装，会直接显示菜单并引导用户安装。
 # ==============================================================================
 
-# 定义变量.
+# 定义变量
 COMPOSE_FILE="docker-compose.yml"
 DATA_DIR="./posteio_data"
 POSTEIO_IMAGE="analogic/poste.io"
@@ -89,16 +89,28 @@ generate_compose_file() {
         exit 1
     fi
 
-    local port_owner_80=$(get_port_owner 80)
+    echo ""
+    echo "请选择您的服务器Web环境类型："
+    echo "1) 您的服务器上正在运行 OpenResty 或 Nginx"
+    echo "2) 您的服务器上没有运行任何Web服务"
+    read -rp "请输入选项: " web_choice
+    echo ""
+
     local web_ports_mapping=""
-    
-    if [[ "$port_owner_80" == "nginx" || "$port_owner_80" == "openresty" ]]; then
-        echo "ℹ️  检测到 OpenResty/Nginx，将自动配置反向代理。"
-        web_ports_mapping=""
-    else
-        echo "✅ 未检测到 Nginx/OpenResty，将直接映射 80/443 端口。"
-        web_ports_mapping='- "80:80"\n      - "443:443"'
-    fi
+    case "$web_choice" in
+        1)
+            echo "ℹ️  将自动配置反向代理。"
+            web_ports_mapping=""
+            ;;
+        2)
+            echo "✅ 将直接映射 80/443 端口。"
+            web_ports_mapping='- "80:80"\n      - "443:443"'
+            ;;
+        *)
+            echo "无效选项，已退出脚本。"
+            exit 1
+            ;;
+    esac
     
     cat > "$COMPOSE_FILE" << EOF
 services:
@@ -137,8 +149,15 @@ configure_reverse_proxy() {
         return 1
     fi
 
-    local proxy_service=$(get_port_owner 80)
-    if [[ "$proxy_service" != "nginx" && "$proxy_service" != "openresty" ]]; then
+    local port_owner_80=$(get_port_owner 80)
+    local proxy_service=""
+    if [[ "$port_owner_80" == "nginx" ]]; then
+        proxy_service="nginx"
+    elif [[ "$port_owner_80" == "openresty" ]]; then
+        proxy_service="openresty"
+    fi
+
+    if [ -z "$proxy_service" ]; then
         echo "ℹ️  未检测到 Nginx/OpenResty，跳过反向代理配置。"
         return 0
     fi
@@ -268,8 +287,10 @@ install_poste() {
 
     if [ $? -eq 0 ]; then
         echo "恭喜！Poste.io 安装成功！"
-        if [ -n "$(get_port_owner 80)" ] || [ -n "$(get_port_owner 443)" ]; then
-            configure_reverse_proxy
+        if [ -f "$COMPOSE_FILE" ]; then
+            if ! grep -q 'ports:.*- "80:80"' "$COMPOSE_FILE"; then
+                configure_reverse_proxy
+            fi
         fi
         show_installed_info
     else
@@ -299,8 +320,14 @@ uninstall_poste() {
 
     # 清理反向代理配置
     local domain=$(grep -Po '^\s*hostname:\s*\K(.+)' "$COMPOSE_FILE" || echo "未设置")
-    local proxy_service=$(get_port_owner 80)
-    if [[ "$proxy_service" == "nginx" || "$proxy_service" == "openresty" ]]; then
+    local port_owner_80=$(get_port_owner 80)
+    local proxy_service=""
+    if [[ "$port_owner_80" == "nginx" ]]; then
+        proxy_service="nginx"
+    elif [[ "$port_owner_80" == "openresty" ]]; then
+        proxy_service="openresty"
+    fi
+    if [ -n "$proxy_service" ]; then
         echo "正在清理反向代理配置..."
         local proxy_config_file="/etc/$proxy_service/sites-available/$domain.conf"
         local proxy_config_link="/etc/$proxy_service/sites-enabled/$domain.conf"
