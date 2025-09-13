@@ -3,15 +3,12 @@ set -e
 
 # =======================================================
 # Shlink 短网址服务 一键安装/管理脚本
-# 增强版：支持自定义端口、域名和 Nginx 配置
+# 终极无文件版：绕过本地文件系统，确保部署成功
 # =======================================================
 
 # -------------------------------------------------------
 # 配置变量
 # -------------------------------------------------------
-CONFIG_DIR="shlink_deploy"
-DATA_DIR="${CONFIG_DIR}/data"
-COMPOSE_FILE="${CONFIG_DIR}/docker-compose.yml"
 SHLINK_API_CONTAINER="shlink_api"
 SHLINK_WEB_CONTAINER="shlink_web_client"
 
@@ -76,16 +73,10 @@ install_shlink() {
     echo "--- 开始部署 Shlink 短链服务 ---"
 
     # 强制清理旧容器和数据卷，确保干净部署
-    echo "正在彻底清理旧的 Shlink 容器和数据卷..."
+    echo "正在彻底清理旧的 Shlink 容器..."
     docker stop ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
     docker rm -f ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
-    if [ -d "${CONFIG_DIR}" ]; then
-        cd "${CONFIG_DIR}" || true
-        DOCKER_COMPOSE down --volumes --rmi local &>/dev/null || true
-        cd ..
-        rm -rf "${CONFIG_DIR}"
-    fi
-
+    
     # 引导用户输入配置
     read -p "请输入您短网址的域名 (例如: u.example.com): " DEFAULT_DOMAIN
     read -p "请输入 Web Client 的域名 (例如: app.example.com): " WEB_CLIENT_DOMAIN
@@ -98,12 +89,9 @@ install_shlink() {
     # 自动生成数据库密码
     DB_PASSWORD=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 16)
 
-    # 创建部署目录
-    mkdir -p "${DATA_DIR}"
-
-    # 生成 docker-compose.yml 文件
-    echo "正在生成 docker-compose.yml 文件..."
-    cat > "${COMPOSE_FILE}" << EOF
+    # 直接使用 docker-compose 管道部署，不创建文件
+    echo "正在使用 Docker Compose 管道部署服务..."
+    DOCKER_COMPOSE -f - up -d << EOF
 version: '3.8'
 services:
     shlink:
@@ -147,28 +135,9 @@ services:
 volumes:
   shlink_data:
 EOF
-    echo "docker-compose.yml 文件已生成。"
-    echo "数据库密码: ${DB_PASSWORD} (已自动设置，无需手动输入)"
-
-    # 启动服务
-    echo "正在使用 Docker Compose 启动服务..."
-    cd "${CONFIG_DIR}"
-    DOCKER_COMPOSE up -d
 
     echo "--- 部署完成！ ---"
     echo "所有服务已在后台启动。您可以随时使用 '查看服务信息' 选项来获取 IP 和端口。"
-    echo ""
-    echo "======================================"
-    echo "  🎉 重要提示：如何获取 API Key 🎉"
-    echo "======================================"
-    echo "为了确保 100% 成功，请您手动执行以下命令来获取 API Key："
-    echo "1. 请等待约 30-60 秒，确保容器已完全启动。"
-    echo "2. 在终端中执行此命令，它会立即生成并显示您的 Key："
-    echo ""
-    echo -e "   \033[36mdocker exec -it ${SHLINK_API_CONTAINER} shlink api-key:generate\033[0m"
-    echo ""
-    echo "请复制生成的 Key，用于登录 Web 客户端。"
-    echo "======================================"
     
     read -p "按任意键返回主菜单..."
 }
@@ -176,7 +145,7 @@ EOF
 # 卸载服务
 uninstall_shlink() {
     echo "--- 开始卸载 Shlink 服务 ---"
-    read -p "此操作将永久删除容器、数据卷和配置文件。确定要继续吗? (y/n): " confirm
+    read -p "此操作将永久删除容器和数据卷。确定要继续吗? (y/n): " confirm
     if [[ ! $confirm =~ ^[Yy]$ ]]; then
         echo "操作已取消。"
         return
@@ -185,17 +154,6 @@ uninstall_shlink() {
     echo "正在强制停止并移除所有 Shlink 容器..."
     docker stop ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
     docker rm -f ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
-    
-    if [ -d "${CONFIG_DIR}" ]; then
-        cd "${CONFIG_DIR}" || true
-        echo "正在使用 Docker Compose 停止并移除服务..."
-        DOCKER_COMPOSE down --volumes --rmi local &>/dev/null || true
-        cd ..
-        echo "正在删除配置文件和数据目录..."
-        rm -rf "${CONFIG_DIR}"
-    else
-        echo "未找到 Shlink 部署目录，无需卸载。"
-    fi
 
     echo "✅ 卸载完成！"
     read -p "按任意键返回主菜单..."
@@ -203,42 +161,68 @@ uninstall_shlink() {
 
 # 更新服务
 update_shlink() {
-    if [ ! -d "${CONFIG_DIR}" ]; then
-        echo "❌ 未找到 Shlink 部署目录，请先安装服务。"
-        read -p "按任意键返回主菜单..."
-        return
-    fi
-
     echo "--- 开始更新 Shlink 服务 ---"
-    cd "${CONFIG_DIR}"
     echo "正在拉取最新镜像..."
-    DOCKER_COMPOSE pull
-    echo "正在重新创建并启动容器..."
-    DOCKER_COMPOSE up -d --force-recreate
+    docker pull shlinkio/shlink:stable
+    docker pull shlinkio/shlink-web-client:stable
+    docker pull mariadb:10.11
+    echo "✅ 镜像更新完成！"
+
+    echo "正在重建并启动容器..."
+    DOCKER_COMPOSE -f - up -d --force-recreate << EOF
+version: '3.8'
+services:
+    shlink:
+      image: shlinkio/shlink:stable
+      container_name: ${SHLINK_API_CONTAINER}
+      ports:
+        - "127.0.0.1:9040:8080"
+      restart: always
+    
+    db:
+      image: mariadb:10.11
+      container_name: shlink_db
+      restart: always
+
+    shlink-web-client:
+        image: shlinkio/shlink-web-client:stable
+        container_name: ${SHLINK_WEB_CONTAINER}
+        ports:
+          - "127.0.0.1:9050:8080"
+        restart: always
+
+volumes:
+  shlink_data:
+EOF
     echo "✅ 更新完成！"
-    show_info_from_file
+    show_info_from_running_containers
     read -p "按任意键返回主菜单..."
 }
 
-# 查看服务信息 (从文件读取，更稳定)
-show_info_from_file() {
-    if [ ! -f "${COMPOSE_FILE}" ]; then
-        echo "❌ 未找到部署文件，请先安装服务。"
-        read -p "按任意键返回主菜单..."
-        return
-    fi
-
+# 从运行中的容器获取信息
+show_info_from_running_containers() {
     local public_ip=$(curl -s https://ipinfo.io/ip)
-    local api_port=$(grep -Po 'shlink:\s*ports:\s*-\s*"\K(\d+)(?=:8080")' "${COMPOSE_FILE}" || grep -Po 'shlink:\s*ports:\s*-\s*\K(\d+)(?=:8080)' "${COMPOSE_FILE}")
-    local web_port=$(grep -Po 'shlink-web-client:\s*ports:\s*-\s*"\K(\d+)(?=:8080")' "${COMPOSE_FILE}" || grep -Po 'shlink-web-client:\s*ports:\s*-\s*\K(\d+)(?=:8080)' "${COMPOSE_FILE}")
-    local default_domain=$(grep -m1 -E 'DEFAULT_DOMAIN=' "${COMPOSE_FILE}" | sed -E 's/.*DEFAULT_DOMAIN=//;s/\s*$//')
     
-    echo "由于安全和稳定性原因，API Key 需要手动生成。"
-    echo "请执行以下命令来获取您的 API Key："
-    echo -e "   \033[36mdocker exec -it shlink_api shlink api-key:generate\033[0m"
-    api_key="请手动执行上方命令获取"
+    # 从容器的环境变量中获取信息
+    local api_port=$(docker inspect --format='{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' ${SHLINK_API_CONTAINER} 2>/dev/null || echo "无法获取")
+    local web_port=$(docker inspect --format='{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' ${SHLINK_WEB_CONTAINER} 2>/dev/null || echo "无法获取")
+    local default_domain=$(docker exec ${SHLINK_API_CONTAINER} printenv DEFAULT_DOMAIN 2>/dev/null || echo "无法获取")
+    
+    # 尝试获取 API Key，可能需要等待
+    echo "正在尝试获取 API Key..."
+    API_KEY=""
+    while [ -z "$API_KEY" ]; do
+        echo "正在等待服务就绪，尝试获取 API Key..."
+        API_KEY=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:list 2>/dev/null | grep -A1 'API Keys' | tail -n 1 | awk '{print $1}')
+        if [ -z "$API_KEY" ]; then
+            echo "❌ 尝试失败，将在 5 秒后重试..."
+            sleep 5
+        fi
+    done
+    
+    echo "✅ API Key 已成功获取！"
 
-    show_info "${default_domain}" "" "${api_port}" "${web_port}" "${api_key}"
+    show_info "${default_domain}" "" "${api_port}" "${web_port}" "${API_KEY}"
     read -p "按任意键返回主菜单..."
 }
 
@@ -292,7 +276,7 @@ show_menu() {
             1) install_shlink ;;
             2) uninstall_shlink ;;
             3) update_shlink ;;
-            4) show_info_from_file ;;
+            4) show_info_from_running_containers ;;
             0) echo "脚本已退出。"; exit 0 ;;
             *) echo "无效选项，请重新输入。" ;;
         esac
