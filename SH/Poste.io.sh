@@ -11,7 +11,7 @@ set -Eeuo pipefail
 # 如果未安装，会直接显示菜单并引导用户安装。
 # ==============================================================================
 
-# 定义变量
+# 定义变量.
 COMPOSE_FILE="docker-compose.yml"
 DATA_DIR="./posteio_data"
 POSTEIO_IMAGE="analogic/poste.io"
