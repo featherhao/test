@@ -132,7 +132,7 @@ services:
         - MYSQL_USER=shlink
         - MYSQL_PASSWORD=${DB_PASSWORD}
       volumes:
-        - ${DATA_DIR}:/var/lib/mysql
+        - shlink_data:/var/lib/mysql
       restart: always
 
     shlink-web-client:
@@ -141,6 +141,9 @@ services:
         ports:
           - "127.0.0.1:${SHLINK_WEB_PORT}:8080"
         restart: always
+
+volumes:
+  shlink_data:
 EOF
     echo "docker-compose.yml 文件已生成。"
     echo "数据库密码: ${DB_PASSWORD} (已自动设置，无需手动输入)"
@@ -214,7 +217,6 @@ show_info_from_file() {
     local api_port=$(grep -Po 'shlink:\s*ports:\s*-\s*"\K(\d+)(?=:8080")' "${COMPOSE_FILE}" || grep -Po 'shlink:\s*ports:\s*-\s*\K(\d+)(?=:8080)' "${COMPOSE_FILE}")
     local web_port=$(grep -Po 'shlink-web-client:\s*ports:\s*-\s*"\K(\d+)(?=:8080")' "${COMPOSE_FILE}" || grep -Po 'shlink-web-client:\s*ports:\s*-\s*\K(\d+)(?=:8080)' "${COMPOSE_FILE}")
     local default_domain=$(grep -m1 -E 'DEFAULT_DOMAIN=' "${COMPOSE_FILE}" | sed -E 's/.*DEFAULT_DOMAIN=//;s/\s*$//')
-    local web_client_domain=$(grep -m1 -E 'SHLINK_WEB_CLIENT_DOMAIN=' "${COMPOSE_FILE}" | sed -E 's/.*SHLINK_WEB_CLIENT_DOMAIN=//;s/\s*$//' || true)
     
     # 动态获取 API Key
     local api_key=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:list | grep -A1 'API Keys' | tail -n 1 | awk '{print $1}')
@@ -222,7 +224,7 @@ show_info_from_file() {
         api_key="请手动生成，容器已停止或 API Key 列表为空"
     fi
 
-    show_info "${default_domain}" "${web_client_domain}" "${api_port}" "${web_port}" "${api_key}"
+    show_info "${default_domain}" "" "${api_port}" "${web_port}" "${api_key}"
 }
 
 # 显示最终信息
@@ -232,6 +234,7 @@ show_info() {
     local SHLINK_API_PORT=$3
     local SHLINK_WEB_PORT=$4
     local API_KEY=$5
+    local PUBLIC_IP=$(curl -s https://ipinfo.io/ip)
 
     echo "------------------------------------"
     echo "  🎉 Shlink 服务信息 🎉"
