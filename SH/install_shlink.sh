@@ -65,22 +65,6 @@ check_container_status() {
     fi
 }
 
-# 增加健康检查，等待容器就绪
-wait_for_container() {
-    local container_name=$1
-    echo "正在等待容器 '${container_name}' 启动并就绪..."
-    for i in {1..20}; do
-        health_status=$(docker inspect --format='{{json .State.Health.Status}}' "$container_name" 2>/dev/null)
-        if [ "$health_status" == '"healthy"' ]; then
-            echo "✅ 容器 '${container_name}' 已就绪。"
-            return 0
-        fi
-        sleep 2
-    done
-    echo "❌ 容器 '${container_name}' 未在预期时间内就绪。"
-    return 1
-}
-
 # -------------------------------------------------------
 # 主要功能函数
 # -------------------------------------------------------
@@ -91,8 +75,10 @@ install_shlink() {
 
     echo "--- 开始部署 Shlink 短链服务 ---"
 
-    # 清理旧部署，防止冲突
-    echo "正在清理可能存在的旧部署..."
+    # 强制清理旧容器和数据卷，确保干净部署
+    echo "正在彻底清理旧的 Shlink 容器和数据卷..."
+    docker stop ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
+    docker rm -f ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
     if [ -d "${CONFIG_DIR}" ]; then
         cd "${CONFIG_DIR}" || true
         DOCKER_COMPOSE down --volumes --rmi local &>/dev/null || true
@@ -137,11 +123,6 @@ services:
         - DB_PORT=3306
         - TIMEZONE=UTC
         - REDIRECT_STATUS_CODE=301
-      healthcheck:
-        test: ["CMD-SHELL", "curl -f http://localhost:8080/rest/health"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
       restart: always
     
     db:
@@ -170,24 +151,28 @@ EOF
     echo "数据库密码: ${DB_PASSWORD} (已自动设置，无需手动输入)"
 
     # 启动服务
-    echo "正在启动服务，这可能需要一些时间..."
+    echo "正在使用 Docker Compose 启动服务..."
     cd "${CONFIG_DIR}"
     DOCKER_COMPOSE up -d
 
-    # 增加健康检查，等待容器就绪
-    if ! wait_for_container "${SHLINK_API_CONTAINER}"; then
-        echo "❌ 无法自动生成 API Key。请手动执行: docker exec -it ${SHLINK_API_CONTAINER} shlink api-key:generate"
-        API_KEY="无法自动生成，请手动获取"
-    else
-        # 生成 API Key
-        echo "正在生成 API Key..."
-        API_KEY=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:generate | grep -o 'API Key:.*' | awk '{print $NF}')
-        if [ -z "$API_KEY" ]; then
-            echo "❌ API Key 生成失败。请手动执行: docker exec -it ${SHLINK_API_CONTAINER} shlink api-key:generate"
-            API_KEY="无法自动生成，请手动获取"
-        else
+    echo "正在等待容器完全启动，这可能需要 30-60 秒..."
+    sleep 30
+    
+    API_KEY=""
+    for i in {1..10}; do
+        echo "第 $i 次尝试获取 API Key..."
+        # 使用 2>&1 重定向错误，让脚本不中断
+        API_KEY=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:generate 2>&1 | grep -o 'API Key:.*' | awk '{print $NF}')
+        if [ -n "$API_KEY" ]; then
             echo "✅ API Key 已成功生成。"
+            break
         fi
+        sleep 5
+    done
+    
+    if [ -z "$API_KEY" ]; then
+        echo "❌ 无法自动生成 API Key。请稍后使用 '查看服务信息' 选项重试。"
+        API_KEY="请稍后重试"
     fi
 
     echo "--- 部署完成！ ---"
@@ -208,10 +193,10 @@ uninstall_shlink() {
     echo "正在强制停止并移除所有 Shlink 容器..."
     docker stop ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
     docker rm -f ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
-
+    
     if [ -d "${CONFIG_DIR}" ]; then
         cd "${CONFIG_DIR}" || true
-        echo "正在停止并移除 Docker 服务..."
+        echo "正在使用 Docker Compose 停止并移除服务..."
         DOCKER_COMPOSE down --volumes --rmi local &>/dev/null || true
         cd ..
         echo "正在删除配置文件和数据目录..."
@@ -256,6 +241,7 @@ show_info_from_file() {
     local web_port=$(grep -Po 'shlink-web-client:\s*ports:\s*-\s*"\K(\d+)(?=:8080")' "${COMPOSE_FILE}" || grep -Po 'shlink-web-client:\s*ports:\s*-\s*\K(\d+)(?=:8080)' "${COMPOSE_FILE}")
     local default_domain=$(grep -m1 -E 'DEFAULT_DOMAIN=' "${COMPOSE_FILE}" | sed -E 's/.*DEFAULT_DOMAIN=//;s/\s*$//')
     
+    echo "正在尝试获取 API Key..."
     # 动态获取 API Key
     local api_key=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:list 2>/dev/null | grep -A1 'API Keys' | tail -n 1 | awk '{print $1}')
     if [ -z "$api_key" ]; then
