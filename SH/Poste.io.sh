@@ -35,7 +35,8 @@ generate_compose_file() {
 version: '3'
 services:
   posteio:
-    image: posteio/poste.io:latest
+    # 修复: 更新为正确的镜像名称
+    image: docker.io/posteio/posteio:latest
     container_name: poste.io
     restart: always
     hostname: mailserver.example.com  # <-- 请修改为你的域名
