@@ -56,13 +56,23 @@ find_available_port() {
 
 # 获取公网IP地址
 get_public_ip() {
-    local ip=""
+    local ipv4=""
+    local ipv6=""
+    
     if command -v curl &> /dev/null; then
-        ip=$(curl -s http://icanhazip.com || curl -s https://api.ipify.org)
-    elif command -v dig &> /dev/null; then
-        ip=$(dig @resolver4.opendns.com myip.opendns.com +short)
+        ipv4=$(curl -s4 http://icanhazip.com || curl -s4 https://api.ipify.org)
+        ipv6=$(curl -s6 http://icanhazip.com || curl -s6 https://api.ipify.org)
     fi
-    echo "$ip"
+    
+    if [ -z "$ipv4" ] && command -v dig &> /dev/null; then
+        ipv4=$(dig @resolver4.opendns.com myip.opendns.com +short -4)
+    fi
+    
+    if [ -z "$ipv6" ] && command -v dig &> /dev/null; then
+        ipv6=$(dig @resolver4.opendns.com myip.opendns.com +short -6)
+    fi
+    
+    echo "$ipv4" "$ipv6"
 }
 
 # 生成 Docker Compose 文件
@@ -109,12 +119,14 @@ EOF
 
 # 显示安装信息
 show_installed_info() {
-    # 尝试从 docker-compose.yml 文件中获取端口和域名信息
     local http_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:80")' "$COMPOSE_FILE" || echo "未知")
     local https_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:443")' "$COMPOSE_FILE" || echo "未知")
     local domain=$(grep -Po '^\s*hostname:\s*\K(.+)' "$COMPOSE_FILE" || echo "未设置")
     local container_status=$(docker ps --filter "name=poste.io" --format "{{.Status}}" || echo "未运行")
-    local public_ip=$(get_public_ip)
+    
+    local ip_addresses=($(get_public_ip))
+    local ipv4=${ip_addresses[0]}
+    local ipv6=${ip_addresses[1]}
 
     echo "--- Poste.io 运行信息 ---"
     echo "容器名称: poste.io"
@@ -122,22 +134,46 @@ show_installed_info() {
     echo "数据目录: $(pwd)/$DATA_DIR"
     echo "--------------------------"
     echo "访问地址："
-    if [ -n "$public_ip" ]; then
-        echo "  - 使用IP访问 (请注意防火墙设置)："
-        echo "    HTTP  : http://${public_ip}:${http_port}"
-        echo "    HTTPS : https://${public_ip}:${https_port}"
+
+    local chosen_ip=""
+    if [ -n "$ipv4" ] && [ -n "$ipv6" ]; then
+        echo "检测到 IPv4 和 IPv6 地址。请选择您希望使用的主要访问方式："
+        echo "1) 使用 IPv4: $ipv4"
+        echo "2) 使用 IPv6: $ipv6"
+        read -rp "请输入选项 (1/2): " ip_choice
+        if [ "$ip_choice" == "2" ]; then
+            chosen_ip="[$ipv6]" # 加上中括号
+        else
+            chosen_ip="$ipv4"
+        fi
+    elif [ -n "$ipv4" ]; then
+        chosen_ip="$ipv4"
+    elif [ -n "$ipv6" ]; then
+        chosen_ip="[$ipv6]" # 加上中括号
     fi
+
+    if [ -n "$chosen_ip" ]; then
+        echo "  - 使用IP访问 (请注意防火墙设置)："
+        echo "    HTTP  : http://${chosen_ip}:${http_port}"
+        echo "    HTTPS : https://${chosen_ip}:${https_port}"
+    fi
+
     if [ "$domain" != "未设置" ]; then
         echo "  - 使用域名访问 (请确保DNS已解析到你的服务器IP)："
         echo "    HTTP  : http://${domain}:${http_port}"
         echo "    HTTPS : https://${domain}:${https_port}"
     fi
+    
     echo "--------------------------"
     echo "后续步骤："
     echo "1. 访问上述 HTTP 地址来完成管理员账户设置。"
     echo "2. 在你的域名服务商后台，将以下DNS记录指向你的服务器IP："
-    echo "   - A记录: $domain"
-    echo "   - MX记录: $domain"
+    if [ -n "$ipv4" ]; then
+        echo "   - A记录: $domain -> $ipv4"
+    fi
+    if [ -n "$ipv6" ]; then
+        echo "   - AAAA记录: $domain -> $ipv6"
+    fi
 }
 
 # 安装 Poste.io
