@@ -29,12 +29,11 @@ check_dependencies() {
     fi
 }
 
-# 生成 Docker Compose 文件
+# 生成 Docker Compose 文件，使用正确的镜像名称
 generate_compose_file() {
     cat > "$COMPOSE_FILE" << EOF
 services:
   posteio:
-    # 修复: 使用完整的官方镜像名称，确保正常拉取
     image: docker.io/posteio/posteio:latest
     container_name: poste.io
     restart: always
@@ -61,10 +60,10 @@ install_poste() {
     check_dependencies
     
     # 新增: 自动检查和修复旧的 docker-compose 文件
-    # 检查是否包含错误的镜像名称，如果包含则删除并重新生成
+    # 使用正确的镜像名称来检查和生成文件
     if [ -f "$COMPOSE_FILE" ]; then
-        if grep -q "posteio/poste.io:latest" "$COMPOSE_FILE"; then
-            echo "警告：检测到旧的 Docker Compose 文件，正在自动修复..."
+        if ! grep -q "docker.io/posteio/posteio:latest" "$COMPOSE_FILE"; then
+            echo "警告：检测到旧的或损坏的 Docker Compose 文件，正在自动修复..."
             rm "$COMPOSE_FILE"
             generate_compose_file
         else
@@ -120,7 +119,6 @@ update_poste() {
     fi
 
     echo "正在拉取最新的 Poste.io 镜像..."
-    # 同样，使用正确的镜像名称来拉取
     docker-compose pull posteio
 
     echo "正在重新创建和启动容器..."
