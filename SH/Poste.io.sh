@@ -90,15 +90,13 @@ generate_compose_file() {
     fi
 
     local port_owner_80=$(get_port_owner 80)
-    local port_owner_443=$(get_port_owner 443)
-
     local web_ports_mapping=""
-    if [[ "$port_owner_80" == "nginx" || "$port_owner_80" == "openresty" || "$port_owner_443" == "nginx" || "$port_owner_443" == "openresty" ]]; then
-        echo "ℹ️  检测到 OpenResty 或 Nginx 正在使用 80/443 端口。"
-        echo "    将跳过端口映射，并自动生成反向代理配置。"
+    
+    if [[ "$port_owner_80" == "nginx" || "$port_owner_80" == "openresty" ]]; then
+        echo "ℹ️  检测到 OpenResty/Nginx，将自动配置反向代理。"
         web_ports_mapping=""
     else
-        echo "✅ 端口 80/443 未被占用，将直接映射。"
+        echo "✅ 未检测到 Nginx/OpenResty，将直接映射 80/443 端口。"
         web_ports_mapping='- "80:80"\n      - "443:443"'
     fi
     
