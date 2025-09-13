@@ -37,6 +37,11 @@ install_shlink() {
   echo "--- 开始部署 Shlink 短链服务 ---"
   mkdir -p "$WORKDIR"
 
+  # 仅当 docker-compose.yml 存在时才停止旧容器
+  if [[ -f "$COMPOSE_FILE" ]]; then
+    docker compose -f "$COMPOSE_FILE" down -v || true
+  fi
+
   read -p "请输入短网址域名 (例如: shlink.qqy.pp.ua): " SHLINK_DOMAIN
   read -p "请输入 Web Client 域名 (例如: shlinkapi.qqypp.ua): " CLIENT_DOMAIN
   read -p "请输入短网址服务 (Shlink API) 的监听端口 [默认: 9040]: " API_PORT
@@ -45,6 +50,7 @@ install_shlink() {
   CLIENT_PORT=${CLIENT_PORT:-9050}
   read -p "请输入 GeoLite2 的 License Key (可选，留空则不启用地理统计): " GEO_KEY
 
+  # 生成 docker-compose.yml
   cat > "$COMPOSE_FILE" <<EOF
 version: "3.8"
 
@@ -78,16 +84,6 @@ services:
     ports:
       - "${API_PORT}:8080"
 
-  shlink_web_client:
-    image: shlinkio/shlink-web-client:stable
-    container_name: shlink_web_client
-    restart: always
-    environment:
-      SHLINK_SERVER_URL: "http://${SHLINK_DOMAIN}:${API_PORT}"
-      SHLINK_SERVER_API_KEY: "will_be_generated"
-    ports:
-      - "${CLIENT_PORT}:80"
-
 volumes:
   db_data:
 EOF
@@ -99,14 +95,13 @@ EOF
   sleep 10
   API_KEY=$(docker exec shlink shlink api-key:generate | grep -oE '[0-9a-f-]{36}' | head -n1)
 
-  echo "--- 配置 Web Client ---"
-  docker stop shlink_web_client
-  docker rm shlink_web_client
+  echo "--- 启动 Web Client ---"
   docker run -d \
     --name shlink_web_client \
     -p ${CLIENT_PORT}:80 \
     -e SHLINK_SERVER_URL="http://${SHLINK_DOMAIN}:${API_PORT}" \
     -e SHLINK_SERVER_API_KEY="$API_KEY" \
+    --restart always \
     shlinkio/shlink-web-client:stable
 
   echo "============================"
@@ -124,8 +119,9 @@ EOF
 # ========================
 uninstall_shlink() {
   echo "--- 卸载 Shlink 服务 ---"
-  if [ -f "$COMPOSE_FILE" ]; then
+  if [[ -f "$COMPOSE_FILE" ]]; then
     docker compose -f "$COMPOSE_FILE" down -v
+    docker rm -f shlink_web_client 2>/dev/null || true
     rm -rf "$WORKDIR"
     echo "Shlink 已卸载"
   else
@@ -140,7 +136,7 @@ uninstall_shlink() {
 # ========================
 update_shlink() {
   echo "--- 更新 Shlink 服务 ---"
-  if [ -f "$COMPOSE_FILE" ]; then
+  if [[ -f "$COMPOSE_FILE" ]]; then
     docker compose -f "$COMPOSE_FILE" pull
     docker compose -f "$COMPOSE_FILE" up -d
     echo "Shlink 已更新"
@@ -156,8 +152,9 @@ update_shlink() {
 # ========================
 info_shlink() {
   echo "--- Shlink 服务信息 ---"
-  if [ -f "$COMPOSE_FILE" ]; then
+  if [[ -f "$COMPOSE_FILE" ]]; then
     docker ps --filter "name=shlink" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+    docker ps --filter "name=shlink_web_client" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
   else
     echo "未找到已安装的 Shlink"
   fi
