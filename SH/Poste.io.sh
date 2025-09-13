@@ -31,6 +31,14 @@ check_dependencies() {
         echo "你可以使用以下命令安装：sudo apt-get install docker-compose"
         exit 1
     fi
+    if ! command -v curl &> /dev/null; then
+        echo "警告：未安装 curl，可能无法自动获取公网IP。"
+        echo "你可以使用以下命令安装：sudo apt-get install curl"
+    fi
+    if ! command -v dig &> /dev/null; then
+        echo "警告：未安装 dig，可能无法自动获取公网IP。"
+        echo "你可以使用以下命令安装：sudo apt-get install dnsutils"
+    fi
 }
 
 # 查找可用端口
@@ -46,8 +54,25 @@ find_available_port() {
     done
 }
 
+# 获取公网IP地址
+get_public_ip() {
+    local ip=""
+    if command -v curl &> /dev/null; then
+        ip=$(curl -s http://icanhazip.com || curl -s https://api.ipify.org)
+    elif command -v dig &> /dev/null; then
+        ip=$(dig @resolver4.opendns.com myip.opendns.com +short)
+    fi
+    echo "$ip"
+}
+
 # 生成 Docker Compose 文件
 generate_compose_file() {
+    read -rp "请输入您要使用的域名 (例如: mail.example.com): " DOMAIN
+    if [ -z "$DOMAIN" ]; then
+        echo "域名不能为空，请重新运行脚本并输入有效的域名。"
+        exit 1
+    fi
+
     local http_port=$(find_available_port)
     local https_port=$((http_port + 443 - 80))
 
@@ -57,7 +82,7 @@ services:
     image: ${POSTEIO_IMAGE}
     container_name: poste.io
     restart: always
-    hostname: mailserver.example.com  # <-- 请修改为你的域名
+    hostname: ${DOMAIN}
     ports:
       - "25:25"
       - "${http_port}:80"
@@ -84,10 +109,12 @@ EOF
 
 # 显示安装信息
 show_installed_info() {
-    # 尝试从 docker-compose.yml 文件中获取端口信息
+    # 尝试从 docker-compose.yml 文件中获取端口和域名信息
     local http_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:80")' "$COMPOSE_FILE" || echo "未知")
     local https_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:443")' "$COMPOSE_FILE" || echo "未知")
+    local domain=$(grep -Po '^\s*hostname:\s*\K(.+)' "$COMPOSE_FILE" || echo "未设置")
     local container_status=$(docker ps --filter "name=poste.io" --format "{{.Status}}" || echo "未运行")
+    local public_ip=$(get_public_ip)
 
     echo "--- Poste.io 运行信息 ---"
     echo "容器名称: poste.io"
@@ -95,16 +122,35 @@ show_installed_info() {
     echo "数据目录: $(pwd)/$DATA_DIR"
     echo "--------------------------"
     echo "访问地址："
-    echo "HTTP  : http://<你的服务器IP>:${http_port}"
-    echo "HTTPS : https://<你的服务器IP>:${https_port}"
+    if [ -n "$public_ip" ]; then
+        echo "  - 使用IP访问 (请注意防火墙设置)："
+        echo "    HTTP  : http://${public_ip}:${http_port}"
+        echo "    HTTPS : https://${public_ip}:${https_port}"
+    fi
+    if [ "$domain" != "未设置" ]; then
+        echo "  - 使用域名访问 (请确保DNS已解析到你的服务器IP)："
+        echo "    HTTP  : http://${domain}:${http_port}"
+        echo "    HTTPS : https://${domain}:${https_port}"
+    fi
     echo "--------------------------"
-    echo "提示: 请将 docker-compose.yml 中的 'mailserver.example.com' 替换为你的域名，并重启容器以生效。"
+    echo "后续步骤："
+    echo "1. 访问上述 HTTP 地址来完成管理员账户设置。"
+    echo "2. 在你的域名服务商后台，将以下DNS记录指向你的服务器IP："
+    echo "   - A记录: $domain"
+    echo "   - MX记录: $domain"
 }
 
 # 安装 Poste.io
 install_poste() {
     echo "=== 开始安装 Poste.io ==="
     check_dependencies
+
+    # 检查是否已安装
+    if docker ps -a --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io"; then
+        echo "ℹ️  检测到 Poste.io 容器已存在。正在显示当前信息..."
+        show_installed_info
+        exit 0
+    fi
 
     if [ -f "$COMPOSE_FILE" ]; then
         echo "警告：检测到旧的 Docker Compose 文件，正在自动删除..."
@@ -187,8 +233,10 @@ update_poste() {
 
 # 新增：主逻辑入口
 main() {
+    check_dependencies
+
     # 检查是否已安装且容器正在运行
-    if docker ps --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io"; then
+    if docker ps --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io" && [ -f "$COMPOSE_FILE" ]; then
         # 如果已安装，则直接显示信息并退出
         echo "✅ Poste.io 容器正在运行，显示当前信息..."
         show_installed_info
