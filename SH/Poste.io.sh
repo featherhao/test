@@ -12,8 +12,8 @@ set -Eeuo pipefail
 # 定义变量
 COMPOSE_FILE="docker-compose.yml"
 DATA_DIR="./posteio_data"
-# 新增：定义正确的镜像名称，方便统一修改
-POSTEIO_IMAGE="docker.io/posteio/posteio:latest"
+# 使用您提供的稳定镜像
+POSTEIO_IMAGE="analogic/poste.io"
 
 # 统一失败处理
 trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
@@ -24,14 +24,15 @@ check_dependencies() {
         echo "错误：未安装 Docker。请先安装 Docker。"
         exit 1
     fi
-    if ! command -v docker-compose &> /dev/null; then
+    # 兼容新旧版本的 docker-compose
+    if ! command -v docker-compose &> /dev/null && ! command -v docker compose &> /dev/null; then
         echo "错误：未安装 Docker Compose。请先安装 Docker Compose。"
         echo "你可以使用以下命令安装：sudo apt-get install docker-compose"
         exit 1
     fi
 }
 
-# 生成 Docker Compose 文件，使用正确的、可公开访问的镜像名称
+# 生成 Docker Compose 文件
 generate_compose_file() {
     cat > "$COMPOSE_FILE" << EOF
 services:
@@ -50,6 +51,8 @@ services:
       - "587:587"
       - "993:993"
       - "995:995"
+    environment:
+      - TZ=Asia/Shanghai
     volumes:
       - "$DATA_DIR:/data"
 EOF
@@ -73,8 +76,11 @@ install_poste() {
     mkdir -p "$DATA_DIR"
 
     echo "正在启动 Poste.io 容器..."
-    # 使用 --pull always 确保强制拉取最新镜像
-    docker-compose up -d --pull always
+    if command -v docker-compose &> /dev/null; then
+        docker-compose up -d --pull always
+    else
+        docker compose up -d --pull always
+    fi
 
     if [ $? -eq 0 ]; then
         echo "恭喜！Poste.io 安装成功！"
@@ -97,7 +103,11 @@ uninstall_poste() {
     fi
 
     echo "正在停止和删除容器..."
-    docker-compose down
+    if command -v docker-compose &> /dev/null; then
+        docker-compose down
+    else
+        docker compose down
+    fi
 
     echo "正在删除 Docker Compose 文件和数据..."
     rm -rf "$COMPOSE_FILE" "$DATA_DIR"
@@ -116,11 +126,18 @@ update_poste() {
     fi
 
     echo "正在拉取最新的 Poste.io 镜像..."
-    # 修复：使用完整的镜像名进行拉取
-    docker-compose pull ${POSTEIO_IMAGE}
+    if command -v docker-compose &> /dev/null; then
+        docker-compose pull
+    else
+        docker compose pull
+    fi
 
     echo "正在重新创建和启动容器..."
-    docker-compose up -d
+    if command -v docker-compose &> /dev/null; then
+        docker-compose up -d
+    else
+        docker compose up -d
+    fi
 
     if [ $? -eq 0 ]; then
         echo "Poste.io 已成功更新到最新版本！"
