@@ -1,0 +1,140 @@
+#!/bin/bash
+
+# ==============================================================================
+# Poste.io 安装/卸载/更新管理脚本
+# 作者：AI助手
+# ------------------------------------------------------------------------------
+# 脚本使用说明：
+# ./poste_manager.sh install  - 安装 Poste.io
+# ./poste_manager.sh uninstall - 卸载 Poste.io (会删除容器、镜像和数据卷)
+# ./poste_manager.sh update   - 更新 Poste.io 到最新版本
+# ==============================================================================
+
+# 定义变量
+COMPOSE_FILE="docker-compose.yml"
+DATA_DIR="./posteio_data"
+
+# 检查依赖项
+check_dependencies() {
+    if ! command -v docker &> /dev/null; then
+        echo "错误：未安装 Docker。请先安装 Docker。"
+        exit 1
+    fi
+    if ! command -v docker-compose &> /dev/null; then
+        echo "错误：未安装 Docker Compose。请先安装 Docker Compose。"
+        echo "你可以使用以下命令安装：sudo apt-get install docker-compose"
+        exit 1
+    fi
+}
+
+# 生成 Docker Compose 文件
+generate_compose_file() {
+    cat > "$COMPOSE_FILE" << EOF
+version: '3'
+services:
+  posteio:
+    image: posteio/poste.io:latest
+    container_name: poste.io
+    restart: always
+    hostname: mailserver.example.com  # <-- 请修改为你的域名
+    ports:
+      - "25:25"
+      - "80:80"
+      - "110:110"
+      - "143:143"
+      - "443:443"
+      - "465:465"
+      - "587:587"
+      - "993:993"
+      - "995:995"
+    volumes:
+      - "$DATA_DIR:/data"
+EOF
+    echo "已生成 Docker Compose 文件：$COMPOSE_FILE"
+}
+
+# 安装 Poste.io
+install_poste() {
+    echo "=== 开始安装 Poste.io ==="
+    check_dependencies
+    
+    if [ -f "$COMPOSE_FILE" ]; then
+        echo "警告：已存在 Docker Compose 文件，跳过生成。"
+    else
+        generate_compose_file
+    fi
+
+    echo "正在创建数据目录：$DATA_DIR"
+    mkdir -p "$DATA_DIR"
+
+    echo "正在启动 Poste.io 容器..."
+    docker-compose up -d
+
+    if [ $? -eq 0 ]; then
+        echo "恭喜！Poste.io 安装成功！"
+        echo "请将 $COMPOSE_FILE 中的 'mailserver.example.com' 替换为你的域名。"
+        echo "然后重新运行：docker-compose up -d"
+        echo "你可以在浏览器中访问你的服务器IP或域名来完成最后的设置。"
+    else
+        echo "安装失败，请检查上面的错误信息。"
+    fi
+}
+
+# 卸载 Poste.io
+uninstall_poste() {
+    echo "=== 开始卸载 Poste.io ==="
+    read -p "警告：卸载将永久删除所有容器、镜像和数据。你确定要继续吗？(y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "已取消卸载。"
+        exit 1
+    fi
+
+    echo "正在停止和删除容器..."
+    docker-compose down
+
+    echo "正在删除 Docker Compose 文件和数据..."
+    rm -rf "$COMPOSE_FILE" "$DATA_DIR"
+
+    echo "卸载完成。"
+}
+
+# 更新 Poste.io
+update_poste() {
+    echo "=== 开始更新 Poste.io ==="
+    check_dependencies
+    
+    if [ ! -f "$COMPOSE_FILE" ]; then
+        echo "错误：找不到 Docker Compose 文件。请先执行安装。"
+        exit 1
+    fi
+
+    echo "正在拉取最新的 Poste.io 镜像..."
+    docker-compose pull posteio
+
+    echo "正在重新创建和启动容器..."
+    docker-compose up -d
+
+    if [ $? -eq 0 ]; then
+        echo "Poste.io 已成功更新到最新版本！"
+    else
+        echo "更新失败，请检查上面的错误信息。"
+    fi
+}
+
+# 脚本主逻辑
+case "$1" in
+    install)
+        install_poste
+        ;;
+    uninstall)
+        uninstall_poste
+        ;;
+    update)
+        update_poste
+        ;;
+    *)
+        echo "使用方法: $0 {install|uninstall|update}"
+        exit 1
+        ;;
+esac
