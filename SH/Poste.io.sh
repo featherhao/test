@@ -12,7 +12,6 @@ set -Eeuo pipefail
 # 定义变量
 COMPOSE_FILE="docker-compose.yml"
 DATA_DIR="./posteio_data"
-# 使用您提供的稳定镜像
 POSTEIO_IMAGE="analogic/poste.io"
 
 # 统一失败处理
@@ -24,7 +23,6 @@ check_dependencies() {
         echo "错误：未安装 Docker。请先安装 Docker。"
         exit 1
     fi
-    # 兼容新旧版本的 docker-compose
     if ! command -v docker-compose &> /dev/null && ! command -v docker compose &> /dev/null; then
         echo "错误：未安装 Docker Compose。请先安装 Docker Compose。"
         echo "你可以使用以下命令安装：sudo apt-get install docker-compose"
@@ -32,8 +30,24 @@ check_dependencies() {
     fi
 }
 
+# 查找可用端口
+find_available_port() {
+    local start_port=80
+    local current_port=$start_port
+    while true; do
+        if ! lsof -i :$current_port &> /dev/null && ! lsof -i :$((current_port + 443 - 80)) &> /dev/null; then
+            echo "$current_port"
+            return
+        fi
+        ((current_port++))
+    done
+}
+
 # 生成 Docker Compose 文件
 generate_compose_file() {
+    local http_port=$(find_available_port)
+    local https_port=$((http_port + 443 - 80))
+
     cat > "$COMPOSE_FILE" << EOF
 services:
   posteio:
@@ -43,10 +57,10 @@ services:
     hostname: mailserver.example.com  # <-- 请修改为你的域名
     ports:
       - "25:25"
-      - "80:80"
+      - "${http_port}:80"
+      - "${https_port}:443"
       - "110:110"
       - "143:143"
-      - "443:443"
       - "465:465"
       - "587:587"
       - "993:993"
@@ -55,8 +69,14 @@ services:
       - TZ=Asia/Shanghai
     volumes:
       - "$DATA_DIR:/data"
+    platform: linux/amd64
 EOF
     echo "已生成 Docker Compose 文件：$COMPOSE_FILE"
+    if [ "$http_port" -ne 80 ]; then
+        echo "注意：由于默认端口被占用，已自动选择备用端口："
+        echo "HTTP 端口: ${http_port}"
+        echo "HTTPS 端口: ${https_port}"
+    fi
 }
 
 # 安装 Poste.io
@@ -64,7 +84,6 @@ install_poste() {
     echo "=== 开始安装 Poste.io ==="
     check_dependencies
 
-    # 强制删除旧的配置文件，避免任何缓存或旧文件问题
     if [ -f "$COMPOSE_FILE" ]; then
         echo "警告：检测到旧的 Docker Compose 文件，正在自动删除..."
         rm "$COMPOSE_FILE"
@@ -85,7 +104,6 @@ install_poste() {
     if [ $? -eq 0 ]; then
         echo "恭喜！Poste.io 安装成功！"
         echo "请将 $COMPOSE_FILE 中的 'mailserver.example.com' 替换为你的域名。"
-        echo "然后重新运行：docker-compose up -d"
         echo "你可以在浏览器中访问你的服务器IP或域名来完成最后的设置。"
     else
         echo "安装失败，请检查上面的错误信息。"
