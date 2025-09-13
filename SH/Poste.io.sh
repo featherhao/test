@@ -6,7 +6,9 @@ set -Eeuo pipefail
 # 作者：AI助手
 # ------------------------------------------------------------------------------
 # 脚本使用说明：
-# 直接运行脚本即可，通过菜单进行安装、卸载或更新操作。
+# 脚本启动时会自动检测安装状态。
+# 如果已安装，会直接显示服务信息。
+# 如果未安装，会显示菜单并引导用户安装。
 # ==============================================================================
 
 # 定义变量
@@ -78,19 +80,18 @@ EOF
         echo "HTTP 端口: ${http_port}"
         echo "HTTPS 端口: ${https_port}"
     fi
-    # 返回找到的端口，供后续使用
-    echo "$http_port" > /tmp/posteio_http_port
-    echo "$https_port" > /tmp/posteio_https_port
 }
 
 # 显示安装信息
 show_installed_info() {
+    # 尝试从 docker-compose.yml 文件中获取端口信息
     local http_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:80")' "$COMPOSE_FILE" || echo "未知")
     local https_port=$(grep -Po '^\s*-\s*"\K(\d+)(?=:443")' "$COMPOSE_FILE" || echo "未知")
+    local container_status=$(docker ps --filter "name=poste.io" --format "{{.Status}}" || echo "未运行")
 
-    echo "--- Poste.io 已安装 ---"
+    echo "--- Poste.io 运行信息 ---"
     echo "容器名称: poste.io"
-    echo "容器状态: $(docker ps --filter "name=poste.io" --format "{{.Status}}")"
+    echo "容器状态: ${container_status}"
     echo "数据目录: $(pwd)/$DATA_DIR"
     echo "--------------------------"
     echo "访问地址："
@@ -104,13 +105,6 @@ show_installed_info() {
 install_poste() {
     echo "=== 开始安装 Poste.io ==="
     check_dependencies
-
-    # 检查是否已安装
-    if docker ps -a --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io"; then
-        echo "ℹ️  检测到 Poste.io 容器已存在。正在显示当前信息..."
-        show_installed_info
-        exit 0
-    fi
 
     if [ -f "$COMPOSE_FILE" ]; then
         echo "警告：检测到旧的 Docker Compose 文件，正在自动删除..."
@@ -191,39 +185,53 @@ update_poste() {
     fi
 }
 
-# 菜单主逻辑
-while true; do
-    echo "=============================="
-    echo "   Poste.io 管理菜单"
-    echo "=============================="
-    echo "1) 安装 Poste.io"
-    echo "2) 卸载 Poste.io"
-    echo "3) 更新 Poste.io"
-    echo "0) 退出"
-    echo "=============================="
-    read -rp "请输入选项: " choice
-    echo
+# 新增：主逻辑入口
+main() {
+    # 检查是否已安装且容器正在运行
+    if docker ps --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io"; then
+        # 如果已安装，则直接显示信息并退出
+        echo "✅ Poste.io 容器正在运行，显示当前信息..."
+        show_installed_info
+        exit 0
+    fi
+    
+    # 如果未安装，显示菜单并引导用户安装
+    while true; do
+        echo "=============================="
+        echo "   Poste.io 管理菜单"
+        echo "=============================="
+        echo "1) 安装 Poste.io"
+        echo "2) 卸载 Poste.io"
+        echo "3) 更新 Poste.io"
+        echo "0) 退出"
+        echo "=============================="
+        read -rp "请输入选项: " choice
+        echo
 
-    case "$choice" in
-        1)
-            install_poste
-            break
-            ;;
-        2)
-            uninstall_poste
-            break
-            ;;
-        3)
-            update_poste
-            break
-            ;;
-        0)
-            echo "退出脚本。"
-            exit 0
-            ;;
-        *)
-            echo "无效选项，请重新输入。"
-            sleep 1
-            ;;
-    esac
-done
+        case "$choice" in
+            1)
+                install_poste
+                break
+                ;;
+            2)
+                uninstall_poste
+                break
+                ;;
+            3)
+                update_poste
+                break
+                ;;
+            0)
+                echo "退出脚本。"
+                exit 0
+                ;;
+            *)
+                echo "无效选项，请重新输入。"
+                sleep 1
+                ;;
+        esac
+    done
+}
+
+# 启动主逻辑
+main
