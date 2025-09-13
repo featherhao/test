@@ -184,8 +184,8 @@ while true; do
         3) libretv_menu ;;
         4) singbox_menu ;;
         5) argosb_menu ;;
-        # 修复：使用 curl -sL kejilion.sh 方式调用
-        6) bash <(curl -sL kejilion.sh) ;;
+        # 修复：使用官方推荐的完整 URL
+        6) bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh) ;;
         7) zjsync_menu ;;
         8) panso_menu ;;
         9) nginx_menu ;;
