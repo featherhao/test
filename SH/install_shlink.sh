@@ -4,9 +4,6 @@ set -e
 WORKDIR="/opt/shlink"
 COMPOSE_FILE="$WORKDIR/docker-compose.yml"
 
-# ========================
-# 菜单函数
-# ========================
 menu() {
   clear
   echo "============================"
@@ -30,9 +27,6 @@ menu() {
   esac
 }
 
-# ========================
-# 安装函数
-# ========================
 install_shlink() {
   echo "--- 开始部署 Shlink 短链服务 ---"
   mkdir -p "$WORKDIR"
@@ -60,8 +54,8 @@ services:
     container_name: shlink_db
     restart: always
     environment:
-      POSTGRES_PASSWORD: shlinkpass
       POSTGRES_USER: shlink
+      POSTGRES_PASSWORD: shlinkpass
       POSTGRES_DB: shlink
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -73,14 +67,14 @@ services:
     depends_on:
       - shlink_db
     environment:
-      DEFAULT_DOMAIN: ${SHLINK_DOMAIN}
-      IS_HTTPS_ENABLED: true
-      GEOLITE_LICENSE_KEY: ${GEO_KEY}
-      DB_DRIVER: postgres
-      DB_USER: shlink
-      DB_PASSWORD: shlinkpass
-      DB_HOST: shlink_db
-      DB_NAME: shlink
+      DEFAULT_DOMAIN: "${SHLINK_DOMAIN}"
+      IS_HTTPS_ENABLED: "true"
+      GEOLITE_LICENSE_KEY: "${GEO_KEY}"
+      DB_DRIVER: "postgres"
+      DB_USER: "shlink"
+      DB_PASSWORD: "shlinkpass"
+      DB_HOST: "shlink_db"
+      DB_NAME: "shlink"
     ports:
       - "${API_PORT}:8080"
 
@@ -91,7 +85,7 @@ EOF
   echo "--- 启动 Docker Compose ---"
   docker compose -f "$COMPOSE_FILE" up -d
 
-  echo "--- 生成 API Key ---"
+  echo "--- 等待 Shlink 服务就绪并生成 API Key ---"
   sleep 10
   API_KEY=$(docker exec shlink shlink api-key:generate | grep -oE '[0-9a-f-]{36}' | head -n1)
 
@@ -114,9 +108,6 @@ EOF
   menu
 }
 
-# ========================
-# 卸载函数
-# ========================
 uninstall_shlink() {
   echo "--- 卸载 Shlink 服务 ---"
   if [[ -f "$COMPOSE_FILE" ]]; then
@@ -131,9 +122,6 @@ uninstall_shlink() {
   menu
 }
 
-# ========================
-# 更新函数
-# ========================
 update_shlink() {
   echo "--- 更新 Shlink 服务 ---"
   if [[ -f "$COMPOSE_FILE" ]]; then
@@ -147,9 +135,6 @@ update_shlink() {
   menu
 }
 
-# ========================
-# 查看信息函数
-# ========================
 info_shlink() {
   echo "--- Shlink 服务信息 ---"
   if [[ -f "$COMPOSE_FILE" ]]; then
@@ -162,7 +147,4 @@ info_shlink() {
   menu
 }
 
-# ========================
-# 启动菜单
-# ========================
 menu
