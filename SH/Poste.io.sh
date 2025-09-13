@@ -2,13 +2,11 @@
 set -Eeuo pipefail
 
 # ==============================================================================
-# Poste.io 安装/卸载/更新管理脚本 (交互式菜单版)
+# Poste.io 安装/卸载/更新管理脚本 (一键反向代理版)
 # 作者：AI助手
 # ------------------------------------------------------------------------------
 # 脚本使用说明：
-# 脚本启动时会自动检测安装状态。
-# 如果已安装，会直接显示服务信息，然后回到主菜单。
-# 如果未安装，会直接显示菜单并引导用户安装。
+# 脚本将自动为 OpenResty/Nginx 用户配置反向代理，无需手动操作。
 # ==============================================================================
 
 # 定义变量
@@ -81,7 +79,7 @@ get_public_ip() {
     echo "$ipv4" "$ipv6"
 }
 
-# 生成 Docker Compose 文件
+# 生成 Docker Compose 文件 (不映射 web 端口)
 generate_compose_file() {
     read -rp "请输入您要使用的域名 (例如: mail.example.com): " DOMAIN
     if [ -z "$DOMAIN" ]; then
@@ -89,28 +87,7 @@ generate_compose_file() {
         exit 1
     fi
 
-    echo ""
-    echo "请选择您的服务器Web环境类型："
-    echo "1) 您的服务器上正在运行 OpenResty 或 Nginx"
-    echo "2) 您的服务器上没有运行任何Web服务"
-    read -rp "请输入选项: " web_choice
-    echo ""
-
-    local web_ports_mapping=""
-    case "$web_choice" in
-        1)
-            echo "ℹ️  将自动配置反向代理。"
-            web_ports_mapping=""
-            ;;
-        2)
-            echo "✅ 将直接映射 80/443 端口。"
-            web_ports_mapping='- "80:80"\n      - "443:443"'
-            ;;
-        *)
-            echo "无效选项，已退出脚本。"
-            exit 1
-            ;;
-    esac
+    echo "ℹ️  已选择反向代理模式，将跳过 80/443 端口映射。"
     
     cat > "$COMPOSE_FILE" << EOF
 services:
@@ -133,36 +110,19 @@ services:
       - "$DATA_DIR:/data"
     platform: linux/amd64
 EOF
-    # 在 ports 块中插入 web 端口映射
-    if [ -n "$web_ports_mapping" ]; then
-        sed -i "/- \"25:25\"/a \ \ \ \ \ \ $web_ports_mapping" "$COMPOSE_FILE"
-    fi
 
     echo "已生成 Docker Compose 文件：$COMPOSE_FILE"
 }
 
-# 配置 Nginx/OpenResty 反向代理
-configure_reverse_proxy() {
+# 强制配置 Nginx/OpenResty 反向代理
+force_configure_reverse_proxy() {
     local domain=$(grep -Po '^\s*hostname:\s*\K(.+)' "$COMPOSE_FILE" || echo "未设置")
     if [ "$domain" == "未设置" ]; then
         echo "警告：未设置域名，无法配置反向代理。"
         return 1
     fi
 
-    local port_owner_80=$(get_port_owner 80)
-    local proxy_service=""
-    if [[ "$port_owner_80" == "nginx" ]]; then
-        proxy_service="nginx"
-    elif [[ "$port_owner_80" == "openresty" ]]; then
-        proxy_service="openresty"
-    fi
-
-    if [ -z "$proxy_service" ]; then
-        echo "ℹ️  未检测到 Nginx/OpenResty，跳过反向代理配置。"
-        return 0
-    fi
-    
-    echo "=== 开始自动配置反向代理 ==="
+    echo "=== 开始强制配置反向代理 ==="
     echo "正在等待 Poste.io 容器启动..."
     sleep 5 # 等待容器获取IP
     
@@ -173,6 +133,21 @@ configure_reverse_proxy() {
     fi
 
     echo "✅ 获取到 Poste.io 容器内部IP: $posteio_ip"
+    
+    local proxy_service=""
+    if [ -n "$(get_port_owner 80)" ]; then
+        if [[ "$(get_port_owner 80)" == "nginx" ]]; then
+            proxy_service="nginx"
+        elif [[ "$(get_port_owner 80)" == "openresty" ]]; then
+            proxy_service="openresty"
+        fi
+    fi
+    
+    if [ -z "$proxy_service" ]; then
+        echo "❌ 警告：未检测到 Nginx 或 OpenResty，无法自动配置反向代理。请手动完成。"
+        return 1
+    fi
+    
     local proxy_config_file="/etc/$proxy_service/sites-available/$domain.conf"
     local proxy_config_link="/etc/$proxy_service/sites-enabled/$domain.conf"
 
@@ -287,11 +262,7 @@ install_poste() {
 
     if [ $? -eq 0 ]; then
         echo "恭喜！Poste.io 安装成功！"
-        if [ -f "$COMPOSE_FILE" ]; then
-            if ! grep -q 'ports:.*- "80:80"' "$COMPOSE_FILE"; then
-                configure_reverse_proxy
-            fi
-        fi
+        force_configure_reverse_proxy
         show_installed_info
     else
         echo "安装失败，请检查上面的错误信息。"
