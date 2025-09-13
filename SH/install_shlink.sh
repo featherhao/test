@@ -205,6 +205,10 @@ uninstall_shlink() {
         return
     fi
 
+    echo "正在强制停止并移除所有 Shlink 容器..."
+    docker stop ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
+    docker rm -f ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
+
     if [ -d "${CONFIG_DIR}" ]; then
         cd "${CONFIG_DIR}" || true
         echo "正在停止并移除 Docker 服务..."
