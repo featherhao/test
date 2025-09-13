@@ -5,7 +5,7 @@ set -Eeuo pipefail
 trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
 
 # ================== 基础配置 ==================
-SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/menu.sh"
+SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh"
 SCRIPT_PATH="$HOME/menu.sh"
 
 # ================== 彩色与日志 ==================
