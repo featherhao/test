@@ -40,7 +40,7 @@ check_prerequisites() {
         exit 1
     fi
 
-    if ! command -v docker-compose >/dev/null 2>&1; then
+    if ! command -v docker-compose >/dev/null 2>&1 && ! docker compose version >/dev/null 2>&1; then
         echo "❌ 未检测到 Docker Compose，正在为您安装..."
         sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
@@ -95,43 +95,43 @@ install_shlink() {
     DOCKER_COMPOSE -f - up -d << EOF
 version: '3.8'
 services:
-    shlink:
-      image: shlinkio/shlink:stable
-      container_name: ${SHLINK_API_CONTAINER}
-      ports:
-        - "127.0.0.1:${SHLINK_API_PORT}:8080"
-      environment:
-        - DEFAULT_DOMAIN=${DEFAULT_DOMAIN}
-        - IS_HTTPS_ENABLED=true
-        - GEOLITE_LICENSE_KEY=${GEOLITE_LICENSE_KEY}
-        - DB_DRIVER=maria
-        - DB_NAME=shlink
-        - DB_USER=shlink
-        - DB_PASSWORD=${DB_PASSWORD}
-        - DB_HOST=db
-        - DB_PORT=3306
-        - TIMEZONE=UTC
-        - REDIRECT_STATUS_CODE=301
-      restart: always
-    
-    db:
-      image: mariadb:10.11
-      container_name: ${SHLINK_DB_CONTAINER}
-      environment:
-        - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
-        - MYSQL_DATABASE=shlink
-        - MYSQL_USER=shlink
-        - MYSQL_PASSWORD=${DB_PASSWORD}
-      volumes:
-        - shlink_data:/var/lib/mysql
-      restart: always
+  shlink:
+    image: shlinkio/shlink:stable
+    container_name: ${SHLINK_API_CONTAINER}
+    ports:
+      - "127.0.0.1:${SHLINK_API_PORT}:8080"
+    environment:
+      - DEFAULT_DOMAIN=${DEFAULT_DOMAIN}
+      - IS_HTTPS_ENABLED=true
+      - GEOLITE_LICENSE_KEY=${GEOLITE_LICENSE_KEY}
+      - DB_DRIVER=maria
+      - DB_NAME=shlink
+      - DB_USER=shlink
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db
+      - DB_PORT=3306
+      - TIMEZONE=UTC
+      - REDIRECT_STATUS_CODE=301
+    restart: always
+  
+  db:
+    image: mariadb:10.11
+    container_name: ${SHLINK_DB_CONTAINER}
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=shlink
+      - MYSQL_USER=shlink
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - shlink_data:/var/lib/mysql
+    restart: always
 
-    shlink-web-client:
-        image: shlinkio/shlink-web-client:stable
-        container_name: ${SHLINK_WEB_CONTAINER}
-        ports:
-          - "127.0.0.1:${SHLINK_WEB_PORT}:8080"
-        restart: always
+  shlink-web-client:
+    image: shlinkio/shlink-web-client:stable
+    container_name: ${SHLINK_WEB_CONTAINER}
+    ports:
+      - "127.0.0.1:${SHLINK_WEB_PORT}:8080"
+    restart: always
 
 volumes:
   shlink_data:
@@ -170,7 +170,6 @@ update_shlink() {
     echo "✅ 镜像更新完成！"
 
     echo "正在重建并启动容器..."
-    # 动态获取配置，然后重建
     local DEFAULT_DOMAIN=$(docker exec ${SHLINK_API_CONTAINER} printenv DEFAULT_DOMAIN 2>/dev/null)
     local GEOLITE_LICENSE_KEY=$(docker exec ${SHLINK_API_CONTAINER} printenv GEOLITE_LICENSE_KEY 2>/dev/null)
     local DB_PASSWORD=$(docker exec ${SHLINK_DB_CONTAINER} printenv MYSQL_PASSWORD 2>/dev/null)
@@ -178,43 +177,43 @@ update_shlink() {
     DOCKER_COMPOSE -f - up -d --force-recreate << EOF
 version: '3.8'
 services:
-    shlink:
-      image: shlinkio/shlink:stable
-      container_name: ${SHLINK_API_CONTAINER}
-      ports:
-        - "127.0.0.1:9040:8080"
-      environment:
-        - DEFAULT_DOMAIN=${DEFAULT_DOMAIN}
-        - IS_HTTPS_ENABLED=true
-        - GEOLITE_LICENSE_KEY=${GEOLITE_LICENSE_KEY}
-        - DB_DRIVER=maria
-        - DB_NAME=shlink
-        - DB_USER=shlink
-        - DB_PASSWORD=${DB_PASSWORD}
-        - DB_HOST=db
-        - DB_PORT=3306
-        - TIMEZONE=UTC
-        - REDIRECT_STATUS_CODE=301
-      restart: always
-    
-    db:
-      image: mariadb:10.11
-      container_name: ${SHLINK_DB_CONTAINER}
-      environment:
-        - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
-        - MYSQL_DATABASE=shlink
-        - MYSQL_USER=shlink
-        - MYSQL_PASSWORD=${DB_PASSWORD}
-      volumes:
-        - shlink_data:/var/lib/mysql
-      restart: always
+  shlink:
+    image: shlinkio/shlink:stable
+    container_name: ${SHLINK_API_CONTAINER}
+    ports:
+      - "127.0.0.1:9040:8080"
+    environment:
+      - DEFAULT_DOMAIN=${DEFAULT_DOMAIN}
+      - IS_HTTPS_ENABLED=true
+      - GEOLITE_LICENSE_KEY=${GEOLITE_LICENSE_KEY}
+      - DB_DRIVER=maria
+      - DB_NAME=shlink
+      - DB_USER=shlink
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db
+      - DB_PORT=3306
+      - TIMEZONE=UTC
+      - REDIRECT_STATUS_CODE=301
+    restart: always
+  
+  db:
+    image: mariadb:10.11
+    container_name: ${SHLINK_DB_CONTAINER}
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=shlink
+      - MYSQL_USER=shlink
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - shlink_data:/var/lib/mysql
+    restart: always
 
-    shlink-web-client:
-        image: shlinkio/shlink-web-client:stable
-        container_name: ${SHLINK_WEB_CONTAINER}
-        ports:
-          - "127.0.0.1:9050:8080"
-        restart: always
+  shlink-web-client:
+    image: shlinkio/shlink-web-client:stable
+    container_name: ${SHLINK_WEB_CONTAINER}
+    ports:
+      - "127.0.0.1:9050:8080"
+    restart: always
 
 volumes:
   shlink_data:
@@ -228,26 +227,31 @@ EOF
 show_info_from_running_containers() {
     local public_ip=$(curl -s https://ipinfo.io/ip)
     
-    # 从容器的环境变量中获取信息
     local api_port=$(docker inspect --format='{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' ${SHLINK_API_CONTAINER} 2>/dev/null || echo "无法获取")
     local web_port=$(docker inspect --format='{{(index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort}}' ${SHLINK_WEB_CONTAINER} 2>/dev/null || echo "无法获取")
     local default_domain=$(docker exec ${SHLINK_API_CONTAINER} printenv DEFAULT_DOMAIN 2>/dev/null || echo "无法获取")
-    
-    # 尝试获取 API Key，可能需要等待
-    echo "正在尝试获取 API Key..."
-    API_KEY=""
-    while [ -z "$API_KEY" ]; do
-        echo "正在等待服务就绪，尝试获取 API Key..."
-        API_KEY=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:list 2>/dev/null | grep -A1 'API Keys' | tail -n 1 | awk '{print $1}')
-        if [ -z "$API_KEY" ]; then
-            echo "❌ 尝试失败，将在 5 秒后重试..."
-            sleep 5
+    local web_domain=$(docker exec ${SHLINK_API_CONTAINER} printenv WEB_CLIENT_DOMAIN 2>/dev/null || echo "无法获取")
+
+    echo "等待 Shlink 服务初始化..."
+    for i in {1..10}; do
+        if docker exec ${SHLINK_API_CONTAINER} shlink api-key:list --no-interaction >/dev/null 2>&1; then
+            break
         fi
+        echo "Shlink 未就绪，5 秒后重试 ($i/10)..."
+        sleep 5
     done
-    
+
+    echo "正在尝试获取 API Key..."
+    API_KEY=$(docker exec ${SHLINK_API_CONTAINER} shlink api-key:list --no-interaction 2>/dev/null | awk 'NR==4 {print $1}')
+
+    if [ -z "$API_KEY" ]; then
+        echo "未检测到现有 API Key，正在生成新的..."
+        API_KEY=$(docker exec ${SHLINK_API_CONTAINER} shlink api-key:generate --no-interaction 2>/dev/null | awk '/Key:/ {print $2}')
+    fi
+
     echo "✅ API Key 已成功获取！"
 
-    show_info "${default_domain}" "" "${api_port}" "${web_port}" "${API_KEY}"
+    show_info "${default_domain}" "${web_domain}" "${api_port}" "${web_port}" "${API_KEY}"
     read -p "按任意键返回主菜单..."
 }
 
