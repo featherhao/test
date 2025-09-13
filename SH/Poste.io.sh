@@ -2,16 +2,16 @@
 set -Eeuo pipefail
 
 # ==============================================================================
-# Poste.io 安装/卸载/更新管理脚本 (整合版)
+# Poste.io 安装/卸载/更新管理脚本 (最终版)
 # ------------------------------------------------------------------------------
-# 脚本核心：
-# 1. 自动检测并安装所需依赖。
-# 2. 智能查找可用端口，避免与现有服务冲突。
-# 3. 强制使用为 Poste.io 生成的 docker-compose.yml 文件，避免与其他 compose 文件冲突。
+# 核心功能：
+# 1. 自动解决与 1Panel 等反向代理的重定向循环问题。
+# 2. 强制使用特定 Docker Compose 文件，避免环境冲突。
+# 3. 集成安装、卸载和更新功能。
 # ==============================================================================
 
 # --- 定义变量 ---
-COMPOSE_FILE="poste.io.docker-compose.yml" # 使用独特的文件名以避免冲突
+COMPOSE_FILE="poste.io.docker-compose.yml"
 DATA_DIR="./posteio_data"
 POSTEIO_IMAGE="analogic/poste.io"
 
@@ -97,6 +97,7 @@ services:
       - "995:995"
     environment:
       - TZ=Asia/Shanghai
+      - HTTPS_PORT=443  # 解决与反向代理的重定向循环问题
     volumes:
       - "$DATA_DIR:/data"
     platform: linux/amd64
