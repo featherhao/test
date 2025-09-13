@@ -11,6 +11,7 @@ set -e
 # -------------------------------------------------------
 SHLINK_API_CONTAINER="shlink_api"
 SHLINK_WEB_CONTAINER="shlink_web_client"
+SHLINK_DB_CONTAINER="shlink_db"
 
 # -------------------------------------------------------
 # 辅助函数
@@ -72,10 +73,10 @@ install_shlink() {
 
     echo "--- 开始部署 Shlink 短链服务 ---"
 
-    # 强制清理旧容器和数据卷，确保干净部署
+    # 彻底清理所有残留的旧容器
     echo "正在彻底清理旧的 Shlink 容器..."
-    docker stop ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
-    docker rm -f ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
+    docker stop ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} ${SHLINK_DB_CONTAINER} &>/dev/null || true
+    docker rm -f ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} ${SHLINK_DB_CONTAINER} &>/dev/null || true
     
     # 引导用户输入配置
     read -p "请输入您短网址的域名 (例如: u.example.com): " DEFAULT_DOMAIN
@@ -115,7 +116,7 @@ services:
     
     db:
       image: mariadb:10.11
-      container_name: shlink_db
+      container_name: ${SHLINK_DB_CONTAINER}
       environment:
         - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
         - MYSQL_DATABASE=shlink
@@ -152,8 +153,8 @@ uninstall_shlink() {
     fi
 
     echo "正在强制停止并移除所有 Shlink 容器..."
-    docker stop ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
-    docker rm -f ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} &>/dev/null || true
+    docker stop ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} ${SHLINK_DB_CONTAINER} &>/dev/null || true
+    docker rm -f ${SHLINK_API_CONTAINER} ${SHLINK_WEB_CONTAINER} ${SHLINK_DB_CONTAINER} &>/dev/null || true
 
     echo "✅ 卸载完成！"
     read -p "按任意键返回主菜单..."
@@ -172,7 +173,7 @@ update_shlink() {
     # 动态获取配置，然后重建
     local DEFAULT_DOMAIN=$(docker exec ${SHLINK_API_CONTAINER} printenv DEFAULT_DOMAIN 2>/dev/null)
     local GEOLITE_LICENSE_KEY=$(docker exec ${SHLINK_API_CONTAINER} printenv GEOLITE_LICENSE_KEY 2>/dev/null)
-    local DB_PASSWORD=$(docker exec shlink_db printenv MYSQL_PASSWORD 2>/dev/null)
+    local DB_PASSWORD=$(docker exec ${SHLINK_DB_CONTAINER} printenv MYSQL_PASSWORD 2>/dev/null)
     
     DOCKER_COMPOSE -f - up -d --force-recreate << EOF
 version: '3.8'
@@ -198,7 +199,7 @@ services:
     
     db:
       image: mariadb:10.11
-      container_name: shlink_db
+      container_name: ${SHLINK_DB_CONTAINER}
       environment:
         - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
         - MYSQL_DATABASE=shlink
