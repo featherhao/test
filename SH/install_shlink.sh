@@ -155,29 +155,9 @@ EOF
     cd "${CONFIG_DIR}"
     DOCKER_COMPOSE up -d
 
-    echo "正在等待容器完全启动，这可能需要 30-60 秒..."
-    sleep 30
-    
-    API_KEY=""
-    for i in {1..10}; do
-        echo "第 $i 次尝试获取 API Key..."
-        # 使用 2>&1 重定向错误，让脚本不中断
-        API_KEY=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:generate 2>&1 | grep -o 'API Key:.*' | awk '{print $NF}')
-        if [ -n "$API_KEY" ]; then
-            echo "✅ API Key 已成功生成。"
-            break
-        fi
-        sleep 5
-    done
-    
-    if [ -z "$API_KEY" ]; then
-        echo "❌ 无法自动生成 API Key。请稍后使用 '查看服务信息' 选项重试。"
-        API_KEY="请稍后重试"
-    fi
-
     echo "--- 部署完成！ ---"
-    show_info "${DEFAULT_DOMAIN}" "${WEB_CLIENT_DOMAIN}" "${SHLINK_API_PORT}" "${SHLINK_WEB_PORT}" "${API_KEY}"
-    
+    echo "所有服务已在后台启动。您可以随时使用 '查看服务信息' 选项获取 API Key。"
+    echo ""
     read -p "按任意键返回主菜单..."
 }
 
@@ -242,10 +222,19 @@ show_info_from_file() {
     local default_domain=$(grep -m1 -E 'DEFAULT_DOMAIN=' "${COMPOSE_FILE}" | sed -E 's/.*DEFAULT_DOMAIN=//;s/\s*$//')
     
     echo "正在尝试获取 API Key..."
-    # 动态获取 API Key
-    local api_key=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:list 2>/dev/null | grep -A1 'API Keys' | tail -n 1 | awk '{print $1}')
-    if [ -z "$api_key" ]; then
-        api_key="请手动生成，容器已停止或 API Key 列表为空"
+    
+    API_KEY=""
+    for i in {1..10}; do
+        # 重试 10 次，每次等待 5 秒，共 50 秒，以确保服务就绪
+        API_KEY=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:list 2>/dev/null | grep -A1 'API Keys' | tail -n 1 | awk '{print $1}')
+        if [ -n "$API_KEY" ]; then
+            break
+        fi
+        sleep 5
+    done
+    
+    if [ -z "$API_KEY" ]; then
+        api_key="获取失败，请手动执行命令 docker exec -it shlink_api shlink api-key:generate"
     fi
 
     show_info "${default_domain}" "" "${api_port}" "${web_port}" "${api_key}"
