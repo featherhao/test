@@ -59,8 +59,15 @@ install_poste() {
     echo "=== 开始安装 Poste.io ==="
     check_dependencies
     
+    # 新增: 自动检查和修复旧的 docker-compose 文件
     if [ -f "$COMPOSE_FILE" ]; then
-        echo "警告：已存在 Docker Compose 文件，跳过生成。"
+        if grep -q "posteio/poste.io:latest" "$COMPOSE_FILE"; then
+            echo "警告：检测到旧的 Docker Compose 文件，正在自动修复..."
+            rm "$COMPOSE_FILE"
+            generate_compose_file
+        else
+            echo "警告：已存在 Docker Compose 文件，跳过生成。"
+        fi
     else
         generate_compose_file
     fi
@@ -111,6 +118,7 @@ update_poste() {
     fi
 
     echo "正在拉取最新的 Poste.io 镜像..."
+    # 同样，使用正确的镜像名称来拉取
     docker-compose pull posteio
 
     echo "正在重新创建和启动容器..."
