@@ -39,12 +39,17 @@ check_dependencies() {
         echo "警告：未安装 dig，可能无法自动获取公网IP。"
         echo "你可以使用以下命令安装：sudo apt-get install dnsutils"
     fi
+    if ! command -v lsof &> /dev/null; then
+        echo "错误：未安装 lsof。请先安装 lsof。"
+        echo "你可以使用以下命令安装：sudo apt-get install lsof"
+        exit 1
+    fi
 }
 
 # 检查端口是否被占用，并返回占用该端口的服务名
 get_port_owner() {
     local port=$1
-    local owner_pid=$(lsof -t -i:$port 2>/dev/null || true)
+    local owner_pid=$(sudo lsof -t -i:$port 2>/dev/null || true)
     if [ -n "$owner_pid" ]; then
         local service_name=$(systemctl status "$owner_pid" 2>/dev/null | grep -Po 'Loaded: .*service; \K(.+)(?=\))' | cut -d'.' -f1 || true)
         if [ -n "$service_name" ]; then
@@ -300,7 +305,12 @@ uninstall_poste() {
         echo "正在清理反向代理配置..."
         local proxy_config_file="/etc/$proxy_service/sites-available/$domain.conf"
         local proxy_config_link="/etc/$proxy_service/sites-enabled/$domain.conf"
-        rm -f "$proxy_config_file" "$proxy_config_link"
+        if [ -L "$proxy_config_link" ]; then
+            rm -f "$proxy_config_link"
+        fi
+        if [ -f "$proxy_config_file" ]; then
+            rm -f "$proxy_config_file"
+        fi
         sudo systemctl reload "$proxy_service" || sudo openresty -s reload
     fi
 
