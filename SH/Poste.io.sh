@@ -186,7 +186,7 @@ install_poste() {
     if docker ps -a --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io"; then
         echo "ℹ️  检测到 Poste.io 容器已存在。正在显示当前信息..."
         show_installed_info
-        exit 0
+        return # 使用 return 代替 exit，返回到主菜单
     fi
 
     if [ -f "$COMPOSE_FILE" ]; then
@@ -221,7 +221,7 @@ uninstall_poste() {
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         echo "已取消卸载。"
-        exit 1
+        return # 使用 return 代替 exit
     fi
 
     echo "正在停止和删除容器..."
@@ -244,7 +244,7 @@ update_poste() {
     
     if [ ! -f "$COMPOSE_FILE" ]; then
         echo "错误：找不到 Docker Compose 文件。请先执行安装。"
-        exit 1
+        return # 使用 return 代替 exit
     fi
 
     echo "正在拉取最新的 Poste.io 镜像..."
@@ -285,15 +285,12 @@ show_main_menu() {
         case "$choice" in
             1)
                 install_poste
-                break
                 ;;
             2)
                 uninstall_poste
-                break
                 ;;
             3)
                 update_poste
-                break
                 ;;
             0)
                 echo "退出脚本。"
@@ -311,6 +308,7 @@ show_main_menu() {
 main() {
     check_dependencies
     
+    # 启动时检查状态，如果已安装则显示信息，然后继续执行菜单逻辑
     if docker ps --filter "name=poste.io" --format "{{.Names}}" | grep -q "poste.io" && [ -f "$COMPOSE_FILE" ]; then
         echo "✅ Poste.io 容器正在运行，显示当前信息..."
         show_installed_info
