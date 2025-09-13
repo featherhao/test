@@ -4,25 +4,30 @@ set -e
 WORKDIR="/root"
 DATADIR="$WORKDIR/posteio_data"
 COMPOSE_FILE="$WORKDIR/poste.io.docker-compose.yml"
+CONTAINER_NAME="poste.io"
 
-menu() {
-  clear
-  echo "=============================="
-  echo "      Poste.io 管理菜单"
-  echo "=============================="
-  echo "1) 安装 Poste.io"
-  echo "2) 卸载 Poste.io"
-  echo "3) 更新 Poste.io"
-  echo "0) 退出"
-  echo "=============================="
-  read -p "请输入选项: " choice
-  case $choice in
-    1) install_poste ;;
-    2) uninstall_poste ;;
-    3) update_poste ;;
-    0) exit 0 ;;
-    *) echo "无效选项"; sleep 2; menu ;;
-  esac
+# 检查容器是否存在
+check_installed() {
+  if docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$"; then
+    echo "✅ Poste.io 已安装"
+    echo "容器名称: $CONTAINER_NAME"
+    echo "容器状态: $(docker inspect -f '{{.State.Status}}' $CONTAINER_NAME)"
+    echo "数据目录: $DATADIR"
+
+    # 提取 docker-compose 配置里的端口和域名
+    DOMAIN=$(grep "HOSTNAME=" $COMPOSE_FILE | cut -d "=" -f2)
+    HTTP_PORT=$(grep -m1 ":[0-9]*:80" $COMPOSE_FILE | cut -d '"' -f2 | cut -d ":" -f1)
+    HTTPS_PORT=$(grep -m1 ":[0-9]*:443" $COMPOSE_FILE | cut -d '"' -f2 | cut -d ":" -f1)
+    SERVER_IP=$(hostname -I | awk '{print $1}')
+
+    echo "访问地址："
+    echo "  - http://$DOMAIN:$HTTP_PORT"
+    echo "  - https://$DOMAIN:$HTTPS_PORT"
+    echo "  - http://$SERVER_IP:$HTTP_PORT"
+    echo "  - https://$SERVER_IP:$HTTPS_PORT"
+    echo "--------------------------"
+    exit 0
+  fi
 }
 
 install_poste() {
@@ -30,12 +35,11 @@ install_poste() {
 
   read -p "请输入您要使用的域名 (例如: mail.example.com): " DOMAIN
   read -p "请输入管理员邮箱 (例如: admin@$DOMAIN): " ADMIN_EMAIL
-  read -s -p "请输入管理员密码: " ADMIN_PASS
-  echo
+  read -p "请输入管理员密码: " ADMIN_PASS
 
   mkdir -p "$DATADIR"
 
-  # 检查 80 和 443 端口是否被占用
+  # 检查端口占用
   HTTP_PORT=80
   HTTPS_PORT=443
   if lsof -i:80 >/dev/null 2>&1; then
@@ -50,7 +54,7 @@ version: '3.3'
 services:
   posteio:
     image: analogic/poste.io
-    container_name: poste.io
+    container_name: $CONTAINER_NAME
     restart: always
     ports:
       - "$HTTP_PORT:80"
@@ -79,28 +83,20 @@ EOF
   echo "正在启动 Poste.io 容器..."
   docker compose -f "$COMPOSE_FILE" up -d
 
+  SERVER_IP=$(hostname -I | awk '{print $1}')
+
   echo "✅ 恭喜！Poste.io 安装并初始化完成！"
   echo "--- Poste.io 运行信息 ---"
-  echo "容器名称: poste.io"
+  echo "容器名称: $CONTAINER_NAME"
   echo "数据目录: $DATADIR"
   echo "访问地址："
   echo "  - http://$DOMAIN:$HTTP_PORT"
   echo "  - https://$DOMAIN:$HTTPS_PORT"
+  echo "  - http://$SERVER_IP:$HTTP_PORT"
+  echo "  - https://$SERVER_IP:$HTTPS_PORT"
   echo "--------------------------"
 }
 
-uninstall_poste() {
-  echo "=== 卸载 Poste.io ==="
-  docker compose -f "$COMPOSE_FILE" down || true
-  rm -rf "$DATADIR" "$COMPOSE_FILE"
-  echo "✅ 卸载完成"
-}
-
-update_poste() {
-  echo "=== 更新 Poste.io ==="
-  docker compose -f "$COMPOSE_FILE" pull
-  docker compose -f "$COMPOSE_FILE" up -d
-  echo "✅ 更新完成"
-}
-
-menu
+# 主逻辑：先检查是否已安装
+check_installed
+install_poste
