@@ -65,6 +65,22 @@ check_container_status() {
     fi
 }
 
+# 增加健康检查，等待容器就绪
+wait_for_container() {
+    local container_name=$1
+    echo "正在等待容器 '${container_name}' 启动并就绪..."
+    for i in {1..20}; do
+        health_status=$(docker inspect --format='{{json .State.Health.Status}}' "$container_name" 2>/dev/null)
+        if [ "$health_status" == '"healthy"' ]; then
+            echo "✅ 容器 '${container_name}' 已就绪。"
+            return 0
+        fi
+        sleep 2
+    done
+    echo "❌ 容器 '${container_name}' 未在预期时间内就绪。"
+    return 1
+}
+
 # -------------------------------------------------------
 # 主要功能函数
 # -------------------------------------------------------
@@ -121,6 +137,11 @@ services:
         - DB_PORT=3306
         - TIMEZONE=UTC
         - REDIRECT_STATUS_CODE=301
+      healthcheck:
+        test: ["CMD-SHELL", "curl -f http://localhost:8080/rest/health"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
       restart: always
     
     db:
@@ -153,24 +174,20 @@ EOF
     cd "${CONFIG_DIR}"
     DOCKER_COMPOSE up -d
 
-    # 增加延时和循环重试以确保 API Key 生成成功
-    echo "等待服务启动 (最多 20 秒)..."
-    sleep 20
-    
-    API_KEY=""
-    for i in {1..5}; do
-        API_KEY=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:generate 2>/dev/null | grep -o 'API Key:.*' | awk '{print $NF}')
-        if [ -n "$API_KEY" ]; then
-            echo "✅ API Key 已成功生成。"
-            break
-        fi
-        echo "第 $i 次尝试获取 API Key 失败，正在重试..."
-        sleep 5
-    done
-    
-    if [ -z "$API_KEY" ]; then
-        echo "❌ API Key 生成失败。请手动执行: docker exec -it ${SHLINK_API_CONTAINER} shlink api-key:generate"
+    # 增加健康检查，等待容器就绪
+    if ! wait_for_container "${SHLINK_API_CONTAINER}"; then
+        echo "❌ 无法自动生成 API Key。请手动执行: docker exec -it ${SHLINK_API_CONTAINER} shlink api-key:generate"
         API_KEY="无法自动生成，请手动获取"
+    else
+        # 生成 API Key
+        echo "正在生成 API Key..."
+        API_KEY=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:generate | grep -o 'API Key:.*' | awk '{print $NF}')
+        if [ -z "$API_KEY" ]; then
+            echo "❌ API Key 生成失败。请手动执行: docker exec -it ${SHLINK_API_CONTAINER} shlink api-key:generate"
+            API_KEY="无法自动生成，请手动获取"
+        else
+            echo "✅ API Key 已成功生成。"
+        fi
     fi
 
     echo "--- 部署完成！ ---"
