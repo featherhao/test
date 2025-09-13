@@ -5,6 +5,7 @@ set -Eeuo pipefail
 trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
 
 # ================== 基础配置 ==================
+# menu.sh 自身的 URL 保持不变，因为它还在根目录
 SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh"
 SCRIPT_PATH="$HOME/menu.sh"
 
@@ -100,6 +101,7 @@ argosb_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 
 # ================== 更新菜单脚本 ==================
 update_menu_script() {
     echo "🔄 正在更新 menu.sh..."
+    # 这里的 URL 保持不变
     curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
     echo "✅ menu.sh 已更新到 $SCRIPT_PATH"
