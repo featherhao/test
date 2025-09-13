@@ -32,11 +32,9 @@ check_dependencies() {
 # 生成 Docker Compose 文件
 generate_compose_file() {
     cat > "$COMPOSE_FILE" << EOF
-version: '3'
 services:
   posteio:
-    # 修复: 更新为正确的镜像名称
-    image: docker.io/posteio/posteio:latest
+    image: posteio/posteio:latest
     container_name: poste.io
     restart: always
     hostname: mailserver.example.com  # <-- 请修改为你的域名
