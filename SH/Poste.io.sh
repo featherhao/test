@@ -12,6 +12,8 @@ set -Eeuo pipefail
 # 定义变量
 COMPOSE_FILE="docker-compose.yml"
 DATA_DIR="./posteio_data"
+# 新增：定义正确的镜像名称，方便统一修改
+POSTEIO_IMAGE="docker.io/posteio/posteio:latest"
 
 # 统一失败处理
 trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
@@ -34,7 +36,7 @@ generate_compose_file() {
     cat > "$COMPOSE_FILE" << EOF
 services:
   posteio:
-    image: docker.io/posteio/posteio:latest
+    image: ${POSTEIO_IMAGE}
     container_name: poste.io
     restart: always
     hostname: mailserver.example.com  # <-- 请修改为你的域名
@@ -114,7 +116,8 @@ update_poste() {
     fi
 
     echo "正在拉取最新的 Poste.io 镜像..."
-    docker-compose pull posteio
+    # 修复：使用完整的镜像名进行拉取
+    docker-compose pull ${POSTEIO_IMAGE}
 
     echo "正在重新创建和启动容器..."
     docker-compose up -d
