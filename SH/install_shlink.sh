@@ -153,17 +153,30 @@ EOF
     cd "${CONFIG_DIR}"
     DOCKER_COMPOSE up -d
 
-    # 生成 API Key
-    echo "正在生成 API Key..."
-    API_KEY=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:generate | grep -o 'API Key:.*' | awk '{print $NF}')
+    # 增加延时和循环重试以确保 API Key 生成成功
+    echo "等待服务启动 (最多 20 秒)..."
+    sleep 20
+    
+    API_KEY=""
+    for i in {1..5}; do
+        API_KEY=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:generate 2>/dev/null | grep -o 'API Key:.*' | awk '{print $NF}')
+        if [ -n "$API_KEY" ]; then
+            echo "✅ API Key 已成功生成。"
+            break
+        fi
+        echo "第 $i 次尝试获取 API Key 失败，正在重试..."
+        sleep 5
+    done
+    
     if [ -z "$API_KEY" ]; then
         echo "❌ API Key 生成失败。请手动执行: docker exec -it ${SHLINK_API_CONTAINER} shlink api-key:generate"
-        exit 1
+        API_KEY="无法自动生成，请手动获取"
     fi
-    echo "✅ Shlink API Key 已生成: ${API_KEY}"
 
     echo "--- 部署完成！ ---"
     show_info "${DEFAULT_DOMAIN}" "${WEB_CLIENT_DOMAIN}" "${SHLINK_API_PORT}" "${SHLINK_WEB_PORT}" "${API_KEY}"
+    
+    read -p "按任意键返回主菜单..."
 }
 
 # 卸载服务
@@ -187,12 +200,14 @@ uninstall_shlink() {
     fi
 
     echo "✅ 卸载完成！"
+    read -p "按任意键返回主菜单..."
 }
 
 # 更新服务
 update_shlink() {
     if [ ! -d "${CONFIG_DIR}" ]; then
         echo "❌ 未找到 Shlink 部署目录，请先安装服务。"
+        read -p "按任意键返回主菜单..."
         return
     fi
 
@@ -204,12 +219,14 @@ update_shlink() {
     DOCKER_COMPOSE up -d --force-recreate
     echo "✅ 更新完成！"
     show_info_from_file
+    read -p "按任意键返回主菜单..."
 }
 
 # 查看服务信息 (从文件读取，更稳定)
 show_info_from_file() {
     if [ ! -f "${COMPOSE_FILE}" ]; then
         echo "❌ 未找到部署文件，请先安装服务。"
+        read -p "按任意键返回主菜单..."
         return
     fi
 
@@ -219,12 +236,13 @@ show_info_from_file() {
     local default_domain=$(grep -m1 -E 'DEFAULT_DOMAIN=' "${COMPOSE_FILE}" | sed -E 's/.*DEFAULT_DOMAIN=//;s/\s*$//')
     
     # 动态获取 API Key
-    local api_key=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:list | grep -A1 'API Keys' | tail -n 1 | awk '{print $1}')
+    local api_key=$(docker exec -it "${SHLINK_API_CONTAINER}" shlink api-key:list 2>/dev/null | grep -A1 'API Keys' | tail -n 1 | awk '{print $1}')
     if [ -z "$api_key" ]; then
         api_key="请手动生成，容器已停止或 API Key 列表为空"
     fi
 
     show_info "${default_domain}" "" "${api_port}" "${web_port}" "${api_key}"
+    read -p "按任意键返回主菜单..."
 }
 
 # 显示最终信息
