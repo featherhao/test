@@ -1,18 +1,20 @@
 #!/bin/bash
+set -Eeuo pipefail
 
 # ==============================================================================
-# Poste.io 安装/卸载/更新管理脚本
+# Poste.io 安装/卸载/更新管理脚本 (交互式菜单版)
 # 作者：AI助手
 # ------------------------------------------------------------------------------
 # 脚本使用说明：
-# ./poste_manager.sh install  - 安装 Poste.io
-# ./poste_manager.sh uninstall - 卸载 Poste.io (会删除容器、镜像和数据卷)
-# ./poste_manager.sh update   - 更新 Poste.io 到最新版本
+# 直接运行脚本即可，通过菜单进行安装、卸载或更新操作。
 # ==============================================================================
 
 # 定义变量
 COMPOSE_FILE="docker-compose.yml"
 DATA_DIR="./posteio_data"
+
+# 统一失败处理
+trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
 
 # 检查依赖项
 check_dependencies() {
@@ -122,19 +124,39 @@ update_poste() {
     fi
 }
 
-# 脚本主逻辑
-case "$1" in
-    install)
-        install_poste
-        ;;
-    uninstall)
-        uninstall_poste
-        ;;
-    update)
-        update_poste
-        ;;
-    *)
-        echo "使用方法: $0 {install|uninstall|update}"
-        exit 1
-        ;;
-esac
+# 菜单主逻辑
+while true; do
+    echo "=============================="
+    echo "   Poste.io 管理菜单"
+    echo "=============================="
+    echo "1) 安装 Poste.io"
+    echo "2) 卸载 Poste.io"
+    echo "3) 更新 Poste.io"
+    echo "0) 退出"
+    echo "=============================="
+    read -rp "请输入选项: " choice
+    echo
+
+    case "$choice" in
+        1)
+            install_poste
+            break
+            ;;
+        2)
+            uninstall_poste
+            break
+            ;;
+        3)
+            update_poste
+            break
+            ;;
+        0)
+            echo "退出脚本。"
+            exit 0
+            ;;
+        *)
+            echo "无效选项，请重新输入。"
+            sleep 1
+            ;;
+    esac
+done
