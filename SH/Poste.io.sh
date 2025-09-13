@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 # ==============================================================================
 # Poste.io 最终一键安装脚本
-# 这个脚本将自动处理架构问题和反向代理配置。
+# 该脚本专为解决 Oracle 云服务器 ARM 架构兼容性问题而设计。
 # ==============================================================================
 
 # 定义变量
@@ -59,7 +59,7 @@ install_poste_final() {
     
     echo "ℹ️  已选择反向代理模式，将跳过 80/443 端口映射。"
     
-    # 生成 Docker Compose 文件 (不映射 web 端口)
+    # 生成 Docker Compose 文件并指定平台
     echo "正在生成 Docker Compose 文件：$COMPOSE_FILE"
     cat > "$COMPOSE_FILE" << EOF
 services:
@@ -68,6 +68,8 @@ services:
     container_name: poste.io
     restart: always
     hostname: ${DOMAIN}
+    # 强制指定为 linux/amd64 平台以解决 'exec format error'
+    platform: linux/amd64
     ports:
       - "25:25"
       - "110:110"
@@ -86,8 +88,8 @@ EOF
     echo "正在创建数据目录：$DATA_DIR"
     mkdir -p "$DATA_DIR"
     
-    # 启动容器并强制拉取最新镜像
-    echo "正在启动 Poste.io 容器并拉取兼容你服务器架构的镜像..."
+    # 启动容器
+    echo "正在启动 Poste.io 容器..."
     if command -v docker-compose &> /dev/null; then
         sudo docker-compose up -d --pull always
     else
