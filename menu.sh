@@ -101,7 +101,6 @@ argosb_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 
 # ================== 更新菜单脚本 ==================
 update_menu_script() {
     echo "🔄 正在更新 menu.sh..."
-    # 这里的 URL 保持不变
     curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
     echo "✅ menu.sh 已更新到 $SCRIPT_PATH"
@@ -185,7 +184,8 @@ while true; do
         3) libretv_menu ;;
         4) singbox_menu ;;
         5) argosb_menu ;;
-        6) bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 https://raw.githubusercontent.com/MoeMann/kejilion/main/kejilion.sh) ;;
+        # 修复：使用 curl -sL kejilion.sh 方式调用
+        6) bash <(curl -sL kejilion.sh) ;;
         7) zjsync_menu ;;
         8) panso_menu ;;
         9) nginx_menu ;;
