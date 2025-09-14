@@ -12,36 +12,56 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# 检查Docker是否安装
-check_docker() {
+# 日志函数
+log() {
+    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
+}
+
+success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+# 检查依赖
+check_dependencies() {
+    log "检查系统依赖..."
+    local missing=0
+    
     if ! command -v docker &> /dev/null; then
-        echo -e "${RED}错误: Docker未安装。请先安装Docker。${NC}"
-        exit 1
+        error "Docker 未安装"
+        missing=1
     fi
+    
+    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+        error "Docker Compose 未安装"
+        missing=1
+    fi
+    
+    if [ $missing -eq 1 ]; then
+        log "尝试安装 Docker 和 Docker Compose..."
+        # 尝试使用国内源安装 Docker
+        curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
+        
+        # 安装 Docker Compose
+        COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep '"tag_name":' | cut -d'"' -f4)
+        curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+    fi
+    
+    success "依赖检查完成"
 }
 
-# 检查Docker Compose是否可用
-check_compose() {
-    if ! docker compose version &> /dev/null && ! command -v docker-compose &> /dev/null; then
-        echo -e "${RED}错误: Docker Compose未安装。请先安装Docker Compose。${NC}"
-        exit 1
-    fi
-}
-
-# 获取Compose命令
-compose_cmd() {
-    if docker compose version &> /dev/null; then
-        echo "docker compose"
-    else
-        echo "docker-compose"
-    fi
-}
-
-# 清理冲突容器
+# 清理旧容器
 cleanup_containers() {
-    echo -e "${YELLOW}清理可能冲突的容器...${NC}"
+    log "清理可能冲突的容器..."
     docker rm -f shlink_web_client shlink shlink_db 2>/dev/null || true
-    # 清理可能存在的旧网络
     docker network rm shlink_net 2>/dev/null || true
     sleep 2
 }
@@ -51,177 +71,116 @@ check_ports() {
     local api_port=$1
     local client_port=$2
     
-    echo -e "${YELLOW}检查端口占用情况...${NC}"
+    log "检查端口占用情况..."
     
     if lsof -i :$api_port &>/dev/null; then
-        echo -e "${RED}错误: 端口 $api_port 已被占用，请释放该端口或选择其他端口${NC}"
+        error "端口 $api_port 已被占用"
         return 1
     fi
     
     if lsof -i :$client_port &>/dev/null; then
-        echo -e "${RED}错误: 端口 $client_port 已被占用，请释放该端口或选择其他端口${NC}"
+        error "端口 $client_port 已被占用"
         return 1
     fi
     
-    echo -e "${GREEN}端口检查通过${NC}"
+    success "端口检查通过"
     return 0
 }
 
-# 获取本机IP地址
-get_ip() {
-    local ipv4=$(curl -s4 https://ipinfo.io/ip 2>/dev/null || echo "无法获取IPv4")
-    local ipv6=$(ip -6 addr show scope global 2>/dev/null | grep inet6 | awk '{print $2}' | cut -d/ -f1 | head -n1 || echo "无法获取IPv6")
-    echo "$ipv4" "$ipv6"
-}
-
-# 等待服务就绪并获取API Key
-wait_for_service_and_get_key() {
-    local max_attempts=30
+# 等待服务就绪
+wait_for_service() {
+    local service=$1
+    local max_attempts=${2:-30}
     local attempt=1
     
-    echo -e "${YELLOW}等待 Shlink 服务就绪...${NC}"
+    log "等待 $service 服务就绪..."
     
     while [ $attempt -le $max_attempts ]; do
-        if docker compose exec shlink curl -f http://localhost:8080/health &>/dev/null; then
-            echo -e "${GREEN}Shlink 服务已就绪${NC}"
+        if docker compose logs $service 2>&1 | grep -q "Server started"; then
+            success "$service 服务已就绪"
             return 0
         fi
         
-        echo "等待服务启动... ($attempt/$max_attempts)"
-        sleep 2
+        if [ $attempt -eq $max_attempts ]; then
+            error "$service 服务启动超时"
+            return 1
+        fi
+        
+        echo "等待中... ($attempt/$max_attempts)"
+        sleep 5
         ((attempt++))
     done
-    
-    echo -e "${RED}Shlink 服务启动超时${NC}"
-    return 1
 }
 
-# 手动生成API Key
-generate_api_key_manually() {
-    echo -e "${YELLOW}尝试手动生成 API Key...${NC}"
+# 生成 API Key
+generate_api_key() {
+    local max_attempts=5
+    local attempt=1
     
-    # 多次尝试生成API Key
-    for i in {1..5}; do
-        echo "尝试生成 API Key (第 $i 次)..."
-        
-        # 使用更稳定的方式生成API Key
-        API_KEY=$(docker compose exec -T shlink shlink api-key:generate --expiration="never" 2>/dev/null | grep -oE '[0-9a-f-]{36}' | head -n1)
+    log "生成 API Key..."
+    
+    while [ $attempt -le $max_attempts ]; do
+        # 尝试使用未来日期而不是 "never"
+        API_KEY=$(docker compose exec -T shlink shlink api-key:generate --expiration-date="2030-01-01" 2>/dev/null | grep -oE '[0-9a-f-]{36}' | head -n1)
         
         if [ -n "$API_KEY" ]; then
-            echo -e "${GREEN}API Key 生成成功: $API_KEY${NC}"
+            success "API Key 生成成功: $API_KEY"
             
-            # 更新环境变量文件
-            if grep -q "API_KEY=" "$ENV_FILE"; then
-                sed -i "s/API_KEY=.*/API_KEY=$API_KEY/" "$ENV_FILE"
+            # 保存到环境变量文件
+            if grep -q "API_KEY=" $ENV_FILE; then
+                sed -i "s/API_KEY=.*/API_KEY=$API_KEY/" $ENV_FILE
             else
-                echo "API_KEY=$API_KEY" >> "$ENV_FILE"
+                echo "API_KEY=$API_KEY" >> $ENV_FILE
             fi
             
-            # 重启Web Client以应用新的API Key
-            docker compose up -d shlink_web_client
-            
             return 0
         fi
         
+        warning "API Key 生成尝试 $attempt 失败，重试..."
         sleep 3
-    done
-    
-    echo -e "${RED}无法生成 API Key，请检查容器日志${NC}"
-    docker compose logs shlink
-    return 1
-}
-
-# 检查Web Client状态
-check_web_client() {
-    echo -e "${YELLOW}检查 Web Client 状态...${NC}"
-    
-    local max_attempts=10
-    local attempt=1
-    
-    while [ $attempt -le $max_attempts ]; do
-        if docker compose ps | grep shlink_web_client | grep -q "healthy\|running"; then
-            echo -e "${GREEN}Web Client 运行正常${NC}"
-            return 0
-        fi
-        
-        echo "等待 Web Client 启动... ($attempt/$max_attempts)"
-        sleep 2
         ((attempt++))
     done
     
-    echo -e "${RED}Web Client 启动异常${NC}"
-    docker compose logs shlink_web_client
+    error "无法生成 API Key"
     return 1
 }
 
-show_menu() {
-    clear
-    echo -e "${BLUE}============================${NC}"
-    echo -e "${BLUE} Shlink 短链服务管理脚本${NC}"
-    echo -e "${BLUE}============================${NC}"
-    echo -e "1) 安装 Shlink 服务"
-    echo -e "2) 卸载 Shlink 服务"
-    echo -e "3) 更新 Shlink 服务"
-    echo -e "4) 查看服务信息"
-    echo -e "5) 重启服务"
-    echo -e "6) 修复服务问题"
-    echo -e "0) 退出"
-    echo -e "${BLUE}----------------------------${NC}"
-    read -p "请输入选项: " choice
-
-    case "$choice" in
-        1) install_shlink ;;
-        2) uninstall_shlink ;;
-        3) update_shlink ;;
-        4) info_shlink ;;
-        5) restart_shlink ;;
-        6) fix_issues ;;
-        0) exit 0 ;;
-        *) echo -e "${RED}无效选项，请重新输入${NC}" && sleep 2 && show_menu ;;
-    esac
-}
-
+# 安装 Shlink
 install_shlink() {
-    echo -e "${GREEN}--- 开始部署 Shlink 短链服务 ---${NC}"
+    log "开始安装 Shlink..."
     
     # 检查依赖
-    check_docker
-    check_compose
+    check_dependencies
     
-    # 创建工作目录
-    mkdir -p "$WORKDIR"
-    cd "$WORKDIR"
-
-    # 清理可能冲突的容器
+    # 创建目录
+    mkdir -p $WORKDIR
+    cd $WORKDIR
+    
+    # 清理旧容器
     cleanup_containers
-
-    # 获取用户输入
-    echo "请输入配置信息:"
-    read -p "请输入短网址服务 API 域名 (例如: api.q.qqy.pp.ua): " API_DOMAIN
-    read -p "请输入 Web Client 域名 (例如: q.qqy.pp.ua): " CLIENT_DOMAIN
     
-    # 使用您指定的端口
+    # 获取用户配置
+    echo "请输入 Shlink 配置信息:"
+    read -p "API 域名 (例如: api.example.com): " API_DOMAIN
+    read -p "Web Client 域名 (例如: short.example.com): " CLIENT_DOMAIN
+    
+    # 使用非标准端口
     API_PORT=9040
     CLIENT_PORT=9050
     
-    # 检查端口占用
+    # 检查端口
     if ! check_ports $API_PORT $CLIENT_PORT; then
-        read -p "按回车键返回菜单..."
-        show_menu
-        return
+        error "端口被占用，请选择其他端口或释放当前端口"
+        exit 1
     fi
     
-    read -p "请输入数据库密码 [默认: shlinkpass]: " DB_PASSWORD
-    DB_PASSWORD=${DB_PASSWORD:-shlinkpass}
-    read -p "请输入 GeoLite2 License Key (可选，留空则不启用): " GEO_KEY
-
-    # 生成随机数据库密码（如果未提供）
-    if [ -z "$DB_PASSWORD" ]; then
-        DB_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 16)
-    fi
-
-    # 生成环境变量文件
-    cat > "$ENV_FILE" <<EOF
+    read -p "数据库密码 [默认: $(tr -dc A-Za-z0-9 </dev/urandom | head -c 16)]: " DB_PASSWORD
+    DB_PASSWORD=${DB_PASSWORD:-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 16)}
+    
+    read -p "GeoLite2 License Key (可选): " GEO_KEY
+    
+    # 创建环境变量文件
+    cat > $ENV_FILE <<EOF
 # Shlink 环境配置
 API_DOMAIN=$API_DOMAIN
 CLIENT_DOMAIN=$CLIENT_DOMAIN
@@ -231,9 +190,8 @@ DB_PASSWORD=$DB_PASSWORD
 GEO_KEY=$GEO_KEY
 EOF
 
-    # 生成 docker-compose.yml (修复版本)
-    cat > "$COMPOSE_FILE" <<EOF
-version: "3.8"
+    # 创建 docker-compose.yml
+    cat > $COMPOSE_FILE <<EOF
 services:
   shlink_db:
     image: postgres:15-alpine
@@ -279,9 +237,9 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 15s
       retries: 5
-      start_period: 40s
+      start_period: 60s
 
   shlink_web_client:
     image: shlinkio/shlink-web-client:stable
@@ -311,199 +269,127 @@ volumes:
     driver: local
 EOF
 
-    echo -e "${YELLOW}--- 启动 Shlink 服务 ---${NC}"
-    $(compose_cmd) up -d
-
+    # 启动服务
+    log "启动 Shlink 服务..."
+    docker compose up -d
+    
     # 等待服务就绪
-    if ! wait_for_service_and_get_key; then
-        echo -e "${RED}服务启动失败，尝试修复...${NC}"
-        fix_issues
-        return
-    fi
-
-    # 生成API Key
-    if ! generate_api_key_manually; then
-        echo -e "${RED}API Key 生成失败${NC}"
-        read -p "按回车键返回菜单..."
-        show_menu
-        return
-    fi
-
-    # 检查Web Client状态
-    check_web_client
-
-    # 获取IP地址
-    read ipv4 ipv6 <<< $(get_ip)
-
-    echo -e "${GREEN}============================${NC}"
-    echo -e "${GREEN} Shlink 部署完成！${NC}"
-    echo -e "${GREEN}API Key: $API_KEY${NC}"
-    echo ""
-    echo -e "${BLUE}访问方式：${NC}"
-    echo -e "本机访问:"
-    echo -e "  - API: http://localhost:$API_PORT"
-    echo -e "  - Web: http://localhost:$CLIENT_PORT"
-    echo -e "域名访问:"
-    echo -e "  - API: http://$API_DOMAIN:$API_PORT"
-    echo -e "  - Web: http://$CLIENT_DOMAIN:$CLIENT_PORT"
+    wait_for_service shlink 40
     
-    if [ "$ipv4" != "无法获取IPv4" ]; then
-        echo -e "IPv4访问:"
-        echo -e "  - API: http://$ipv4:$API_PORT"
-        echo -e "  - Web: http://$ipv4:$CLIENT_PORT"
-    fi
-    
-    if [ "$ipv6" != "无法获取IPv6" ]; then
-        echo -e "IPv6访问:"
-        echo -e "  - API: http://[$ipv6]:$API_PORT"
-        echo -e "  - Web: http://[$ipv6]:$CLIENT_PORT"
-    fi
-    
-    echo ""
-    echo -e "${YELLOW}重要提示:${NC}"
-    echo -e "1. 请确保域名解析正确"
-    echo -e "2. 如果遇到502错误，请尝试选项6修复服务"
-    echo -e "${GREEN}============================${NC}"
-
-    read -p "按回车键返回菜单..."
-    show_menu
-}
-
-fix_issues() {
-    echo -e "${YELLOW}--- 修复 Shlink 服务问题 ---${NC}"
-    
-    if [ ! -f "$COMPOSE_FILE" ]; then
-        echo -e "${YELLOW}未找到Shlink安装。${NC}"
-        read -p "按回车键返回菜单..."
-        show_menu
-        return
-    fi
-    
-    cd "$WORKDIR"
-    
-    echo -e "${YELLOW}停止服务...${NC}"
-    $(compose_cmd) down
-    
-    echo -e "${YELLOW}清理临时文件...${NC}"
-    docker system prune -f
-    
-    echo -e "${YELLOW}重新启动服务...${NC}"
-    $(compose_cmd) up -d
-    
-    echo -e "${YELLOW}等待服务就绪...${NC}"
-    sleep 10
-    
-    # 重新生成API Key
-    if generate_api_key_manually; then
-        echo -e "${GREEN}修复完成！${NC}"
+    # 生成 API Key
+    if generate_api_key; then
+        # 重启 Web Client 以应用 API Key
+        docker compose up -d shlink_web_client
+        
+        # 显示安装结果
+        success "Shlink 安装完成!"
+        echo ""
+        echo "====================== 安装信息 ======================"
+        echo "API 地址: http://$API_DOMAIN:$API_PORT"
+        echo "Web 界面: http://$CLIENT_DOMAIN:$CLIENT_PORT"
+        echo "API Key: $API_KEY"
+        echo "数据库密码: $DB_PASSWORD"
+        echo "======================================================"
+        echo ""
+        echo "下一步:"
+        echo "1. 确保域名解析正确指向服务器 IP"
+        echo "2. 访问 Web 界面开始使用 Shlink"
+        echo "3. 妥善保存 API Key 和数据库密码"
     else
-        echo -e "${RED}修复失败，请查看日志获取详细信息${NC}"
+        error "安装过程中出现问题"
+        echo "请检查日志: docker compose logs shlink"
+        exit 1
     fi
-    
-    read -p "按回车键返回菜单..."
-    show_menu
 }
 
-uninstall_shlink() {
-    echo -e "${RED}--- 卸载 Shlink 服务 ---${NC}"
+# 修复安装
+fix_installation() {
+    log "尝试修复 Shlink 安装..."
+    cd $WORKDIR
     
-    if [ ! -f "$COMPOSE_FILE" ]; then
-        echo -e "${YELLOW}未找到Shlink安装。${NC}"
-        read -p "按回车键返回菜单..."
-        show_menu
-        return
+    # 停止服务
+    docker compose down
+    
+    # 清理网络和卷（谨慎操作）
+    read -p "是否清理数据卷？这将删除所有数据！(y/N): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        docker volume rm -f shlink_db_data 2>/dev/null || true
     fi
     
-    cd "$WORKDIR"
+    # 重新启动
+    docker compose up -d
     
-    read -p "确定要卸载Shlink吗？这将删除所有数据！(y/N): " -n 1 -r
+    # 等待并重新生成 API Key
+    wait_for_service shlink 40
+    generate_api_key
+    docker compose up -d shlink_web_client
+    
+    success "修复完成"
+}
+
+# 卸载 Shlink
+uninstall_shlink() {
+    log "卸载 Shlink..."
+    cd $WORKDIR 2>/dev/null || {
+        error "Shlink 目录不存在"
+        exit 1
+    }
+    
+    read -p "确定要卸载 Shlink 吗？这将删除所有数据！(y/N): " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${YELLOW}卸载已取消。${NC}"
-        sleep 2
-        show_menu
-        return
+        echo "卸载已取消"
+        exit 0
     fi
     
-    $(compose_cmd) down -v
-    cd /opt
-    rm -rf "$WORKDIR"
-    echo -e "${GREEN}Shlink 已卸载${NC}"
-    read -p "按回车键返回菜单..."
-    show_menu
+    docker compose down -v
+    rm -rf $WORKDIR
+    success "Shlink 已卸载"
 }
 
-update_shlink() {
-    echo -e "${YELLOW}--- 更新 Shlink 服务 ---${NC}"
+# 显示菜单
+show_menu() {
+    echo -e "${BLUE}=================================${NC}"
+    echo -e "${BLUE}    Shlink 一键安装管理脚本     ${NC}"
+    echo -e "${BLUE}=================================${NC}"
+    echo "1) 安装 Shlink"
+    echo "2) 修复安装"
+    echo "3) 卸载 Shlink"
+    echo "4) 查看状态"
+    echo "5) 重启服务"
+    echo "0) 退出"
+    echo -e "${BLUE}=================================${NC}"
+    read -p "请选择操作 [0-5]: " choice
     
-    if [ ! -f "$COMPOSE_FILE" ]; then
-        echo -e "${YELLOW}未找到Shlink安装。${NC}"
-        read -p "按回车键返回菜单..."
-        show_menu
-        return
-    fi
-    
-    cd "$WORKDIR"
-    $(compose_cmd) pull
-    $(compose_cmd) up -d
-    
-    # 更新后重新生成API Key
-    generate_api_key_manually
-    
-    echo -e "${GREEN}Shlink 已更新${NC}"
-    read -p "按回车键返回菜单..."
-    show_menu
+    case $choice in
+        1) install_shlink ;;
+        2) fix_installation ;;
+        3) uninstall_shlink ;;
+        4) docker compose ps && docker compose logs --tail=10 ;;
+        5) docker compose restart ;;
+        0) exit 0 ;;
+        *) echo "无效选择" ;;
+    esac
 }
 
-restart_shlink() {
-    echo -e "${YELLOW}--- 重启 Shlink 服务 ---${NC}"
-    
-    if [ ! -f "$COMPOSE_FILE" ]; then
-        echo -e "${YELLOW}未找到Shlink安装。${NC}"
-        read -p "按回车键返回菜单..."
-        show_menu
-        return
-    fi
-    
-    cd "$WORKDIR"
-    $(compose_cmd) restart
-    echo -e "${GREEN}Shlink 已重启${NC}"
-    read -p "按回车键返回菜单..."
-    show_menu
-}
-
-info_shlink() {
-    echo -e "${BLUE}--- Shlink 服务信息 ---${NC}"
-    
-    if [ ! -f "$COMPOSE_FILE" ]; then
-        echo -e "${YELLOW}未找到Shlink安装。${NC}"
-        read -p "按回车键返回菜单..."
-        show_menu
-        return
-    fi
-    
-    cd "$WORKDIR"
-    echo -e "${GREEN}容器状态:${NC}"
-    $(compose_cmd) ps
-    
-    echo -e "\n${GREEN}服务配置:${NC}"
-    if [ -f "$ENV_FILE" ]; then
-        grep -v "DB_PASSWORD\|API_KEY" "$ENV_FILE"
-    fi
-    
-    echo -e "\n${GREEN}网络信息:${NC}"
-    docker network inspect shlink_shlink_net --format '{{range .Containers}}{{.Name}} - {{.IPv4Address}}{{"\n"}}{{end}}' 2>/dev/null || echo "网络信息获取失败"
-    
-    read -p "按回车键返回菜单..."
-    show_menu
-}
-
-# 主执行流程
+# 主函数
 main() {
-    check_docker
-    check_compose
-    show_menu
+    # 检查是否已安装
+    if [ -f $COMPOSE_FILE ] && [ $# -eq 0 ]; then
+        cd $WORKDIR
+        show_menu
+    else
+        case ${1:-} in
+            install) install_shlink ;;
+            fix) fix_installation ;;
+            uninstall) uninstall_shlink ;;
+            status) docker compose ps ;;
+            restart) docker compose restart ;;
+            *) show_menu ;;
+        esac
+    fi
 }
 
-# 启动脚本
+# 运行主函数
 main "$@"
