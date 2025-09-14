@@ -20,65 +20,161 @@ warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 error() { echo -e "${RED}✗${NC} $1"; }
 info() { echo -e "${CYAN}ℹ${NC} $1"; }
 
-# 检查系统资源
-check_system_resources() {
-    log "检查系统资源..."
-    
-    # 检查内存
-    local free_mem=$(free -m | awk '/Mem:/{print $7}')
-    if [ "$free_mem" -lt 512 ]; then
-        warning "可用内存较低: ${free_mem}MB (建议至少512MB)"
+# 检查依赖
+check_dependencies() {
+    log "检查系统依赖..."
+    if ! command -v docker &>/dev/null; then
+        error "Docker 未安装，尝试自动安装..."
+        curl -fsSL https://get.docker.com | bash
+        systemctl start docker
+        systemctl enable docker
     fi
     
-    # 检查磁盘空间
-    local disk_free=$(df -m / | awk 'NR==2{print $4}')
-    if [ "$disk_free" -lt 1024 ]; then
-        warning "磁盘空间较低: ${disk_free}MB (建议至少1GB)"
+    if ! docker compose version &>/dev/null && ! command -v docker-compose &>/dev/null; then
+        error "Docker Compose 未安装，尝试自动安装..."
+        COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep '"tag_name":' | cut -d'"' -f4)
+        curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+    fi
+    success "依赖检查完成"
+}
+
+# 清理容器
+cleanup_containers() {
+    log "清理可能冲突的容器..."
+    docker rm -f shlink_web_client shlink shlink_db 2>/dev/null || true
+    docker network rm shlink_net 2>/dev/null || true
+    sleep 2
+}
+
+# 检查端口占用
+check_ports() {
+    local api_port=9040
+    local client_port=9050
+    
+    log "检查端口占用情况..."
+    
+    if command -v ss &>/dev/null && (ss -tln | grep -q ":${api_port}\|:${client_port}"); then
+        error "端口 ${api_port} 或 ${client_port} 已被占用"
+        return 1
     fi
     
-    # 检查CPU核心数
-    local cpu_cores=$(nproc)
-    if [ "$cpu_cores" -lt 2 ]; then
-        warning "CPU核心数较少: ${cpu_cores} (建议至少2核心)"
+    if command -v netstat &>/dev/null && (netstat -tln | grep -q ":${api_port}\|:${client_port}"); then
+        error "端口 ${api_port} 或 ${client_port} 已被占用"
+        return 1
+    fi
+    
+    success "端口检查通过"
+    return 0
+}
+
+# 获取IP地址
+get_ip_addresses() {
+    log "获取服务器IP地址..."
+    IPV4=$(curl -s4 https://ipinfo.io/ip 2>/dev/null || echo "无法获取IPv4")
+    IPV6=$(curl -s6 https://ipinfo.io/ip 2>/dev/null || echo "无法获取IPv6")
+    
+    if [ "$IPV4" = "无法获取IPv4" ] && [ "$IPV6" = "无法获取IPv6" ]; then
+        IPV4=$(hostname -I | awk '{print $1}' | head -n1)
+        IPV6=$(ip -6 addr show scope global 2>/dev/null | grep inet6 | awk '{print $2}' | cut -d/ -f1 | head -n1 || echo "无法获取IPv6")
     fi
 }
 
-# 增强的服务等待函数
-wait_for_service_enhanced() {
-    local service=$1
-    local max_attempts=60
+# 生成API Key
+generate_api_key() {
+    local max_attempts=10
     local attempt=1
     
-    log "等待 $service 服务就绪（增强模式）..."
+    log "生成 API Key..."
     
     while [ $attempt -le $max_attempts ]; do
-        # 多种方式检查服务状态
-        if docker compose exec $service curl -f http://localhost:8080/rest/health &>/dev/null; then
-            success "$service 服务已就绪"
+        API_KEY=$(docker compose exec -T shlink shlink api-key:generate --expiration-date="2030-01-01" 2>/dev/null | grep -oE '[0-9a-f-]{36}' | head -n1)
+        
+        if [ -n "$API_KEY" ]; then
+            success "API Key 生成成功: $API_KEY"
+            echo "API_KEY=$API_KEY" >> "$ENV_FILE"
             return 0
         fi
         
-        # 检查容器日志中的成功启动信息
-        if docker compose logs $service 2>&1 | grep -q "Server started\|RoadRunner server started"; then
-            success "$service 服务日志显示已启动"
-            return 0
+        warning "API Key 生成尝试 $attempt 失败，重试..."
+        sleep 3
+        ((attempt++))
+    done
+    
+    error "无法生成 API Key"
+    return 1
+}
+
+# 显示访问信息
+show_access_info() {
+    source "$ENV_FILE" 2>/dev/null
+    
+    echo -e "${GREEN}"
+    echo "================================================================"
+    echo "                   Shlink 安装完成！                            "
+    echo "================================================================"
+    echo -e "${NC}"
+    
+    echo -e "${CYAN}📊 API 服务访问方式:${NC}"
+    echo -e "域名访问: ${GREEN}http://${API_DOMAIN}:9040${NC}"
+    echo -e "IPv4访问: ${GREEN}http://${IPV4}:9040${NC}"
+    if [ "$IPV6" != "无法获取IPv6" ]; then
+        echo -e "IPv6访问: ${GREEN}http://[${IPV6}]:9040${NC}"
+    fi
+    echo -e "健康检查: ${GREEN}http://${IPV4}:9040/rest/health${NC}"
+    
+    echo -e "${CYAN}🌐 Web 客户端访问方式:${NC}"
+    echo -e "域名访问: ${GREEN}http://${CLIENT_DOMAIN}:9050${NC}"
+    echo -e "IPv4访问: ${GREEN}http://${IPV4}:9050${NC}"
+    if [ "$IPV6" != "无法获取IPv6" ]; then
+        echo -e "IPv6访问: ${GREEN}http://[${IPV6}]:9050${NC}"
+    fi
+    
+    echo -e "${CYAN}🔑 API 密钥:${NC} ${GREEN}${API_KEY}${NC}"
+    echo -e "${CYAN}🗄️ 数据库密码:${NC} ${GREEN}${DB_PASSWORD}${NC}"
+    
+    echo -e "${CYAN}📝 重要提示:${NC}"
+    echo -e "1. 请确保防火墙开放端口 9040 和 9050"
+    echo -e "2. 域名需要正确解析到服务器IP地址"
+    echo -e "3. API Key 请妥善保管，用于API调用"
+    echo -e "4. 首次访问可能需要几分钟服务完全启动"
+    
+    echo -e "${GREEN}================================================================"
+    echo -e "${NC}"
+}
+
+# 等待服务就绪
+wait_for_service() {
+    local service=$1
+    local max_attempts=50
+    local attempt=1
+    
+    log "等待 $service 服务就绪..."
+    
+    while [ $attempt -le $max_attempts ]; do
+        if [ "$service" = "shlink_db" ]; then
+            if docker compose exec $service pg_isready -U shlink -d shlink &>/dev/null; then
+                success "$service 服务已就绪"
+                return 0
+            fi
+        else
+            if docker compose exec $service curl -f http://localhost:8080/rest/health &>/dev/null; then
+                success "$service 服务已就绪"
+                return 0
+            fi
+            
+            if docker compose logs $service 2>&1 | grep -q "Server started\|RoadRunner"; then
+                success "$service 服务日志显示已启动"
+                return 0
+            fi
         fi
         
-        # 检查容器进程
-        if docker compose exec $service ps aux | grep -q "rr\|php"; then
-            success "$service 服务进程已运行"
-            return 0
-        fi
-        
-        # 每10次尝试显示一次进度
         if [ $((attempt % 10)) -eq 0 ]; then
             echo "等待中... ($attempt/$max_attempts)"
-            # 同时显示一些诊断信息
-            docker compose logs $service --tail=5
         fi
         
         if [ $attempt -eq $max_attempts ]; then
-            error "$service 服务启动超时，尝试自动修复..."
+            error "$service 服务启动超时"
             return 1
         fi
         
@@ -87,51 +183,9 @@ wait_for_service_enhanced() {
     done
 }
 
-# 自动修复服务启动问题
-auto_fix_service_issues() {
-    local service=$1
-    
-    log "尝试自动修复 $service 服务问题..."
-    
-    # 1. 首先重启服务
-    docker compose restart $service
-    sleep 10
-    
-    # 2. 检查资源使用情况
-    local mem_usage=$(docker stats $service --no-stream --format "{{.MemUsage}}" | cut -d'/' -f1 | tr -d '[:alpha:]')
-    if [ -n "$mem_usage" ] && [ "$mem_usage" -gt 0 ]; then
-        info "$service 内存使用: ${mem_usage}MB"
-    fi
-    
-    # 3. 调整健康检查参数（如果服务是shlink）
-    if [ "$service" = "shlink" ]; then
-        log "优化健康检查配置..."
-        sed -i '/healthcheck:/,/test:/!b; /test:/a\  interval: 45s\n  timeout: 30s\n  retries: 8\n  start_period: 180s' $COMPOSE_FILE
-    fi
-    
-    # 4. 增加资源限制（如果资源紧张）
-    if ! grep -q "resources:" $COMPOSE_FILE; then
-        log "增加资源限制..."
-        sed -i '/shlink:/a\    deploy:\n      resources:\n        limits:\n          memory: 768M\n          cpus: "1.0"\n        reservations:\n          memory: 256M' $COMPOSE_FILE
-    fi
-    
-    # 5. 重新部署
-    docker compose up -d $service
-    sleep 20
-    
-    # 6. 最终检查
-    if docker compose exec $service curl -f http://localhost:8080/rest/health &>/dev/null; then
-        success "$service 服务修复成功"
-        return 0
-    else
-        error "$service 服务修复失败，需要手动干预"
-        return 1
-    fi
-}
-
-# 创建优化的docker-compose配置
-create_optimized_compose_config() {
-    cat > "$COMPOSE_FILE" <<EOF
+# 创建docker-compose配置
+create_docker_compose_config() {
+    cat > "$COMPOSE_FILE" <<'EOF'
 services:
   shlink_db:
     image: postgres:15-alpine
@@ -139,7 +193,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: shlink
-      POSTGRES_PASSWORD: \$DB_PASSWORD
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: shlink
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -150,12 +204,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-        reservations:
-          memory: 128M
 
   shlink:
     image: shlinkio/shlink:stable
@@ -164,15 +212,13 @@ services:
     depends_on:
       shlink_db:
         condition: service_healthy
-    env_file:
-      - .env
     environment:
-      DEFAULT_DOMAIN: \$API_DOMAIN
+      DEFAULT_DOMAIN: ${API_DOMAIN}
       IS_HTTPS_ENABLED: "false"
-      GEOLITE_LICENSE_KEY: \$GEO_KEY
+      GEOLITE_LICENSE_KEY: ${GEO_KEY}
       DB_DRIVER: postgres
       DB_USER: shlink
-      DB_PASSWORD: \$DB_PASSWORD
+      DB_PASSWORD: ${DB_PASSWORD}
       DB_HOST: shlink_db
       DB_NAME: shlink
       DB_PORT: 5432
@@ -183,17 +229,10 @@ services:
       - shlink_net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/rest/health"]
-      interval: 45s
-      timeout: 30s
-      retries: 8
-      start_period: 180s
-    deploy:
-      resources:
-        limits:
-          memory: 768M
-          cpus: "1.0"
-        reservations:
-          memory: 256M
+      interval: 30s
+      timeout: 20s
+      retries: 10
+      start_period: 120s
 
   shlink_web_client:
     image: shlinkio/shlink-web-client:stable
@@ -203,7 +242,7 @@ services:
       - shlink
     environment:
       SHLINK_SERVER_URL: http://shlink:8080
-      SHLINK_SERVER_API_KEY: \${API_KEY:-}
+      SHLINK_SERVER_API_KEY: ${API_KEY}
     ports:
       - "0.0.0.0:9050:8080"
     networks:
@@ -212,20 +251,11 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
       interval: 30s
       timeout: 10s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-        reservations:
-          memory: 128M
+      retries: 5
 
 networks:
   shlink_net:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.24.0.0/16
 
 volumes:
   db_data:
@@ -233,18 +263,18 @@ volumes:
 EOF
 }
 
-# 完整的安装流程
-install_shlink_complete() {
-    log "开始完整安装流程..."
+# 主安装函数
+install_shlink() {
+    log "开始安装 Shlink..."
     
-    # 检查系统资源
-    check_system_resources
+    check_dependencies
+    mkdir -p "$WORKDIR"
+    cd "$WORKDIR"
     
-    # 清理和准备
     cleanup_containers
     check_ports || exit 1
     
-    # 获取配置
+    # 获取用户配置
     echo "请输入 Shlink 配置信息:"
     read -p "API 域名 (例如: api.example.com): " API_DOMAIN
     read -p "Web Client 域名 (例如: short.example.com): " CLIENT_DOMAIN
@@ -261,77 +291,44 @@ DB_PASSWORD=$DB_PASSWORD
 GEO_KEY=$GEO_KEY
 EOF
 
-    # 创建优化的docker-compose配置
-    create_optimized_compose_config
+    get_ip_addresses
     
-    log "启动 Shlink 服务（优化配置）..."
+    create_docker_compose_config
+    
+    log "启动 Shlink 服务..."
     docker compose up -d
     
-    # 等待服务（使用增强版等待函数）
-    if wait_for_service_enhanced "shlink"; then
-        generate_api_key
+    wait_for_service "shlink_db"
+    wait_for_service "shlink"
+    
+    if generate_api_key; then
+        # 更新环境变量并重启web client
         docker compose up -d shlink_web_client
+        wait_for_service "shlink_web_client"
+        
+        success "Shlink 安装成功完成！"
         show_access_info
+        
+        # 保持脚本运行，显示最终状态
+        echo ""
+        log "最终服务状态:"
+        docker compose ps
+        
+        log "服务日志监控（Ctrl+C 退出）:"
+        docker compose logs -f --tail=10
     else
-        warning "服务启动较慢，尝试自动优化..."
-        if auto_fix_service_issues "shlink"; then
-            generate_api_key
-            docker compose up -d shlink_web_client
-            show_access_info
-        else
-            error "安装失败，请查看日志手动修复"
-            docker compose logs shlink
-            exit 1
-        fi
+        error "安装失败，请检查日志"
+        docker compose logs shlink
+        exit 1
     fi
 }
 
-# 主安装函数
-install_shlink() {
-    log "开始安装 Shlink..."
-    check_dependencies
-    mkdir -p $WORKDIR
-    cd $WORKDIR
-    
-    install_shlink_complete
-}
-
-# 主菜单
-show_menu() {
-    echo -e "${BLUE}=================================${NC}"
-    echo -e "${BLUE}    Shlink 一键安装管理脚本     ${NC}"
-    echo -e "${BLUE}=================================${NC}"
-    echo "1) 安装 Shlink (自动修复版)"
-    echo "2) 修复现有安装"
-    echo "3) 查看状态和日志"
-    echo "4) 重启服务"
-    echo "5) 完全卸载"
-    echo "0) 退出"
-    echo -e "${BLUE}=================================${NC}"
-    read -p "请选择操作 [0-5]: " choice
-    
-    case $choice in
-        1) install_shlink ;;
-        2) auto_fix_existing_installation ;;
-        3) show_status_and_logs ;;
-        4) docker compose restart ;;
-        5) docker compose down -v && rm -rf $WORKDIR ;;
-        0) exit 0 ;;
-        *) echo "无效选择" ;;
+# 如果参数存在，直接安装；否则显示菜单
+if [ $# -gt 0 ]; then
+    case $1 in
+        install) install_shlink ;;
+        *) echo "用法: $0 install" ;;
     esac
-}
-
-# 主函数
-main() {
-    if [ -f $COMPOSE_FILE ]; then
-        cd $WORKDIR
-        show_menu
-    else
-        install_shlink
-    fi
-}
-
-# 包含其他函数（check_dependencies, cleanup_containers, check_ports, generate_api_key, show_access_info等）
-# ... [之前定义的其他函数]
-
-main "$@"
+else
+    install_shlink
+fi
