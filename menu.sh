@@ -124,20 +124,21 @@ set_q_shortcut() {
 # ================== 主菜单 ==================
 while true; do
     # 动态检测安装状态
-    local moon_status="❌ 未安装"; [[ -d /opt/moontv ]] && moon_status="✅ 已安装"
-    local rustdesk_status="❌ 未安装"; [[ -d /opt/rustdesk ]] && rustdesk_status="✅ 已安装"
-    local libretv_status="❌ 未安装"; [[ -d /opt/libretv ]] && libretv_status="✅ 已安装"
-    local singbox_status="❌ 未安装"; command -v sing-box &>/dev/null || command -v sb &>/dev/null && singbox_status="✅ 已安装"
-    local argosb_status="❌ 未安装"; command -v agsb &>/dev/null || [[ -f /etc/opt/ArgoSB/config.json ]] && argosb_status="✅ 已安装"
-    local panso_status="❌ 未安装"; docker ps -a --format '{{.Names}}' | grep -q "^pansou-web$" && panso_status="✅ 已安装"
-    local zjsync_status="❌ 未配置"; [[ -f /etc/zjsync.conf ]] && zjsync_status="✅ 已配置"
-    local subconverter_status="❌ 未运行"; docker ps -a --filter "name=subconverter" --format "{{.Status}}" | grep -q "Up" && subconverter_status="✅ 运行中"
+    # 移除 'local' 关键字
+    moon_status="❌ 未安装"; [[ -d /opt/moontv ]] && moon_status="✅ 已安装"
+    rustdesk_status="❌ 未安装"; [[ -d /opt/rustdesk ]] && rustdesk_status="✅ 已安装"
+    libretv_status="❌ 未安装"; [[ -d /opt/libretv ]] && libretv_status="✅ 已安装"
+    singbox_status="❌ 未安装"; command -v sing-box &>/dev/null || command -v sb &>/dev/null && singbox_status="✅ 已安装"
+    argosb_status="❌ 未安装"; command -v agsb &>/dev/null || [[ -f /etc/opt/ArgoSB/config.json ]] && argosb_status="✅ 已安装"
+    panso_status="❌ 未安装"; docker ps -a --format '{{.Names}}' | grep -q "^pansou-web$" && panso_status="✅ 已安装"
+    zjsync_status="❌ 未配置"; [[ -f /etc/zjsync.conf ]] && zjsync_status="✅ 已配置"
+    subconverter_status="❌ 未运行"; docker ps -a --filter "name=subconverter" --format "{{.Status}}" | grep -q "Up" && subconverter_status="✅ 运行中"
     
-    local posteio_status="❌ 未安装"; docker ps -a --filter "name=posteio" --format "{{.Status}}" | grep -q "Up" && posteio_status="✅ 运行中"
-    local shlink_status="❌ 未安装"; docker ps -a --filter "name=shlink_web" --format "{{.Status}}" | grep -q "Up" && shlink_status="✅ 运行中"
+    posteio_status="❌ 未安装"; docker ps -a --filter "name=posteio" --format "{{.Status}}" | grep -q "Up" && posteio_status="✅ 运行中"
+    shlink_status="❌ 未安装"; docker ps -a --filter "name=shlink_web" --format "{{.Status}}" | grep -q "Up" && shlink_status="✅ 运行中"
 
-    local kejilion_status="⚡ 远程调用"
-    local nginx_status="⚡ 远程调用"
+    kejilion_status="⚡ 远程调用"
+    nginx_status="⚡ 远程调用"
 
     render_menu "🚀 服务管理中心" \
         "1) MoonTV 安装             $moon_status" \
