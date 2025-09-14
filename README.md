@@ -2,8 +2,9 @@
 一个功能强大的 Bash 脚本，用于快速安装和管理各种服务器应用程序和服务。
 
 📋 功能概述
-工具名称	功能描述	状态检测
-MoonTV	媒体服务器和流媒体平台	目录存在检测
+
+工具名称	  功能描述	    状态检测
+MoonTV	  媒体服务器和流媒体平台	  目录存在检测
 RustDesk	开源远程桌面软件	目录存在检测
 LibreTV	电视流媒体解决方案	目录存在检测
 Sing-box-yg	甬哥开发的代理工具	二进制文件检测
@@ -17,20 +18,25 @@ Poste.io	邮件服务器	Docker 容器检测
 Shlink	短链接生成服务	Docker 容器检测
 🛠️ 安装方法
 一键安装并运行
-bash```
-bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/main/menu.sh)````
+bash
+```
+bash <(curl -fsSL https://raw.githubusercontent.com/featherhao/test/main/menu.sh)
+````
 脚本会自动保存到 ~/menu.sh，下次可直接运行：
 
-bash```
-bash ~/menu.sh ```
+···
+bash ~/menu.sh 
+```
 设置快捷命令
 在菜单中选择选项 13 或直接运行：
 
 bash
-```
-echo "alias Q='bash ~/menu.sh'" >> ~/.bashrc```
+···
+echo "alias Q='bash ~/menu.sh'" >> ~/.bashrc
+···
 echo "alias q='bash ~/menu.sh'" >> ~/.bashrc
-source ~/.bashrc
+source ~/.bashrc···
+···
 之后只需输入 Q 或 q 即可打开菜单。
 
 📖 详细功能说明
