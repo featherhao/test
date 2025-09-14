@@ -31,7 +31,7 @@ install_shlink() {
     echo "--- 开始部署 Shlink 短链服务 ---"
     mkdir -p "$WORKDIR"
 
-    # 删除旧容器和旧网络
+    # 删除旧容器和网络
     docker rm -f shlink_web_client shlink 2>/dev/null || true
     docker compose -f "$COMPOSE_FILE" down -v 2>/dev/null || true
 
@@ -91,18 +91,29 @@ EOF
     echo "--- 启动 Shlink API 和数据库 ---"
     docker compose -f "$COMPOSE_FILE" up -d shlink_db shlink
 
-    echo "--- 等待 Shlink API 就绪 ---"
-    until docker exec shlink curl -s http://shlink:8080/health | grep -q "OK"; do
-        echo "等待 API 启动..."
-        sleep 2
+    echo "--- 等待 Shlink API 就绪（最多 60 秒）---"
+    READY=0
+    for i in {1..30}; do
+        if docker exec shlink shlink api-key:generate &>/dev/null; then
+            READY=1
+            break
+        else
+            echo "等待 API 启动..."
+            sleep 2
+        fi
     done
+
+    if [ $READY -ne 1 ]; then
+        echo "Shlink API 启动失败，请检查容器日志"
+        docker logs shlink
+        exit 1
+    fi
 
     echo "--- 生成 API Key ---"
     API_KEY=$(docker exec shlink shlink api-key:generate | grep -oE '[0-9a-f-]{36}' | head -n1)
     echo "生成 API Key: $API_KEY"
 
     echo "--- 启动 Web Client ---"
-    # 启动 Web Client，加入同一网络，直接注入 API Key
     docker rm -f shlink_web_client 2>/dev/null || true
     docker run -d \
       --name shlink_web_client \
