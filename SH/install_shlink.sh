@@ -115,29 +115,29 @@ show_access_info() {
     echo "================================================================"
     echo -e "${NC}"
     
+    echo -e "${CYAN}🌐 Web 客户端访问方式:${NC}"
+    echo -e "域名访问: ${GREEN}https://${CLIENT_DOMAIN}${NC}"
+    echo -e "IPv4访问: ${GREEN}http://${IPV4}:9050${NC}"
+    if [ "$IPV6" != "无法获取IPv6" ]; then
+        echo -e "IPv6访问: ${GREEN}http://[${IPV6}]:9050${NC}"
+    fi
+    
     echo -e "${CYAN}📊 API 服务访问方式:${NC}"
-    echo -e "域名访问: ${GREEN}http://${API_DOMAIN}:9040${NC}"
+    echo -e "域名访问: ${GREEN}https://${API_DOMAIN}${NC}"
     echo -e "IPv4访问: ${GREEN}http://${IPV4}:9040${NC}"
     if [ "$IPV6" != "无法获取IPv6" ]; then
         echo -e "IPv6访问: ${GREEN}http://[${IPV6}]:9040${NC}"
     fi
     echo -e "健康检查: ${GREEN}http://${IPV4}:9040/rest/health${NC}"
     
-    echo -e "${CYAN}🌐 Web 客户端访问方式:${NC}"
-    echo -e "域名访问: ${GREEN}http://${CLIENT_DOMAIN}:9050${NC}"
-    echo -e "IPv4访问: ${GREEN}http://${IPV4}:9050${NC}"
-    if [ "$IPV6" != "无法获取IPv6" ]; then
-        echo -e "IPv6访问: ${GREEN}http://[${IPV6}]:9050${NC}"
-    fi
-    
     echo -e "${CYAN}🔑 API 密钥:${NC} ${GREEN}${API_KEY}${NC}"
     echo -e "${CYAN}🗄️ 数据库密码:${NC} ${GREEN}${DB_PASSWORD}${NC}"
     
     echo -e "${CYAN}📝 重要提示:${NC}"
-    echo -e "1. 请确保防火墙开放端口 9040 和 9050"
-    echo -e "2. 域名需要正确解析到服务器IP地址"
-    echo -e "3. API Key 请妥善保管，用于API调用"
-    echo -e "4. 首次访问可能需要几分钟服务完全启动"
+    echo -e "1. 请确保域名正确解析到服务器IP: ${IPV4}"
+    echo -e "2. 配置反向代理（Nginx/Apache）将域名指向对应端口"
+    echo -e "3. 防火墙需要开放端口 9040 和 9050（仅IP访问需要）"
+    echo -e "4. API Key 请妥善保管"
     
     echo -e "${GREEN}================================================================"
     echo -e "${NC}"
@@ -263,6 +263,36 @@ volumes:
 EOF
 }
 
+# 查看服务状态
+show_status() {
+    echo -e "${CYAN}=== 服务状态 ===${NC}"
+    docker compose ps
+    
+    echo -e "\n${CYAN}=== 资源使用情况 ===${NC}"
+    docker stats --no-stream
+    
+    echo -e "\n${CYAN}=== 最近日志 ===${NC}"
+    docker compose logs --tail=10
+}
+
+# 监控服务日志
+monitor_logs() {
+    echo -e "${CYAN}=== 开始监控日志（Ctrl+C 退出）===${NC}"
+    docker compose logs -f
+}
+
+# 查看服务信息
+show_service_info() {
+    source "$ENV_FILE" 2>/dev/null
+    echo -e "${CYAN}=== 服务配置信息 ===${NC}"
+    echo -e "Web 域名: ${GREEN}https://${CLIENT_DOMAIN}${NC}"
+    echo -e "API 域名: ${GREEN}https://${API_DOMAIN}${NC}"
+    echo -e "服务器IP: ${GREEN}${IPV4}${NC}"
+    echo -e "API 端口: ${GREEN}9040${NC}"
+    echo -e "Web 端口: ${GREEN}9050${NC}"
+    echo -e "API Key: ${GREEN}${API_KEY}${NC}"
+}
+
 # 主安装函数
 install_shlink() {
     log "开始安装 Shlink..."
@@ -309,13 +339,12 @@ EOF
         success "Shlink 安装成功完成！"
         show_access_info
         
-        # 保持脚本运行，显示最终状态
+        # 显示最终状态但不监控日志
         echo ""
         log "最终服务状态:"
         docker compose ps
         
-        log "服务日志监控（Ctrl+C 退出）:"
-        docker compose logs -f --tail=10
+        echo -e "\n${GREEN}安装完成！您可以通过菜单查看状态和日志。${NC}"
     else
         error "安装失败，请检查日志"
         docker compose logs shlink
@@ -323,12 +352,88 @@ EOF
     fi
 }
 
-# 如果参数存在，直接安装；否则显示菜单
-if [ $# -gt 0 ]; then
-    case $1 in
-        install) install_shlink ;;
-        *) echo "用法: $0 install" ;;
+# 显示主菜单
+show_main_menu() {
+    echo -e "${BLUE}=================================${NC}"
+    echo -e "${BLUE}        Shlink 管理菜单          ${NC}"
+    echo -e "${BLUE}=================================${NC}"
+    echo "1) 安装 Shlink"
+    echo "2) 查看服务状态"
+    echo "3) 监控实时日志"
+    echo "4) 查看服务信息"
+    echo "5) 重启服务"
+    echo "6) 停止服务"
+    echo "7) 完全卸载"
+    echo "0) 退出"
+    echo -e "${BLUE}=================================${NC}"
+}
+
+# 处理菜单选择
+handle_menu_choice() {
+    local choice=$1
+    
+    case $choice in
+        1) 
+            install_shlink
+            read -p "按回车键返回菜单..."
+            ;;
+        2) 
+            cd "$WORKDIR" 2>/dev/null && show_status || error "未找到Shlink安装"
+            read -p "按回车键返回菜单..."
+            ;;
+        3) 
+            cd "$WORKDIR" 2>/dev/null && monitor_logs || error "未找到Shlink安装"
+            ;;
+        4) 
+            cd "$WORKDIR" 2>/dev/null && show_service_info || error "未找到Shlink安装"
+            read -p "按回车键返回菜单..."
+            ;;
+        5) 
+            cd "$WORKDIR" 2>/dev/null && docker compose restart && success "服务已重启" || error "未找到Shlink安装"
+            read -p "按回车键返回菜单..."
+            ;;
+        6) 
+            cd "$WORKDIR" 2>/dev/null && docker compose stop && success "服务已停止" || error "未找到Shlink安装"
+            read -p "按回车键返回菜单..."
+            ;;
+        7) 
+            cd "$WORKDIR" 2>/dev/null && {
+                read -p "确定要完全卸载Shlink吗？(y/N): " confirm
+                if [[ $confirm == "y" || $confirm == "Y" ]]; then
+                    docker compose down -v
+                    rm -rf "$WORKDIR"
+                    success "Shlink 已完全卸载"
+                else
+                    info "卸载已取消"
+                fi
+            } || error "未找到Shlink安装"
+            read -p "按回车键返回菜单..."
+            ;;
+        0) 
+            exit 0
+            ;;
+        *) 
+            error "无效选择"
+            sleep 1
+            ;;
     esac
-else
-    install_shlink
-fi
+}
+
+# 主函数
+main() {
+    # 检查是否已安装
+    if [ -f "$COMPOSE_FILE" ]; then
+        cd "$WORKDIR"
+        while true; do
+            clear
+            show_main_menu
+            read -p "请选择操作 [0-7]: " choice
+            handle_menu_choice "$choice"
+        done
+    else
+        install_shlink
+    fi
+}
+
+# 启动脚本
+main "$@"
