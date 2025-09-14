@@ -32,15 +32,15 @@ install_shlink() {
   mkdir -p "$WORKDIR"
 
   [[ -f "$COMPOSE_FILE" ]] && docker compose -f "$COMPOSE_FILE" down -v || true
+  docker rm -f shlink_web_client 2>/dev/null || true
 
-  # 区分 API 域名和 Web 域名
-  read -p "请输入 Shlink API 域名 (例如: api.shlink.qqy.pp.ua): " SHLINK_API_DOMAIN
-  read -p "请输入 Web Client 域名 (例如: shlink.qqy.pp.ua): " SHLINK_WEB_DOMAIN
-  read -p "请输入 Shlink API 端口 [默认: 9040]: " API_PORT
+  read -p "请输入短网址域名 (API，例如: api-q.qqy.pp.ua): " SHLINK_DOMAIN
+  read -p "请输入 Web Client 域名 (例如: q.qqy.pp.ua): " CLIENT_DOMAIN
+  read -p "请输入短网址服务 (Shlink API) 的监听端口 [默认: 9040]: " API_PORT
   API_PORT=${API_PORT:-9040}
-  read -p "请输入 Web Client 端口 [默认: 9050]: " CLIENT_PORT
+  read -p "请输入 Web Client (前端) 的监听端口 [默认: 9050]: " CLIENT_PORT
   CLIENT_PORT=${CLIENT_PORT:-9050}
-  read -p "请输入 GeoLite2 License Key (可选，留空不启用): " GEO_KEY
+  read -p "请输入 GeoLite2 的 License Key (可选，留空则不启用地理统计): " GEO_KEY
 
   # 生成 docker-compose.yml
   cat > "$COMPOSE_FILE" <<EOF
@@ -65,7 +65,7 @@ services:
     depends_on:
       - shlink_db
     environment:
-      DEFAULT_DOMAIN: "$SHLINK_API_DOMAIN"
+      DEFAULT_DOMAIN: "$SHLINK_DOMAIN"
       IS_HTTPS_ENABLED: "true"
       GEOLITE_LICENSE_KEY: "$GEO_KEY"
       DB_DRIVER: "postgres"
@@ -88,11 +88,11 @@ EOF
   API_KEY=$(docker exec shlink shlink api-key:generate | grep -oE '[0-9a-f-]{36}' | head -n1)
 
   echo "--- 启动 Web Client ---"
-  docker rm -f shlink_web_client 2>/dev/null || true
   docker run -d \
     --name shlink_web_client \
+    --network shlink_default \
     -p 0.0.0.0:${CLIENT_PORT}:80 \
-    -e SHLINK_SERVER_URL="http://${SHLINK_API_DOMAIN}:${API_PORT}" \
+    -e SHLINK_SERVER_URL="http://shlink:8080" \
     -e SHLINK_SERVER_API_KEY="$API_KEY" \
     --restart always \
     shlinkio/shlink-web-client:stable
@@ -107,8 +107,8 @@ EOF
   echo ""
   echo "访问方式："
   echo "域名访问:"
-  echo "  - API: http://$SHLINK_API_DOMAIN:$API_PORT"
-  echo "  - Web: http://$SHLINK_WEB_DOMAIN:$CLIENT_PORT"
+  echo "  - API: http://$SHLINK_DOMAIN:$API_PORT"
+  echo "  - Web: http://$CLIENT_DOMAIN:$CLIENT_PORT"
   echo ""
   echo "本机访问:"
   echo "  - API: http://localhost:$API_PORT"
@@ -121,13 +121,6 @@ EOF
   [[ -n "$IPV6" ]] && echo "IPv6访问:"
   [[ -n "$IPV6" ]] && echo "  - API: http://[$IPV6]:$API_PORT"
   [[ -n "$IPV6" ]] && echo "  - Web: http://[$IPV6]:$CLIENT_PORT"
-  echo "============================"
-  echo ""
-  echo "Nginx 反代示例:"
-  echo "API 域名: $SHLINK_API_DOMAIN"
-  echo "location / { proxy_pass http://127.0.0.1:$API_PORT; }"
-  echo "Web 域名: $SHLINK_WEB_DOMAIN"
-  echo "location / { proxy_pass http://127.0.0.0:$CLIENT_PORT; }"
   echo "============================"
   read -p "按回车键返回菜单..."
   menu
