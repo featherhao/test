@@ -31,17 +31,17 @@ install_shlink() {
   echo "--- 开始部署 Shlink 短链服务 ---"
   mkdir -p "$WORKDIR"
 
-  # 删除旧容器和旧网络，避免冲突
+  # 删除旧容器和旧网络
   docker rm -f shlink_web_client shlink 2>/dev/null || true
   docker compose -f "$COMPOSE_FILE" down -v 2>/dev/null || true
 
   read -p "请输入短网址服务 API 域名 (例如: api.q.qqy.pp.ua): " API_DOMAIN
   read -p "请输入 Web Client 域名 (例如: q.qqy.pp.ua): " CLIENT_DOMAIN
-  read -p "请输入短网址服务 (Shlink API) 的监听端口 [默认: 9040]: " API_PORT
+  read -p "请输入 Shlink API 端口 [默认: 9040]: " API_PORT
   API_PORT=${API_PORT:-9040}
-  read -p "请输入 Web Client (前端) 的监听端口 [默认: 9050]: " CLIENT_PORT
+  read -p "请输入 Web Client 端口 [默认: 9050]: " CLIENT_PORT
   CLIENT_PORT=${CLIENT_PORT:-9050}
-  read -p "请输入 GeoLite2 的 License Key (可选，留空则不启用地理统计): " GEO_KEY
+  read -p "请输入 GeoLite2 License Key (可选，留空则不启用): " GEO_KEY
 
   # 生成 docker-compose.yml
   cat > "$COMPOSE_FILE" <<EOF
@@ -101,11 +101,16 @@ volumes:
   db_data:
 EOF
 
-  echo "--- 启动 Shlink ---"
+  echo "--- 启动 Shlink API 和数据库 ---"
   docker compose -f "$COMPOSE_FILE" up -d shlink_db shlink
 
-  echo "--- 等待 Shlink 就绪并生成 API Key ---"
-  sleep 10
+  echo "--- 等待 Shlink API 就绪 ---"
+  until docker exec shlink curl -s http://shlink:8080/health | grep -q "OK"; do
+    echo "等待 API 启动..."
+    sleep 2
+  done
+
+  echo "--- 生成 API Key ---"
   export SHLINK_API_KEY=$(docker exec shlink shlink api-key:generate | grep -oE '[0-9a-f-]{36}' | head -n1)
 
   echo "--- 启动 Web Client ---"
