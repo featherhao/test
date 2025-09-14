@@ -5,10 +5,17 @@ WORKDIR="/opt/shlink"
 COMPOSE_FILE="$WORKDIR/docker-compose.yml"
 ENV_FILE="$WORKDIR/.env"
 
+# 颜色定义
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
 # 检查Docker是否安装
 check_docker() {
     if ! command -v docker &> /dev/null; then
-        echo "错误: Docker未安装。请先安装Docker。"
+        echo -e "${RED}错误: Docker未安装。请先安装Docker。${NC}"
         exit 1
     fi
 }
@@ -16,7 +23,7 @@ check_docker() {
 # 检查Docker Compose是否可用
 check_compose() {
     if ! docker compose version &> /dev/null && ! command -v docker-compose &> /dev/null; then
-        echo "错误: Docker Compose未安装。请先安装Docker Compose。"
+        echo -e "${RED}错误: Docker Compose未安装。请先安装Docker Compose。${NC}"
         exit 1
     fi
 }
@@ -30,25 +37,33 @@ compose_cmd() {
     fi
 }
 
+# 清理冲突容器
+cleanup_containers() {
+    echo -e "${YELLOW}清理可能冲突的容器...${NC}"
+    docker rm -f shlink_web_client shlink shlink_db 2>/dev/null || true
+    # 清理可能存在的旧网络
+    docker network rm shlink_net 2>/dev/null || true
+}
+
 # 获取本机IP地址
 get_ip() {
-    local ipv4=$(curl -s4 https://ipinfo.io/ip || echo "无法获取IPv4")
-    local ipv6=$(curl -s6 https://ipinfo.io/ip || echo "无法获取IPv6")
+    local ipv4=$(curl -s4 https://ipinfo.io/ip 2>/dev/null || echo "无法获取IPv4")
+    local ipv6=$(ip -6 addr show scope global 2>/dev/null | grep inet6 | awk '{print $2}' | cut -d/ -f1 | head -n1 || echo "无法获取IPv6")
     echo "$ipv4" "$ipv6"
 }
 
-menu() {
+show_menu() {
     clear
-    echo "============================"
-    echo " Shlink 短链服务管理脚本"
-    echo "============================"
-    echo "1) 安装 Shlink 服务"
-    echo "2) 卸载 Shlink 服务"
-    echo "3) 更新 Shlink 服务"
-    echo "4) 查看服务信息"
-    echo "5) 重启服务"
-    echo "0) 退出"
-    echo "----------------------------"
+    echo -e "${BLUE}============================${NC}"
+    echo -e "${BLUE} Shlink 短链服务管理脚本${NC}"
+    echo -e "${BLUE}============================${NC}"
+    echo -e "1) 安装 Shlink 服务"
+    echo -e "2) 卸载 Shlink 服务"
+    echo -e "3) 更新 Shlink 服务"
+    echo -e "4) 查看服务信息"
+    echo -e "5) 重启服务"
+    echo -e "0) 退出"
+    echo -e "${BLUE}----------------------------${NC}"
     read -p "请输入选项: " choice
 
     case "$choice" in
@@ -58,12 +73,12 @@ menu() {
         4) info_shlink ;;
         5) restart_shlink ;;
         0) exit 0 ;;
-        *) echo "无效选项，请重新输入" && sleep 2 && menu ;;
+        *) echo -e "${RED}无效选项，请重新输入${NC}" && sleep 2 && show_menu ;;
     esac
 }
 
 install_shlink() {
-    echo "--- 开始部署 Shlink 短链服务 ---"
+    echo -e "${GREEN}--- 开始部署 Shlink 短链服务 ---${NC}"
     
     # 检查依赖
     check_docker
@@ -73,28 +88,18 @@ install_shlink() {
     mkdir -p "$WORKDIR"
     cd "$WORKDIR"
 
-    # 检查是否已安装
-    if [ -f "$COMPOSE_FILE" ]; then
-        echo "检测到已存在的Shlink安装。"
-        read -p "是否要重新安装？这将删除所有现有数据！(y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            echo "安装已取消。"
-            sleep 2
-            menu
-            return
-        fi
-        uninstall_shlink
-    fi
+    # 清理可能冲突的容器
+    cleanup_containers
 
     # 获取用户输入
-    echo "请输入配置信息（直接回车使用默认值）:"
-    read -p "请输入短网址服务 API 域名 (例如: api.example.com): " API_DOMAIN
-    read -p "请输入 Web Client 域名 (例如: short.example.com): " CLIENT_DOMAIN
-    read -p "请输入 Shlink API 端口 [默认: 8080]: " API_PORT
-    API_PORT=${API_PORT:-8080}
-    read -p "请输入 Web Client 端口 [默认: 80]: " CLIENT_PORT
-    CLIENT_PORT=${CLIENT_PORT:-80}
+    echo "请输入配置信息:"
+    read -p "请输入短网址服务 API 域名 (例如: api.q.qqy.pp.ua): " API_DOMAIN
+    read -p "请输入 Web Client 域名 (例如: q.qqy.pp.ua): " CLIENT_DOMAIN
+    
+    # 使用您指定的端口
+    API_PORT=9040
+    CLIENT_PORT=9050
+    
     read -p "请输入数据库密码 [默认: shlinkpass]: " DB_PASSWORD
     DB_PASSWORD=${DB_PASSWORD:-shlinkpass}
     read -p "请输入 GeoLite2 License Key (可选，留空则不启用): " GEO_KEY
@@ -157,7 +162,7 @@ services:
       DB_NAME: shlink
       DB_PORT: 5432
     ports:
-      - "\$API_PORT:8080"
+      - "0.0.0.0:\$API_PORT:8080"
     networks:
       - shlink_net
     healthcheck:
@@ -176,7 +181,7 @@ services:
       SHLINK_SERVER_URL: http://\$API_DOMAIN:\$API_PORT
       SHLINK_SERVER_API_KEY: \${API_KEY:-}
     ports:
-      - "\$CLIENT_PORT:80"
+      - "0.0.0.0:\$CLIENT_PORT:80"
     networks:
       - shlink_net
 
@@ -189,10 +194,10 @@ volumes:
     driver: local
 EOF
 
-    echo "--- 启动 Shlink 服务 ---"
+    echo -e "${YELLOW}--- 启动 Shlink 服务 ---${NC}"
     $(compose_cmd) up -d
 
-    echo "--- 等待 Shlink API 就绪（最多 60 秒）---"
+    echo -e "${YELLOW}--- 等待 Shlink API 就绪（最多 60 秒）---${NC}"
     local READY=0
     for i in {1..30}; do
         if $(compose_cmd) exec shlink shlink api-key:list >/dev/null 2>&1; then
@@ -205,12 +210,12 @@ EOF
     done
 
     if [ $READY -ne 1 ]; then
-        echo "Shlink API 启动失败，请检查容器日志"
+        echo -e "${RED}Shlink API 启动失败，请检查容器日志${NC}"
         $(compose_cmd) logs shlink
         exit 1
     fi
 
-    echo "--- 生成 API Key ---"
+    echo -e "${YELLOW}--- 生成 API Key ---${NC}"
     API_KEY=$($(compose_cmd) exec shlink shlink api-key:generate --expiration="never" | grep -oE '[0-9a-f-]{36}' | head -n1)
     
     # 更新环境变量文件
@@ -222,45 +227,45 @@ EOF
     # 获取IP地址
     read ipv4 ipv6 <<< $(get_ip)
 
-    echo "============================"
-    echo " Shlink 部署完成！"
-    echo "API Key: $API_KEY"
+    echo -e "${GREEN}============================${NC}"
+    echo -e "${GREEN} Shlink 部署完成！${NC}"
+    echo -e "${GREEN}API Key: $API_KEY${NC}"
     echo ""
-    echo "访问方式："
-    echo "本机访问:"
-    echo "  - API: http://localhost:$API_PORT"
-    echo "  - Web: http://localhost:$CLIENT_PORT"
-    echo "域名访问:"
-    echo "  - API: http://$API_DOMAIN:$API_PORT"
-    echo "  - Web: http://$CLIENT_DOMAIN:$CLIENT_PORT"
+    echo -e "${BLUE}访问方式：${NC}"
+    echo -e "本机访问:"
+    echo -e "  - API: http://localhost:$API_PORT"
+    echo -e "  - Web: http://localhost:$CLIENT_PORT"
+    echo -e "域名访问:"
+    echo -e "  - API: http://$API_DOMAIN:$API_PORT"
+    echo -e "  - Web: http://$CLIENT_DOMAIN:$CLIENT_PORT"
     
     if [ "$ipv4" != "无法获取IPv4" ]; then
-        echo "IPv4访问:"
-        echo "  - API: http://$ipv4:$API_PORT"
-        echo "  - Web: http://$ipv4:$CLIENT_PORT"
+        echo -e "IPv4访问:"
+        echo -e "  - API: http://$ipv4:$API_PORT"
+        echo -e "  - Web: http://$ipv4:$CLIENT_PORT"
     fi
     
     if [ "$ipv6" != "无法获取IPv6" ]; then
-        echo "IPv6访问:"
-        echo "  - API: http://[$ipv6]:$API_PORT"
-        echo "  - Web: http://[$ipv6]:$CLIENT_PORT"
+        echo -e "IPv6访问:"
+        echo -e "  - API: http://[$ipv6]:$API_PORT"
+        echo -e "  - Web: http://[$ipv6]:$CLIENT_PORT"
     fi
     
     echo ""
-    echo "重要: 请确保您的域名已正确解析到本服务器"
-    echo "============================"
+    echo -e "${YELLOW}重要: 请确保您的域名已正确解析到本服务器${NC}"
+    echo -e "${GREEN}============================${NC}"
 
     read -p "按回车键返回菜单..."
-    menu
+    show_menu
 }
 
 uninstall_shlink() {
-    echo "--- 卸载 Shlink 服务 ---"
+    echo -e "${RED}--- 卸载 Shlink 服务 ---${NC}"
     
     if [ ! -f "$COMPOSE_FILE" ]; then
-        echo "未找到Shlink安装。"
+        echo -e "${YELLOW}未找到Shlink安装。${NC}"
         read -p "按回车键返回菜单..."
-        menu
+        show_menu
         return
     fi
     
@@ -269,79 +274,84 @@ uninstall_shlink() {
     read -p "确定要卸载Shlink吗？这将删除所有数据！(y/N): " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "卸载已取消。"
+        echo -e "${YELLOW}卸载已取消。${NC}"
         sleep 2
-        menu
+        show_menu
         return
     fi
     
     $(compose_cmd) down -v
     cd /opt
     rm -rf "$WORKDIR"
-    echo "Shlink 已卸载"
+    echo -e "${GREEN}Shlink 已卸载${NC}"
     read -p "按回车键返回菜单..."
-    menu
+    show_menu
 }
 
 update_shlink() {
-    echo "--- 更新 Shlink 服务 ---"
+    echo -e "${YELLOW}--- 更新 Shlink 服务 ---${NC}"
     
     if [ ! -f "$COMPOSE_FILE" ]; then
-        echo "未找到Shlink安装。"
+        echo -e "${YELLOW}未找到Shlink安装。${NC}"
         read -p "按回车键返回菜单..."
-        menu
+        show_menu
         return
     fi
     
     cd "$WORKDIR"
     $(compose_cmd) pull
     $(compose_cmd) up -d
-    echo "Shlink 已更新"
+    echo -e "${GREEN}Shlink 已更新${NC}"
     read -p "按回车键返回菜单..."
-    menu
+    show_menu
 }
 
 restart_shlink() {
-    echo "--- 重启 Shlink 服务 ---"
+    echo -e "${YELLOW}--- 重启 Shlink 服务 ---${NC}"
     
     if [ ! -f "$COMPOSE_FILE" ]; then
-        echo "未找到Shlink安装。"
+        echo -e "${YELLOW}未找到Shlink安装。${NC}"
         read -p "按回车键返回菜单..."
-        menu
+        show_menu
         return
     fi
     
     cd "$WORKDIR"
     $(compose_cmd) restart
-    echo "Shlink 已重启"
+    echo -e "${GREEN}Shlink 已重启${NC}"
     read -p "按回车键返回菜单..."
-    menu
+    show_menu
 }
 
 info_shlink() {
-    echo "--- Shlink 服务信息 ---"
+    echo -e "${BLUE}--- Shlink 服务信息 ---${NC}"
     
     if [ ! -f "$COMPOSE_FILE" ]; then
-        echo "未找到Shlink安装。"
+        echo -e "${YELLOW}未找到Shlink安装。${NC}"
         read -p "按回车键返回菜单..."
-        menu
+        show_menu
         return
     fi
     
     cd "$WORKDIR"
-    echo "容器状态:"
+    echo -e "${GREEN}容器状态:${NC}"
     $(compose_cmd) ps
     
-    echo -e "\n服务配置:"
+    echo -e "\n${GREEN}服务配置:${NC}"
     if [ -f "$ENV_FILE" ]; then
         grep -v "DB_PASSWORD\|API_KEY" "$ENV_FILE"
     fi
     
     read -p "按回车键返回菜单..."
-    menu
+    show_menu
 }
 
-# 启动菜单
-check_docker
-check_compose
-menu
+# 主执行流程
+main() {
+    check_docker
+    check_compose
+    show_menu
+}
+
+# 启动脚本
+main "$@"
