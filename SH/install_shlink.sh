@@ -32,17 +32,22 @@ install_shlink() {
   mkdir -p "$WORKDIR"
 
   [[ -f "$COMPOSE_FILE" ]] && docker compose -f "$COMPOSE_FILE" down -v || true
-  docker rm -f shlink_web_client 2>/dev/null || true
 
-  read -p "请输入短网址域名 (例如: api.example.com): " SHLINK_DOMAIN
-  read -p "请输入 Web Client 域名 (例如: app.example.com): " CLIENT_DOMAIN
+  read -p "请输入短网址域名 (例如: shlink.qqy.pp.ua): " SHLINK_DOMAIN
+  read -p "请输入 Web Client 域名 (例如: shlinkapi.qqypp.ua): " CLIENT_DOMAIN
   read -p "请输入短网址服务 (Shlink API) 的监听端口 [默认: 9040]: " API_PORT
   API_PORT=${API_PORT:-9040}
+  read -p "请输入 Web Client (前端) 的监听端口 [默认: 9050]: " CLIENT_PORT
+  CLIENT_PORT=${CLIENT_PORT:-9050}
   read -p "请输入 GeoLite2 的 License Key (可选，留空则不启用地理统计): " GEO_KEY
 
-  # 生成 docker-compose.yml
+  # 生成 docker-compose.yml，绑定 0.0.0.0，并使用自定义网络
   cat > "$COMPOSE_FILE" <<EOF
 version: "3.8"
+
+networks:
+  shlink_net:
+    driver: bridge
 
 services:
   shlink_db:
@@ -55,6 +60,8 @@ services:
       POSTGRES_DB: shlink
     volumes:
       - db_data:/var/lib/postgresql/data
+    networks:
+      - shlink_net
 
   shlink:
     image: shlinkio/shlink:stable
@@ -73,23 +80,29 @@ services:
       DB_NAME: "shlink"
     ports:
       - "0.0.0.0:$API_PORT:8080"
+    networks:
+      - shlink_net
 
 volumes:
   db_data:
 EOF
 
-  echo "--- 启动 Docker Compose (API) ---"
+  echo "--- 启动 Docker Compose ---"
   docker compose -f "$COMPOSE_FILE" up -d
 
-  echo "--- 等待 Shlink API 就绪并生成 API Key ---"
+  echo "--- 等待 Shlink 服务就绪并生成 API Key ---"
   sleep 10
   API_KEY=$(docker exec shlink shlink api-key:generate | grep -oE '[0-9a-f-]{36}' | head -n1)
 
-  echo "--- 启动 Web Client (host 网络模式) ---"
+  echo "--- 启动 Web Client ---"
+  # 删除旧容器
+  docker rm -f shlink_web_client 2>/dev/null || true
+
   docker run -d \
     --name shlink_web_client \
-    --network host \
-    -e SHLINK_SERVER_URL="http://127.0.0.1:$API_PORT" \
+    --network shlink_net \
+    -p 0.0.0.0:${CLIENT_PORT}:80 \
+    -e SHLINK_SERVER_URL="http://shlink:8080" \
     -e SHLINK_SERVER_API_KEY="$API_KEY" \
     --restart always \
     shlinkio/shlink-web-client:stable
@@ -103,21 +116,15 @@ EOF
   echo "API Key: $API_KEY"
   echo ""
   echo "访问方式："
-  echo "域名访问:"
-  echo "  - API: http://$SHLINK_DOMAIN:$API_PORT"
-  echo "  - Web: http://$CLIENT_DOMAIN"
-  echo ""
   echo "本机访问:"
   echo "  - API: http://localhost:$API_PORT"
-  echo "  - Web: http://localhost"
-  echo ""
+  echo "  - Web: http://localhost:$CLIENT_PORT"
   echo "IPv4访问:"
   echo "  - API: http://$IPV4:$API_PORT"
-  echo "  - Web: http://$IPV4"
-  [[ -n "$IPV6" ]] && echo ""
+  echo "  - Web: http://$IPV4:$CLIENT_PORT"
   [[ -n "$IPV6" ]] && echo "IPv6访问:"
   [[ -n "$IPV6" ]] && echo "  - API: http://[$IPV6]:$API_PORT"
-  [[ -n "$IPV6" ]] && echo "  - Web: http://[$IPV6]"
+  [[ -n "$IPV6" ]] && echo "  - Web: http://[$IPV6]:$CLIENT_PORT"
   echo "============================"
   read -p "按回车键返回菜单..."
   menu
@@ -144,7 +151,7 @@ update_shlink() {
 info_shlink() {
   echo "--- Shlink 服务信息 ---"
   [[ -f "$COMPOSE_FILE" ]] && docker ps --filter "name=shlink" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-  docker ps --filter "name=shlink_web_client" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  [[ -f "$COMPOSE_FILE" ]] && docker ps --filter "name=shlink_web_client" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
   read -p "按回车键返回菜单..."
   menu
 }
