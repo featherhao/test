@@ -33,22 +33,17 @@ install_shlink() {
 
   [[ -f "$COMPOSE_FILE" ]] && docker compose -f "$COMPOSE_FILE" down -v || true
 
-  read -p "请输入短网址域名 (例如: shlink.qqy.pp.ua): " SHLINK_DOMAIN
-  read -p "请输入 Web Client 域名 (例如: shlinkapi.qqypp.ua): " CLIENT_DOMAIN
+  # 域名示例：API 域名必须带 api 前缀，前端域名可普通
+  read -p "请输入短网址服务 API 域名 (例如: api.q.qqy.pp.ua): " API_DOMAIN
+  read -p "请输入 Web Client 域名 (例如: q.qqy.pp.ua): " CLIENT_DOMAIN
   read -p "请输入短网址服务 (Shlink API) 的监听端口 [默认: 9040]: " API_PORT
   API_PORT=${API_PORT:-9040}
   read -p "请输入 Web Client (前端) 的监听端口 [默认: 9050]: " CLIENT_PORT
   CLIENT_PORT=${CLIENT_PORT:-9050}
   read -p "请输入 GeoLite2 的 License Key (可选，留空则不启用地理统计): " GEO_KEY
 
-  # 生成 docker-compose.yml，绑定 0.0.0.0，并使用自定义网络
+  # 生成 docker-compose.yml
   cat > "$COMPOSE_FILE" <<EOF
-version: "3.8"
-
-networks:
-  shlink_net:
-    driver: bridge
-
 services:
   shlink_db:
     image: postgres:15
@@ -70,7 +65,7 @@ services:
     depends_on:
       - shlink_db
     environment:
-      DEFAULT_DOMAIN: "$SHLINK_DOMAIN"
+      DEFAULT_DOMAIN: "$API_DOMAIN"
       IS_HTTPS_ENABLED: "true"
       GEOLITE_LICENSE_KEY: "$GEO_KEY"
       DB_DRIVER: "postgres"
@@ -83,6 +78,24 @@ services:
     networks:
       - shlink_net
 
+  shlink_web_client:
+    image: shlinkio/shlink-web-client:stable
+    container_name: shlink_web_client
+    restart: always
+    environment:
+      SHLINK_SERVER_URL: "http://shlink:8080"
+      SHLINK_SERVER_API_KEY: "TEMP_API_KEY"
+    ports:
+      - "0.0.0.0:$CLIENT_PORT:80"
+    depends_on:
+      - shlink
+    networks:
+      - shlink_net
+
+networks:
+  shlink_net:
+    driver: bridge
+
 volumes:
   db_data:
 EOF
@@ -94,18 +107,8 @@ EOF
   sleep 10
   API_KEY=$(docker exec shlink shlink api-key:generate | grep -oE '[0-9a-f-]{36}' | head -n1)
 
-  echo "--- 启动 Web Client ---"
-  # 删除旧容器
-  docker rm -f shlink_web_client 2>/dev/null || true
-
-  docker run -d \
-    --name shlink_web_client \
-    --network shlink_net \
-    -p 0.0.0.0:${CLIENT_PORT}:80 \
-    -e SHLINK_SERVER_URL="http://shlink:8080" \
-    -e SHLINK_SERVER_API_KEY="$API_KEY" \
-    --restart always \
-    shlinkio/shlink-web-client:stable
+  echo "--- 更新 Web Client 的 API Key ---"
+  docker exec shlink_web_client /bin/sh -c "sed -i 's/TEMP_API_KEY/$API_KEY/' /usr/share/nginx/html/env-config.js || true"
 
   # 获取 IPv4 和 IPv6
   IPV4=$(curl -s https://ipinfo.io/ip)
@@ -133,7 +136,6 @@ EOF
 uninstall_shlink() {
   echo "--- 卸载 Shlink 服务 ---"
   [[ -f "$COMPOSE_FILE" ]] && docker compose -f "$COMPOSE_FILE" down -v
-  docker rm -f shlink_web_client 2>/dev/null || true
   rm -rf "$WORKDIR"
   echo "Shlink 已卸载"
   read -p "按回车键返回菜单..."
