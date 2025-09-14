@@ -5,7 +5,6 @@ set -Eeuo pipefail
 trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
 
 # ================== 基础配置 ==================
-# menu.sh 自身的 URL 保持不变，因为它还在根目录
 SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh"
 SCRIPT_PATH="$HOME/menu.sh"
 
@@ -64,7 +63,7 @@ else
     COMPOSE="docker compose"
 fi
 
-# ================== 子脚本路径 (已更新为 SH 目录) ==================
+# ================== 子脚本路径 ==================
 WORKDIR_MOONTV="/opt/moontv"
 MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/mootvinstall.sh"
 WORKDIR_RUSTDESK="/opt/rustdesk"
@@ -79,31 +78,47 @@ ARGOSB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main
 PANSO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/pansou.sh"
 POSTEIO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/Poste.io.sh"
 
-# ================== 调用子脚本 (已更新为 SH 目录) ==================
-moon_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${MOONTV_SCRIPT}?t=$(date +%s)"); }
-rustdesk_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
-libretv_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
-singbox_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh); }
-nginx_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${NGINX_SCRIPT}?t=$(date +%s)"); }
-panso_menu() {
-    bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${PANSO_SCRIPT}?t=$(date +%s)")
+# ================== 调用子脚本 ==================
+moon_menu() { bash <(fetch "${MOONTV_SCRIPT}?t=$(date +%s)"); }
+rustdesk_menu() { bash <(fetch "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
+libretv_menu() { bash <(fetch "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
+singbox_menu() { bash <(fetch "https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh"); }
+nginx_menu() { bash <(fetch "${NGINX_SCRIPT}?t=$(date +%s)"); }
+panso_menu() { bash <(fetch "${PANSO_SCRIPT}?t=$(date +%s)"); }
+zjsync_menu() { bash <(fetch "${ZJSYNC_SCRIPT}?t=$(date +%s)"); }
+subconverter_menu() { bash <(fetch "${SUB_SCRIPT}?t=$(date +%s)"); }
+shlink_menu() { bash <(fetch "${SHLINK_SCRIPT}?t=$(date +%s)"); }
+argosb_menu() { bash <(fetch "${ARGOSB_SCRIPT}?t=$(date +%s)"); }
+posteio_menu() { bash <(fetch "${POSTEIO_SCRIPT}?t=$(date +%s)"); }
+
+# ================== Docker 服务检查 ==================
+check_docker_service() {
+    local service_name="$1"
+    if ! command -v docker &>/dev/null; then
+        echo "❌ Docker 未安装"
+        return 1
+    fi
+    
+    if ! docker info &>/dev/null; then
+        echo "❌ Docker 未运行"
+        return 1
+    fi
+    
+    if docker ps -a --format '{{.Names}}' | grep -q "^${service_name}$"; then
+        if docker ps --format '{{.Names}}' | grep -q "^${service_name}$"; then
+            echo "✅ 运行中"
+        else
+            echo "⚠️ 已停止"
+        fi
+    else
+        echo "❌ 未安装"
+    fi
 }
-zjsync_menu() {
-    bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${ZJSYNC_SCRIPT}?t=$(date +%s)")
-}
-subconverter_menu() {
-    bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${SUB_SCRIPT}?t=$(date +%s)")
-}
-shlink_menu() {
-    bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${SHLINK_SCRIPT}?t=$(date +%s)")
-}
-argosb_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${ARGOSB_SCRIPT}?t=$(date +%s)"); }
-posteio_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${POSTEIO_SCRIPT}?t=$(date +%s)"); }
 
 # ================== 更新菜单脚本 ==================
 update_menu_script() {
     echo "🔄 正在更新 menu.sh..."
-    curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
+    fetch "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
     echo "✅ menu.sh 已更新到 $SCRIPT_PATH"
     echo "👉 以后可直接执行：bash ~/menu.sh"
@@ -128,43 +143,26 @@ while true; do
     [[ -d /opt/moontv ]] && moon_status="✅ 已安装" || moon_status="❌ 未安装"
     [[ -d /opt/rustdesk ]] && rustdesk_status="✅ 已安装" || rustdesk_status="❌ 未安装"
     [[ -d /opt/libretv ]] && libretv_status="✅ 已安装" || libretv_status="❌ 未安装"
+    
     if command -v sing-box &>/dev/null || command -v sb &>/dev/null; then
         singbox_status="✅ 已安装"
     else
         singbox_status="❌ 未安装"
     fi
+    
     if command -v agsb &>/dev/null || [[ -f /etc/opt/ArgoSB/config.json ]]; then
         argosb_status="✅ 已安装"
     else
         argosb_status="❌ 未安装"
     fi
-    if docker ps -a --format '{{.Names}}' | grep -q "^pansou-web$"; then
-        panso_status="✅ 已安装"
-    else
-        panso_status="❌ 未安装"
-    fi
-    if [[ -f /etc/zjsync.conf ]]; then
-        zjsync_status="✅ 已配置"
-    else
-        zjsync_status="❌ 未配置"
-    fi
-    if docker ps -a --filter "name=subconverter" --format "{{.Status}}" | grep -q "Up"; then
-        subconverter_status="✅ 运行中"
-    else
-        subconverter_status="❌ 未运行"
-    fi
-    # 新增的两个服务状态检测，使用与原脚本一致的写法
-    if docker ps -a --filter "name=shlink_web" --format "{{.Status}}" | grep -q "Up"; then
-        shlink_status="✅ 运行中"
-    else
-        shlink_status="❌ 未运行"
-    fi
-    if docker ps -a --filter "name=posteio" --format "{{.Status}}" | grep -q "Up"; then
-        posteio_status="✅ 运行中"
-    else
-        posteio_status="❌ 未运行"
-    fi
-
+    
+    # 使用新的 Docker 服务检查函数
+    panso_status=$(check_docker_service "pansou-web")
+    zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "✅ 已配置" || echo "❌ 未配置")
+    subconverter_status=$(check_docker_service "subconverter")
+    shlink_status=$(check_docker_service "shlink-web")
+    posteio_status=$(check_docker_service "posteio")
+    
     kejilion_status="⚡ 远程调用"
     nginx_status="⚡ 远程调用"
 
@@ -193,7 +191,7 @@ while true; do
         3) libretv_menu ;;
         4) singbox_menu ;;
         5) argosb_menu ;;
-        6) bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh) ;;
+        6) bash <(fetch "https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh") ;;
         7) zjsync_menu ;;
         8) panso_menu ;;
         9) nginx_menu ;;
