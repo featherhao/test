@@ -31,9 +31,10 @@ install_shlink() {
   echo "--- 开始部署 Shlink 短链服务 ---"
   mkdir -p "$WORKDIR"
 
-  [[ -f "$COMPOSE_FILE" ]] && docker compose -f "$COMPOSE_FILE" down -v || true
+  # 删除旧容器和旧网络，避免冲突
+  docker rm -f shlink_web_client 2>/dev/null || true
+  docker compose -f "$COMPOSE_FILE" down -v 2>/dev/null || true
 
-  # 域名示例：API 域名必须带 api 前缀，前端域名可普通
   read -p "请输入短网址服务 API 域名 (例如: api.q.qqy.pp.ua): " API_DOMAIN
   read -p "请输入 Web Client 域名 (例如: q.qqy.pp.ua): " CLIENT_DOMAIN
   read -p "请输入短网址服务 (Shlink API) 的监听端口 [默认: 9040]: " API_PORT
@@ -135,7 +136,8 @@ EOF
 
 uninstall_shlink() {
   echo "--- 卸载 Shlink 服务 ---"
-  [[ -f "$COMPOSE_FILE" ]] && docker compose -f "$COMPOSE_FILE" down -v
+  docker rm -f shlink_web_client 2>/dev/null || true
+  docker compose -f "$COMPOSE_FILE" down -v 2>/dev/null || true
   rm -rf "$WORKDIR"
   echo "Shlink 已卸载"
   read -p "按回车键返回菜单..."
@@ -144,7 +146,8 @@ uninstall_shlink() {
 
 update_shlink() {
   echo "--- 更新 Shlink 服务 ---"
-  [[ -f "$COMPOSE_FILE" ]] && docker compose -f "$COMPOSE_FILE" pull && docker compose -f "$COMPOSE_FILE" up -d
+  docker compose -f "$COMPOSE_FILE" pull
+  docker compose -f "$COMPOSE_FILE" up -d
   echo "Shlink 已更新"
   read -p "按回车键返回菜单..."
   menu
@@ -152,8 +155,8 @@ update_shlink() {
 
 info_shlink() {
   echo "--- Shlink 服务信息 ---"
-  [[ -f "$COMPOSE_FILE" ]] && docker ps --filter "name=shlink" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-  [[ -f "$COMPOSE_FILE" ]] && docker ps --filter "name=shlink_web_client" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  docker ps --filter "name=shlink" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  docker ps --filter "name=shlink_web_client" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
   read -p "按回车键返回菜单..."
   menu
 }
