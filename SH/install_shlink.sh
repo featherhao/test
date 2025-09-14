@@ -32,7 +32,7 @@ install_shlink() {
   mkdir -p "$WORKDIR"
 
   # 删除旧容器和旧网络，避免冲突
-  docker rm -f shlink_web_client 2>/dev/null || true
+  docker rm -f shlink_web_client shlink 2>/dev/null || true
   docker compose -f "$COMPOSE_FILE" down -v 2>/dev/null || true
 
   read -p "请输入短网址服务 API 域名 (例如: api.q.qqy.pp.ua): " API_DOMAIN
@@ -85,11 +85,11 @@ services:
     restart: always
     environment:
       SHLINK_SERVER_URL: "http://shlink:8080"
-      SHLINK_SERVER_API_KEY: "TEMP_API_KEY"
-    ports:
-      - "0.0.0.0:$CLIENT_PORT:80"
+      SHLINK_SERVER_API_KEY: "\${SHLINK_API_KEY}"
     depends_on:
       - shlink
+    ports:
+      - "0.0.0.0:$CLIENT_PORT:80"
     networks:
       - shlink_net
 
@@ -101,28 +101,31 @@ volumes:
   db_data:
 EOF
 
-  echo "--- 启动 Docker Compose ---"
-  docker compose -f "$COMPOSE_FILE" up -d
+  echo "--- 启动 Shlink ---"
+  docker compose -f "$COMPOSE_FILE" up -d shlink_db shlink
 
-  echo "--- 等待 Shlink 服务就绪并生成 API Key ---"
+  echo "--- 等待 Shlink 就绪并生成 API Key ---"
   sleep 10
-  API_KEY=$(docker exec shlink shlink api-key:generate | grep -oE '[0-9a-f-]{36}' | head -n1)
+  export SHLINK_API_KEY=$(docker exec shlink shlink api-key:generate | grep -oE '[0-9a-f-]{36}' | head -n1)
 
-  echo "--- 更新 Web Client 的 API Key ---"
-  docker exec shlink_web_client /bin/sh -c "sed -i 's/TEMP_API_KEY/$API_KEY/' /usr/share/nginx/html/env-config.js || true"
+  echo "--- 启动 Web Client ---"
+  docker compose -f "$COMPOSE_FILE" up -d shlink_web_client
 
-  # 获取 IPv4 和 IPv6
+  # 获取宿主机 IP
   IPV4=$(curl -s https://ipinfo.io/ip)
   IPV6=$(ip -6 addr show scope global | grep inet6 | awk '{print $2}' | cut -d/ -f1 | head -n1)
 
   echo "============================"
   echo " Shlink 部署完成！"
-  echo "API Key: $API_KEY"
+  echo "API Key: $SHLINK_API_KEY"
   echo ""
   echo "访问方式："
   echo "本机访问:"
   echo "  - API: http://localhost:$API_PORT"
   echo "  - Web: http://localhost:$CLIENT_PORT"
+  echo "域名访问:"
+  echo "  - API: http://$API_DOMAIN:$API_PORT"
+  echo "  - Web: http://$CLIENT_DOMAIN:$CLIENT_PORT"
   echo "IPv4访问:"
   echo "  - API: http://$IPV4:$API_PORT"
   echo "  - Web: http://$IPV4:$CLIENT_PORT"
@@ -130,13 +133,14 @@ EOF
   [[ -n "$IPV6" ]] && echo "  - API: http://[$IPV6]:$API_PORT"
   [[ -n "$IPV6" ]] && echo "  - Web: http://[$IPV6]:$CLIENT_PORT"
   echo "============================"
+
   read -p "按回车键返回菜单..."
   menu
 }
 
 uninstall_shlink() {
   echo "--- 卸载 Shlink 服务 ---"
-  docker rm -f shlink_web_client 2>/dev/null || true
+  docker rm -f shlink_web_client shlink 2>/dev/null || true
   docker compose -f "$COMPOSE_FILE" down -v 2>/dev/null || true
   rm -rf "$WORKDIR"
   echo "Shlink 已卸载"
