@@ -124,7 +124,7 @@ set_q_shortcut() {
 # ================== 主菜单 ==================
 while true; do
     # 动态检测安装状态
-    # 请确保以下所有行都没有 'local'
+    # 移除了所有 'local' 关键字，以修复错误
     moon_status="❌ 未安装"; [[ -d /opt/moontv ]] && moon_status="✅ 已安装"
     rustdesk_status="❌ 未安装"; [[ -d /opt/rustdesk ]] && rustdesk_status="✅ 已安装"
     libretv_status="❌ 未安装"; [[ -d /opt/libretv ]] && libretv_status="✅ 已安装"
