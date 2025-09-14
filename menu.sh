@@ -5,9 +5,9 @@ set -Eeuo pipefail
 trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
 
 # ================== 基础配置 ==================
-# menu.sh 自身的 URL
-readonly SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh"
-readonly SCRIPT_PATH="$HOME/menu.sh"
+# menu.sh 自身的 URL 保持不变，因为它还在根目录
+SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh"
+SCRIPT_PATH="$HOME/menu.sh"
 
 # ================== 彩色与日志 ==================
 if [[ -t 1 ]] && command -v tput &>/dev/null; then
@@ -21,7 +21,6 @@ info()  { echo -e "${C_CYAN}[*]${C_RESET} $*"; }
 warn()  { echo -e "${C_YELLOW}[!]${C_RESET} $*"; }
 error() { echo -e "${C_RED}[x]${C_RESET} $*"; }
 
-# ================== 核心函数 ==================
 print_header() {
     local title="$1"
     echo -e "${C_BOLD}==============================${C_RESET}"
@@ -40,23 +39,19 @@ render_menu() {
     echo "=============================="
 }
 
-# 统一的 fetch 函数，带有重试和超时逻辑
 fetch() {
-    curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$1"
+    curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@"
 }
 
-# 动态调用子脚本
-run_remote_script() {
-    local script_url="$1"
-    info "正在加载并执行 $script_url..."
-    fetch "$script_url?t=$(date +%s)" | bash
+run_url() {
+    bash <(fetch "$1")
 }
 
 # ================== 自我初始化逻辑 ==================
 if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
-    echo "⚡ 检测到你是通过 <(curl ...) 临时运行的"
+    echo "⚡ 检测到你是通过 <(curl …) 临时运行的"
     echo "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
-    fetch "${SCRIPT_URL}" -o "$SCRIPT_PATH"
+    curl -fsSL "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
     echo "✅ 已保存，下次可直接执行：bash ~/menu.sh"
     sleep 2
@@ -69,40 +64,46 @@ else
     COMPOSE="docker compose"
 fi
 
-# ================== 子脚本 URL (已统一目录) ==================
-readonly SUB_SCRIPT_BASE="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH"
-readonly MOONTV_SCRIPT="$SUB_SCRIPT_BASE/mootvinstall.sh"
-readonly RUSTDESK_SCRIPT="$SUB_SCRIPT_BASE/install_rustdesk.sh"
-readonly LIBRETV_SCRIPT="$SUB_SCRIPT_BASE/install_libretv.sh"
-readonly ZJSYNC_SCRIPT="$SUB_SCRIPT_BASE/zjsync.sh"
-readonly NGINX_SCRIPT="$SUB_SCRIPT_BASE/nginx"
-readonly SUB_SCRIPT="$SUB_SCRIPT_BASE/subconverter-api.sh"
-readonly PANSO_SCRIPT="$SUB_SCRIPT_BASE/pansou.sh"
-readonly ARGOSB_SCRIPT="$SUB_SCRIPT_BASE/argosb.sh"
-readonly POSTEIO_SCRIPT="$SUB_SCRIPT_BASE/Poste.io.sh"
-readonly SHLINK_SCRIPT="$SUB_SCRIPT_BASE/install_shlink.sh"
-readonly KEJILION_SCRIPT="https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh"
-readonly SINGBOX_SCRIPT="https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh"
+# ================== 子脚本路径 (已更新为 SH 目录) ==================
+WORKDIR_MOONTV="/opt/moontv"
+MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/mootvinstall.sh"
+WORKDIR_RUSTDESK="/opt/rustdesk"
+RUSTDESK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_rustdesk.sh"
+WORKDIR_LIBRETV="/opt/libretv"
+LIBRETV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_libretv.sh"
+ZJSYNC_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/zjsync.sh"
+NGINX_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/nginx"
+SUB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/subconverter-api.sh"
+SHLINK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_shlink.sh"
+ARGOSB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/argosb.sh"
+PANSO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/pansou.sh"
+POSTEIO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/Poste.io.sh"
 
-# ================== 调用子脚本函数 (使用新函数) ==================
-moon_menu() { run_remote_script "$MOONTV_SCRIPT"; }
-rustdesk_menu() { run_remote_script "$RUSTDESK_SCRIPT"; }
-libretv_menu() { run_remote_script "$LIBRETV_SCRIPT"; }
-singbox_menu() { run_remote_script "$SINGBOX_SCRIPT"; }
-nginx_menu() { run_remote_script "$NGINX_SCRIPT"; }
-panso_menu() { run_remote_script "$PANSO_SCRIPT"; }
-zjsync_menu() { run_remote_script "$ZJSYNC_SCRIPT"; }
-subconverter_menu() { run_remote_script "$SUB_SCRIPT"; }
-argosb_menu() { run_remote_script "$ARGOSB_SCRIPT"; }
-posteio_menu() { run_remote_script "$POSTEIO_SCRIPT"; }
-shlink_menu() { run_remote_script "$SHLINK_SCRIPT"; }
-kejilion_menu() { run_remote_script "$KEJILION_SCRIPT"; }
-
+# ================== 调用子脚本 (已更新为 SH 目录) ==================
+moon_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${MOONTV_SCRIPT}?t=$(date +%s)"); }
+rustdesk_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
+libretv_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
+singbox_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh); }
+nginx_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${NGINX_SCRIPT}?t=$(date +%s)"); }
+panso_menu() {
+    bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${PANSO_SCRIPT}?t=$(date +%s)")
+}
+zjsync_menu() {
+    bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${ZJSYNC_SCRIPT}?t=$(date +%s)")
+}
+subconverter_menu() {
+    bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${SUB_SCRIPT}?t=$(date +%s)")
+}
+shlink_menu() {
+    bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${SHLINK_SCRIPT}?t=$(date +%s)")
+}
+argosb_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${ARGOSB_SCRIPT}?t=$(date +%s)"); }
+posteio_menu() { bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${POSTEIO_SCRIPT}?t=$(date +%s)"); }
 
 # ================== 更新菜单脚本 ==================
 update_menu_script() {
-    info "正在更新 menu.sh..."
-    fetch "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
+    echo "🔄 正在更新 menu.sh..."
+    curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
     echo "✅ menu.sh 已更新到 $SCRIPT_PATH"
     echo "👉 以后可直接执行：bash ~/menu.sh"
@@ -124,18 +125,45 @@ set_q_shortcut() {
 # ================== 主菜单 ==================
 while true; do
     # 动态检测安装状态
-    # 移除了所有 'local' 关键字，以修复错误
-    moon_status="❌ 未安装"; [[ -d /opt/moontv ]] && moon_status="✅ 已安装"
-    rustdesk_status="❌ 未安装"; [[ -d /opt/rustdesk ]] && rustdesk_status="✅ 已安装"
-    libretv_status="❌ 未安装"; [[ -d /opt/libretv ]] && libretv_status="✅ 已安装"
-    singbox_status="❌ 未安装"; command -v sing-box &>/dev/null || command -v sb &>/dev/null && singbox_status="✅ 已安装"
-    argosb_status="❌ 未安装"; command -v agsb &>/dev/null || [[ -f /etc/opt/ArgoSB/config.json ]] && argosb_status="✅ 已安装"
-    panso_status="❌ 未安装"; docker ps -a --format '{{.Names}}' | grep -q "^pansou-web$" && panso_status="✅ 已安装"
-    zjsync_status="❌ 未配置"; [[ -f /etc/zjsync.conf ]] && zjsync_status="✅ 已配置"
-    subconverter_status="❌ 未运行"; docker ps -a --filter "name=subconverter" --format "{{.Status}}" | grep -q "Up" && subconverter_status="✅ 运行中"
-    
-    posteio_status="❌ 未安装"; docker ps -a --filter "name=posteio" --format "{{.Status}}" | grep -q "Up" && posteio_status="✅ 运行中"
-    shlink_status="❌ 未安装"; docker ps -a --filter "name=shlink_web" --format "{{.Status}}" | grep -q "Up" && shlink_status="✅ 运行中"
+    [[ -d /opt/moontv ]] && moon_status="✅ 已安装" || moon_status="❌ 未安装"
+    [[ -d /opt/rustdesk ]] && rustdesk_status="✅ 已安装" || rustdesk_status="❌ 未安装"
+    [[ -d /opt/libretv ]] && libretv_status="✅ 已安装" || libretv_status="❌ 未安装"
+    if command -v sing-box &>/dev/null || command -v sb &>/dev/null; then
+        singbox_status="✅ 已安装"
+    else
+        singbox_status="❌ 未安装"
+    fi
+    if command -v agsb &>/dev/null || [[ -f /etc/opt/ArgoSB/config.json ]]; then
+        argosb_status="✅ 已安装"
+    else
+        argosb_status="❌ 未安装"
+    fi
+    if docker ps -a --format '{{.Names}}' | grep -q "^pansou-web$"; then
+        panso_status="✅ 已安装"
+    else
+        panso_status="❌ 未安装"
+    fi
+    if [[ -f /etc/zjsync.conf ]]; then
+        zjsync_status="✅ 已配置"
+    else
+        zjsync_status="❌ 未配置"
+    fi
+    if docker ps -a --filter "name=subconverter" --format "{{.Status}}" | grep -q "Up"; then
+        subconverter_status="✅ 运行中"
+    else
+        subconverter_status="❌ 未运行"
+    fi
+    # 新增的两个服务状态检测，使用与原脚本一致的写法
+    if docker ps -a --filter "name=shlink_web" --format "{{.Status}}" | grep -q "Up"; then
+        shlink_status="✅ 运行中"
+    else
+        shlink_status="❌ 未运行"
+    fi
+    if docker ps -a --filter "name=posteio" --format "{{.Status}}" | grep -q "Up"; then
+        posteio_status="✅ 运行中"
+    else
+        posteio_status="❌ 未运行"
+    fi
 
     kejilion_status="⚡ 远程调用"
     nginx_status="⚡ 远程调用"
@@ -165,7 +193,7 @@ while true; do
         3) libretv_menu ;;
         4) singbox_menu ;;
         5) argosb_menu ;;
-        6) kejilion_menu ;;
+        6) bash <(curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh) ;;
         7) zjsync_menu ;;
         8) panso_menu ;;
         9) nginx_menu ;;
