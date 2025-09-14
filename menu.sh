@@ -54,7 +54,7 @@ run_remote_script() {
 
 # ================== 自我初始化逻辑 ==================
 if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
-    echo "⚡ 检测到你是通过 <(curl ...) 临时运行的"
+    echo "⚡ 检测到你是通过 <(curl ...。) 临时运行的"
     echo "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
     fetch "${SCRIPT_URL}" -o "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
