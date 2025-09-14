@@ -160,7 +160,7 @@ while true; do
     panso_status=$(check_docker_service "pansou-web")
     zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "✅ 已配置" || echo "❌ 未配置")
     subconverter_status=$(check_docker_service "subconverter")
-    shlink_status=$(check_docker_service "shlink-web")
+    shlink_status=$(check_docker_service "shlink")
     posteio_status=$(check_docker_service "posteio")
     
     kejilion_status="⚡ 远程调用"
