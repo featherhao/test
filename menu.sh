@@ -54,7 +54,7 @@ run_remote_script() {
 
 # ================== 自我初始化逻辑 ==================
 if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
-    echo "⚡ 检测到你是通过 <(curl ...。) 临时运行的"
+    echo "⚡ 检测到你是通过 <(curl ...) 临时运行的"
     echo "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
     fetch "${SCRIPT_URL}" -o "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
@@ -124,7 +124,7 @@ set_q_shortcut() {
 # ================== 主菜单 ==================
 while true; do
     # 动态检测安装状态
-    # 移除 'local' 关键字
+    # 确保以下所有行都没有 'local'
     moon_status="❌ 未安装"; [[ -d /opt/moontv ]] && moon_status="✅ 已安装"
     rustdesk_status="❌ 未安装"; [[ -d /opt/rustdesk ]] && rustdesk_status="✅ 已安装"
     libretv_status="❌ 未安装"; [[ -d /opt/libretv ]] && libretv_status="✅ 已安装"
