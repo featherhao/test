@@ -111,33 +111,34 @@ show_access_info() {
     
     echo -e "${GREEN}"
     echo "================================================================"
-    echo "                   Shlink 安装完成！                            "
+    echo "                      Shlink 安装完成！                         "
     echo "================================================================"
     echo -e "${NC}"
     
-    echo -e "${CYAN}🌐 Web 客户端访问方式:${NC}"
-    echo -e "域名访问: ${GREEN}https://${CLIENT_DOMAIN}${NC}"
-    echo -e "IPv4访问: ${GREEN}http://${IPV4}:9050${NC}"
-    if [ "$IPV6" != "无法获取IPv6" ]; then
-        echo -e "IPv6访问: ${GREEN}http://[${IPV6}]:9050${NC}"
-    fi
-    
-    echo -e "${CYAN}📊 API 服务访问方式:${NC}"
+    echo -e "${CYAN}🌐 短链接访问地址 (核心服务):${NC}"
     echo -e "域名访问: ${GREEN}https://${API_DOMAIN}${NC}"
     echo -e "IPv4访问: ${GREEN}http://${IPV4}:9040${NC}"
     if [ "$IPV6" != "无法获取IPv6" ]; then
         echo -e "IPv6访问: ${GREEN}http://[${IPV6}]:9040${NC}"
     fi
-    echo -e "健康检查: ${GREEN}http://${IPV4}:9040/rest/health${NC}"
-    
+    echo -e "示例短链接: ${GREEN}https://${API_DOMAIN}/xxxxxx${NC}"
+
+    echo -e "${CYAN}📊 管理后台访问地址 (Web 客户端):${NC}"
+    echo -e "域名访问: ${GREEN}https://${CLIENT_DOMAIN}${NC}"
+    echo -e "IPv4访问: ${GREEN}http://${IPV4}:9050${NC}"
+    if [ "$IPV6" != "无法获取IPv6" ]; then
+        echo -e "IPv6访问: ${GREEN}http://[${IPV6}]:9050${NC}"
+    fi
+
     echo -e "${CYAN}🔑 API 密钥:${NC} ${GREEN}${API_KEY}${NC}"
     echo -e "${CYAN}🗄️ 数据库密码:${NC} ${GREEN}${DB_PASSWORD}${NC}"
     
     echo -e "${CYAN}📝 重要提示:${NC}"
-    echo -e "1. 请确保域名正确解析到服务器IP: ${IPV4}"
-    echo -e "2. 配置反向代理（Nginx/Apache）将域名指向对应端口"
-    echo -e "3. 防火墙需要开放端口 9040 和 9050（仅IP访问需要）"
-    echo -e "4. API Key 请妥善保管"
+    echo -e "1. 请确保两个域名都正确解析到服务器IP: ${IPV4}"
+    echo -e "2. 配置反向代理（Nginx/Apache）将 ${API_DOMAIN} 指向 ${IPV4}:9040"
+    echo -e "3. 配置反向代理（Nginx/Apache）将 ${CLIENT_DOMAIN} 指向 ${IPV4}:9050"
+    echo -e "4. 防火墙需要开放端口 9040 和 9050（仅IP访问需要）"
+    echo -e "5. API Key 请妥善保管"
     
     echo -e "${GREEN}================================================================"
     echo -e "${NC}"
@@ -285,8 +286,8 @@ monitor_logs() {
 show_service_info() {
     source "$ENV_FILE" 2>/dev/null
     echo -e "${CYAN}=== 服务配置信息 ===${NC}"
-    echo -e "Web 域名: ${GREEN}https://${CLIENT_DOMAIN}${NC}"
-    echo -e "API 域名: ${GREEN}https://${API_DOMAIN}${NC}"
+    echo -e "短链接域名: ${GREEN}https://${API_DOMAIN}${NC}"
+    echo -e "管理后台域名: ${GREEN}https://${CLIENT_DOMAIN}${NC}"
     echo -e "服务器IP: ${GREEN}${IPV4}${NC}"
     echo -e "API 端口: ${GREEN}9040${NC}"
     echo -e "Web 端口: ${GREEN}9050${NC}"
@@ -306,8 +307,10 @@ install_shlink() {
     
     # 获取用户配置
     echo "请输入 Shlink 配置信息:"
-    read -p "API 域名 (例如: api.example.com): " API_DOMAIN
-    read -p "Web Client 域名 (例如: short.example.com): " CLIENT_DOMAIN
+    echo -e "${CYAN}ℹ${NC} 这通常是你希望用于生成短链接的域名，例如：${GREEN}go.example.com${NC}"
+    read -p "短链接域名 (API Domain): " API_DOMAIN
+    echo -e "${CYAN}ℹ${NC} 这通常是你用于访问管理后台的域名，例如：${GREEN}shlink.example.com${NC}"
+    read -p "管理后台域名 (Web Client Domain): " CLIENT_DOMAIN
     
     read -p "数据库密码 [默认: 随机生成]: " DB_PASSWORD
     DB_PASSWORD=${DB_PASSWORD:-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 16)}
