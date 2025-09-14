@@ -31,7 +31,7 @@ install_shlink() {
     echo "--- 开始部署 Shlink 短链服务 ---"
     mkdir -p "$WORKDIR"
 
-    # 删除旧容器和网络
+    # 删除旧容器和旧网络
     docker rm -f shlink_web_client shlink 2>/dev/null || true
     docker compose -f "$COMPOSE_FILE" down -v 2>/dev/null || true
 
@@ -118,9 +118,9 @@ EOF
     docker run -d \
       --name shlink_web_client \
       -p ${CLIENT_PORT}:80 \
-      -e SHLINK_SERVER_URL="http://shlink:8080" \
+      -e SHLINK_SERVER_URL="http://$API_DOMAIN:$API_PORT" \
       -e SHLINK_SERVER_API_KEY="$API_KEY" \
-      --network shlink_shlink_net \
+      --network shlink_net \
       --restart always \
       shlinkio/shlink-web-client:stable
 
