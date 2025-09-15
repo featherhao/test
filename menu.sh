@@ -170,8 +170,8 @@ while true; do
     else
         singbox_status="❌ 未安装"
     fi
-    
-    if [[ -f "/usr/local/bin/argosb.sh" ]] || [[ -d "/etc/opt/ArgoSB" ]]; then
+    # 检查 argosb 的安装状态，同时检查文件路径和命令
+if command -v agsb &>/dev/null || [[ -f "/usr/local/bin/argosb.sh" ]] || [[ -d "/etc/opt/ArgoSB" ]]; then
     argosb_status="✅ 已安装"
 else
     argosb_status="❌ 未安装"
