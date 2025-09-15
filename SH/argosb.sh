@@ -28,6 +28,10 @@ render_menu() {
 }
 
 # ================== 勇哥ArgoSB菜单 ==================
+# New script URL from your previous message
+SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/argosb.sh"
+MAIN_SCRIPT_CMD="bash <(curl -Ls ${SCRIPT_URL})"
+
 if command -v agsb &>/dev/null; then
     argosb_status="✅ 已安装"
 else
@@ -55,8 +59,8 @@ while true; do
             done
 
             if [[ -f /etc/opt/ArgoSB/config.json ]]; then
-                for p in vlpt xhpt vxpt sspt anpt arpt vmpt hypt tupt; do
-                    grep -q "\"$p\"" /etc/opt/ArgoSB/config.json && protocol_status[$p]="✅ 已安装"
+                for p in "${!protocol_status[@]}"; do
+                    grep -q "\"$p\"" /etc/opt/ArgoSB/config.json && protocol_status[$p]="✅ 已安装" || true
                 done
             fi
 
@@ -86,12 +90,13 @@ while true; do
                     8) NEW_VARS="$NEW_VARS hypt=\"\"" ;;
                     9) NEW_VARS="$NEW_VARS tupt=\"\"" ;;
                     10) NEW_VARS="$NEW_VARS vmpt=\"\" argo=\"y\"" ;;
+                    *) echo "⚠️ 无效选项: $c" ;;
                 esac
             done
 
             if [[ -n "$NEW_VARS" ]]; then
                 echo "🔹 正在增量更新节点..."
-                eval "$NEW_VARS bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep"
+                eval "$NEW_VARS ${MAIN_SCRIPT_CMD} rep"
             else
                 echo "⚠️ 未选择有效协议"
             fi
@@ -100,9 +105,9 @@ while true; do
         2)
             echo "🔹 正在显示节点信息..."
             if command -v agsb &>/dev/null; then
-                eval "agsb list"
+                agsb list
             else
-                eval "bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) list"
+                eval "${MAIN_SCRIPT_CMD} list"
             fi
             read -rp "按回车返回菜单..." dummy
             ;;
@@ -110,30 +115,53 @@ while true; do
             echo "👉 请输入自定义变量，例如：vlpt=\"\" sspt=\"\""
             read -rp "变量: " custom_vars
             if [[ -n "$custom_vars" ]]; then
-                eval "$custom_vars bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep"
+                eval "$custom_vars ${MAIN_SCRIPT_CMD} rep"
             else
                 echo "⚠️ 没有输入变量"
             fi
             read -rp "按回车返回菜单..." dummy
             ;;
         4)
-            eval "agsb rep || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) rep"
+            if command -v agsb &>/dev/null; then
+                agsb rep
+            else
+                eval "${MAIN_SCRIPT_CMD} rep"
+            fi
             read -rp "按回车返回菜单..." dummy
             ;;
         5)
-            eval "agsb res || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) res"
+            if command -v agsb &>/dev/null; then
+                agsb res
+            else
+                eval "${MAIN_SCRIPT_CMD} res"
+            fi
             read -rp "按回车返回菜单..." dummy
             ;;
         6)
-            eval "agsb del || bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh) del"
+            if command -v agsb &>/dev/null; then
+                agsb del
+            else
+                eval "${MAIN_SCRIPT_CMD} del"
+            fi
             read -rp "按回车返回菜单..." dummy
             ;;
         7)
             echo "1) 显示 IPv4 节点配置"
             echo "2) 显示 IPv6 节点配置"
             read -rp "请输入选项: " ip_choice
-            [[ "$ip_choice" == "1" ]] && eval "ippz=4 agsb list"
-            [[ "$ip_choice" == "2" ]] && eval "ippz=6 agsb list"
+            if [[ "$ip_choice" == "1" ]]; then
+                if command -v agsb &>/dev/null; then
+                    ippz=4 agsb list
+                else
+                    eval "ippz=4 ${MAIN_SCRIPT_CMD} list"
+                fi
+            elif [[ "$ip_choice" == "2" ]]; then
+                if command -v agsb &>/dev/null; then
+                    ippz=6 agsb list
+                else
+                    eval "ippz=6 ${MAIN_SCRIPT_CMD} list"
+                fi
+            fi
             read -rp "按回车返回菜单..." dummy
             ;;
         0) break ;;
