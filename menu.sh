@@ -171,11 +171,11 @@ while true; do
         singbox_status="❌ 未安装"
     fi
     
-    if command -v agsb &>/dev/null || [[ -f /etc/opt/ArgoSB/config.json ]]; then
-        argosb_status="✅ 已安装"
-    else
-        argosb_status="❌ 未安装"
-    fi
+    if [[ -f "/usr/local/bin/argosb.sh" ]] || [[ -d "/etc/opt/ArgoSB" ]]; then
+    argosb_status="✅ 已安装"
+else
+    argosb_status="❌ 未安装"
+fi
     
     # 使用新的 Docker 服务检查函数
     panso_status=$(check_docker_service "pansou-web")
