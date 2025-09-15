@@ -49,7 +49,8 @@ run_url() {
 # ================== 自我初始化与快捷键设置 ==================
 set_q_shortcut() {
     local shell_rc=""
-    if [ -n "$ZSH_VERSION" ]; then
+    # 修复 unbound variable 错误
+    if [[ -n "${ZSH_VERSION:-}" ]]; then
         shell_rc="$HOME/.zshrc"
     else
         shell_rc="$HOME/.bashrc"
