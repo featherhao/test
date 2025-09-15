@@ -66,11 +66,13 @@ set_q_shortcut() {
     fi
 }
 
+# 修复：将快捷键设置逻辑移动到此，确保仅在首次运行和保存脚本时执行。
 if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
     info "⚡ 检测到你是通过 <(curl …) 临时运行的"
     info "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
     curl -fsSL "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
+    set_q_shortcut  # <-- 修复：现在只在这里调用
     sleep 2
 fi
 
@@ -144,8 +146,7 @@ update_menu_script() {
 }
 
 # ================== 主菜单 ==================
-set_q_shortcut
-
+# 修复：主菜单循环前不再调用 set_q_shortcut，避免重复提示。
 while true; do
     # 动态检测安装状态
     [[ -d /opt/moontv ]] && moon_status="✅ 已安装" || moon_status="❌ 未安装"
@@ -175,18 +176,18 @@ while true; do
     nginx_status="⚡ 远程调用"
 
     render_menu "🚀 服务管理中心" \
-        "1) MoonTV 安装                 $moon_status" \
-        "2) RustDesk 安装                $rustdesk_status" \
-        "3) LibreTV 安装                 $libretv_status" \
-        "4) 甬哥Sing-box-yg安装          $singbox_status" \
-        "5) 勇哥ArgoSB脚本               $argosb_status" \
-        "6) Kejilion.sh 一键脚本工具箱   $kejilion_status" \
+        "1) MoonTV 安装          $moon_status" \
+        "2) RustDesk 安装        $rustdesk_status" \
+        "3) LibreTV 安装         $libretv_status" \
+        "4) 甬哥Sing-box-yg安装     $singbox_status" \
+        "5) 勇哥ArgoSB脚本          $argosb_status" \
+        "6) Kejilion.sh 一键脚本工具箱  $kejilion_status" \
         "7) zjsync（GitHub 文件自动同步）$zjsync_status" \
-        "8) Pansou 网盘搜索              $panso_status" \
-        "9) 域名绑定管理                 $nginx_status" \
-        "10) Subconverter- 订阅转换后端API  $subconverter_status" \
-        "11) Poste.io 邮件服务器          $posteio_status" \
-        "12) Shlink 短链接生成            $shlink_status" \
+        "8) Pansou 网盘搜索         $panso_status" \
+        "9) 域名绑定管理          $nginx_status" \
+        "10) Subconverter- 订阅转换后端API   $subconverter_status" \
+        "11) Poste.io 邮件服务器      $posteio_status" \
+        "12) Shlink 短链接生成        $shlink_status" \
         "00) 更新菜单脚本 menu.sh" \
         "0) 退出" \
         "" \
