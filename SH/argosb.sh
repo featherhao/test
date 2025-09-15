@@ -47,6 +47,7 @@ while true; do
         "5) 重启脚本 (agsb res)" \
         "6) 卸载脚本 (agsb del)" \
         "7) 临时切换 IPv4 / IPv6 节点显示" \
+        "8) 更改协议端口" \
         "0) 返回主菜单"
     read -rp "请输入选项: " main_choice
 
@@ -79,19 +80,29 @@ while true; do
 
             NEW_VARS=""
             for c in $choices; do
+                local protocol_name=""
                 case $c in
-                    1) NEW_VARS="$NEW_VARS vlpt=\"\"" ;;
-                    2) NEW_VARS="$NEW_VARS xhpt=\"\"" ;;
-                    3) NEW_VARS="$NEW_VARS vxpt=\"\"" ;;
-                    4) NEW_VARS="$NEW_VARS sspt=\"\"" ;;
-                    5) NEW_VARS="$NEW_VARS anpt=\"\"" ;;
-                    6) NEW_VARS="$NEW_VARS arpt=\"\"" ;;
-                    7) NEW_VARS="$NEW_VARS vmpt=\"\"" ;;
-                    8) NEW_VARS="$NEW_VARS hypt=\"\"" ;;
-                    9) NEW_VARS="$NEW_VARS tupt=\"\"" ;;
-                    10) NEW_VARS="$NEW_VARS vmpt=\"\" argo=\"y\"" ;;
+                    1) protocol_name="vlpt" ;;
+                    2) protocol_name="xhpt" ;;
+                    3) protocol_name="vxpt" ;;
+                    4) protocol_name="sspt" ;;
+                    5) protocol_name="anpt" ;;
+                    6) protocol_name="arpt" ;;
+                    7) protocol_name="vmpt" ;;
+                    8) protocol_name="hypt" ;;
+                    9) protocol_name="tupt" ;;
+                    10) protocol_name="vmpt"; NEW_VARS="$NEW_VARS argo=\"y\"" ;;
                     *) echo "⚠️ 无效选项: $c" ;;
                 esac
+
+                if [[ -n "$protocol_name" ]]; then
+                    read -rp "为 $protocol_name 输入端口号 (留空则随机): " custom_port
+                    if [[ -n "$custom_port" ]]; then
+                        NEW_VARS="$NEW_VARS $protocol_name=\"$custom_port\""
+                    else
+                        NEW_VARS="$NEW_VARS $protocol_name=\"\""
+                    fi
+                fi
             done
 
             if [[ -n "$NEW_VARS" ]]; then
@@ -137,6 +148,19 @@ while true; do
                 eval "ippz=4 ${MAIN_SCRIPT_CMD} list"
             elif [[ "$ip_choice" == "2" ]]; then
                 eval "ippz=6 ${MAIN_SCRIPT_CMD} list"
+            fi
+            read -rp "按回车返回菜单..." dummy
+            ;;
+        8)
+            echo "👉 请输入要更改端口的协议名和新端口号，格式为：[协议名]=[端口号]"
+            echo "例如：vlpt=12345"
+            read -rp "输入: " port_change_input
+            if [[ -n "$port_change_input" ]]; then
+                eval "$port_change_input ${MAIN_SCRIPT_CMD} rep"
+                echo "🔹 端口修改已提交，正在重新加载服务..."
+                eval "${MAIN_SCRIPT_CMD} res"
+            else
+                echo "⚠️ 输入为空，操作取消。"
             fi
             read -rp "按回车返回菜单..." dummy
             ;;
