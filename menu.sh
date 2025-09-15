@@ -18,7 +18,7 @@ fi
 
 info()  { echo -e "${C_CYAN}[*]${C_RESET} $*"; }
 warn()  { echo -e "${C_YELLOW}[!]${C_RESET} $*"; }
-error() { echo -e "${C_RED}[x]${C_RESET} $*"; }
+error() { echo -e "${C_RED}[x]${C_RESET} $*" >&2; }
 
 print_header() {
     local title="$1"
@@ -46,13 +46,29 @@ run_url() {
     bash <(fetch "$1")
 }
 
-# ================== 自我初始化逻辑 ==================
+# ================== 自我初始化与快捷键设置 ==================
+set_q_shortcut() {
+    local shell_rc=""
+    if [ -n "$ZSH_VERSION" ]; then
+        shell_rc="$HOME/.zshrc"
+    else
+        shell_rc="$HOME/.bashrc"
+    fi
+
+    # 检查是否已经设置过快捷键，避免重复写入
+    if ! grep -q "alias Q='bash ~/menu.sh'" "$shell_rc" 2>/dev/null; then
+        echo "alias Q='bash ~/menu.sh'" >> "$shell_rc"
+        echo "alias q='bash ~/menu.sh'" >> "$shell_rc"
+        info "✅ 已自动设置快捷键，下次可直接输入 q 或 Q 运行。"
+        info "👉 请执行 'source $shell_rc' 或重启终端以使其生效。"
+    fi
+}
+
 if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
-    echo "⚡ 检测到你是通过 <(curl …) 临时运行的"
-    echo "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
+    info "⚡ 检测到你是通过 <(curl …) 临时运行的"
+    info "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
     curl -fsSL "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
-    echo "✅ 已保存，下次可直接执行：bash ~/menu.sh"
     sleep 2
 fi
 
@@ -96,12 +112,12 @@ check_docker_service() {
     local service_name="$1"
     if ! command -v docker &>/dev/null; then
         echo "❌ Docker 未安装"
-        return 1
+        return
     fi
     
     if ! docker info &>/dev/null; then
         echo "❌ Docker 未运行"
-        return 1
+        return
     fi
     
     if docker ps -a --format '{{.Names}}' | grep -q "^${service_name}$"; then
@@ -117,27 +133,17 @@ check_docker_service() {
 
 # ================== 更新菜单脚本 ==================
 update_menu_script() {
-    echo "🔄 正在更新 menu.sh..."
+    info "🔄 正在更新 menu.sh..."
     fetch "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
-    echo "✅ menu.sh 已更新到 $SCRIPT_PATH"
-    echo "👉 以后可直接执行：bash ~/menu.sh"
-    sleep 2
-}
-
-# ================== 设置快捷键 Q/q ==================
-set_q_shortcut() {
-    SHELL_RC="$HOME/.bashrc"
-    [ -n "$ZSH_VERSION" ] && SHELL_RC="$HOME/.zshrc"
-    sed -i '/alias Q=/d' "$SHELL_RC"
-    sed -i '/alias q=/d' "$SHELL_RC"
-    echo "alias Q='bash ~/menu.sh'" >> "$SHELL_RC"
-    echo "alias q='bash ~/menu.sh'" >> "$SHELL_RC"
-    echo "⚡ 请执行 'source $SHELL_RC' 或重启终端生效"
+    info "✅ menu.sh 已更新到 $SCRIPT_PATH"
+    info "👉 以后可直接执行：bash ~/menu.sh"
     sleep 2
 }
 
 # ================== 主菜单 ==================
+set_q_shortcut
+
 while true; do
     # 动态检测安装状态
     [[ -d /opt/moontv ]] && moon_status="✅ 已安装" || moon_status="❌ 未安装"
@@ -167,25 +173,26 @@ while true; do
     nginx_status="⚡ 远程调用"
 
     render_menu "🚀 服务管理中心" \
-        "1) MoonTV 安装             $moon_status" \
-        "2) RustDesk 安装          $rustdesk_status" \
-        "3) LibreTV 安装           $libretv_status" \
-        "4) 甬哥Sing-box-yg安装    $singbox_status" \
-        "5) 勇哥ArgoSB脚本         $argosb_status" \
-        "6) Kejilion.sh 一键脚本工具箱 $kejilion_status" \
+        "1) MoonTV 安装                 $moon_status" \
+        "2) RustDesk 安装                $rustdesk_status" \
+        "3) LibreTV 安装                 $libretv_status" \
+        "4) 甬哥Sing-box-yg安装          $singbox_status" \
+        "5) 勇哥ArgoSB脚本               $argosb_status" \
+        "6) Kejilion.sh 一键脚本工具箱   $kejilion_status" \
         "7) zjsync（GitHub 文件自动同步）$zjsync_status" \
-        "8) Pansou 网盘搜索        $panso_status" \
-        "9) 域名绑定管理           $nginx_status" \
-        "10) Subconverter- 订阅转换后端API $subconverter_status" \
-        "11) Poste.io 邮件服务器      $posteio_status" \
-        "12) Shlink 短链接生成      $shlink_status" \
-        "13) 设置快捷键 Q / q" \
-        "U) 更新菜单脚本 menu.sh" \
-        "0) 退出"
+        "8) Pansou 网盘搜索              $panso_status" \
+        "9) 域名绑定管理                 $nginx_status" \
+        "10) Subconverter- 订阅转换后端API  $subconverter_status" \
+        "11) Poste.io 邮件服务器          $posteio_status" \
+        "12) Shlink 短链接生成            $shlink_status" \
+        "00) 更新菜单脚本 menu.sh" \
+        "0) 退出" \
+        "" \
+        "快捷键提示：此脚本已自动设置 q 或 Q 为快捷键"
 
     read -rp "请输入选项: " main_choice
 
-    case "${main_choice^^}" in
+    case "${main_choice}" in
         1) moon_menu ;;
         2) rustdesk_menu ;;
         3) libretv_menu ;;
@@ -198,9 +205,8 @@ while true; do
         10) subconverter_menu ;;
         11) posteio_menu ;;
         12) shlink_menu ;;
-        13) set_q_shortcut ;;
-        U) update_menu_script ;;
+        00) update_menu_script ;;
         0) exit 0 ;;
-        *) echo "❌ 无效输入"; sleep 1 ;;
+        *) error "❌ 无效输入"; sleep 1 ;;
     esac
 done
