@@ -48,41 +48,47 @@ run_url() {
 }
 
 # ================== 自我初始化与快捷键设置 ==================
-# 标志位：判断脚本是否是首次通过 curl 方式运行
-SCRIPT_IS_FIRST_RUN=false
 if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
     info "⚡ 检测到你是通过 <(curl …) 临时运行的"
     info "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
     curl -fsSL "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
-    SCRIPT_IS_FIRST_RUN=true # 标记为首次运行
     sleep 2
 fi
 
-# 修复：将快捷键设置逻辑移回主循环之前，确保它始终被调用
-set_q_shortcut() {
+# ================== 新增：手动设置快捷键的函数 ==================
+set_q_shortcut_manual() {
     local shell_rc=""
-    # 修复 unbound variable 错误
     if [[ -n "${ZSH_VERSION:-}" ]]; then
         shell_rc="$HOME/.zshrc"
     else
         shell_rc="$HOME/.bashrc"
     fi
 
-    # 检查是否已经设置过快捷键，避免重复写入
-    if ! grep -q "alias Q='bash ~/menu.sh'" "$shell_rc" 2>/dev/null; then
-        echo "alias Q='bash ~/menu.sh'" >> "$shell_rc"
-        echo "alias q='bash ~/menu.sh'" >> "$shell_rc"
-        
-        # 修复：只有在首次运行时才显示提示
-        if $SCRIPT_IS_FIRST_RUN; then
-            info "✅ 已自动设置快捷键，下次可直接输入 q 或 Q 运行。"
-            info "👉 请执行 'source $shell_rc' 或重启终端以使其生效。"
-        fi
+    # 检查是否已存在
+    if grep -q "alias Q='bash ~/menu.sh'" "$shell_rc" 2>/dev/null; then
+        warn "⚠️ 快捷键已存在，无需重复设置。"
+        echo "=============================="
+        read -rp "按任意键继续..."
+        return
     fi
-}
+    
+    # 提示用户确认
+    read -rp "❓ 确定要将 'q' 和 'Q' 设置为菜单启动快捷键吗？[y/n]: " choice
+    if [[ "$choice" != "y" ]]; then
+        info "❌ 已取消快捷键设置。"
+        sleep 1
+        return
+    fi
 
-set_q_shortcut
+    echo "alias Q='bash ~/menu.sh'" >> "$shell_rc"
+    echo "alias q='bash ~/menu.sh'" >> "$shell_rc"
+    
+    info "✅ 已成功设置快捷键！"
+    info "👉 请执行 'source $shell_rc' 或重启终端以使其生效。"
+    
+    sleep 2
+}
 
 # ================== docker compose 兼容 ==================
 if command -v docker-compose &>/dev/null; then
@@ -195,10 +201,9 @@ while true; do
         "10) Subconverter- 订阅转换后端API   $subconverter_status" \
         "11) Poste.io 邮件服务器      $posteio_status" \
         "12) Shlink 短链接生成        $shlink_status" \
+        "01) 设置快捷键 Q/q" \
         "00) 更新菜单脚本 menu.sh" \
-        "0) 退出" \
-        "" \
-        "快捷键提示：此脚本已自动设置 q 或 Q 为快捷键"
+        "0) 退出"
 
     read -rp "请输入选项: " main_choice
 
@@ -215,6 +220,7 @@ while true; do
         10) subconverter_menu ;;
         11) posteio_menu ;;
         12) shlink_menu ;;
+        01) set_q_shortcut_manual ;;
         00) update_menu_script ;;
         0) exit 0 ;;
         *) error "❌ 无效输入"; sleep 1 ;;
