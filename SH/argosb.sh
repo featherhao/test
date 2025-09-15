@@ -80,7 +80,8 @@ while true; do
 
             NEW_VARS=""
             for c in $choices; do
-                local protocol_name=""
+                # 修复: 移除 local 关键字
+                protocol_name=""
                 case $c in
                     1) protocol_name="vlpt" ;;
                     2) protocol_name="xhpt" ;;
