@@ -48,6 +48,18 @@ run_url() {
 }
 
 # ================== 自我初始化与快捷键设置 ==================
+# 标志位：判断脚本是否是首次通过 curl 方式运行
+SCRIPT_IS_FIRST_RUN=false
+if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
+    info "⚡ 检测到你是通过 <(curl …) 临时运行的"
+    info "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
+    curl -fsSL "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
+    chmod +x "$SCRIPT_PATH"
+    SCRIPT_IS_FIRST_RUN=true # 标记为首次运行
+    sleep 2
+fi
+
+# 修复：将快捷键设置逻辑移回主循环之前，确保它始终被调用
 set_q_shortcut() {
     local shell_rc=""
     # 修复 unbound variable 错误
@@ -61,20 +73,16 @@ set_q_shortcut() {
     if ! grep -q "alias Q='bash ~/menu.sh'" "$shell_rc" 2>/dev/null; then
         echo "alias Q='bash ~/menu.sh'" >> "$shell_rc"
         echo "alias q='bash ~/menu.sh'" >> "$shell_rc"
-        info "✅ 已自动设置快捷键，下次可直接输入 q 或 Q 运行。"
-        info "👉 请执行 'source $shell_rc' 或重启终端以使其生效。"
+        
+        # 修复：只有在首次运行时才显示提示
+        if $SCRIPT_IS_FIRST_RUN; then
+            info "✅ 已自动设置快捷键，下次可直接输入 q 或 Q 运行。"
+            info "👉 请执行 'source $shell_rc' 或重启终端以使其生效。"
+        fi
     fi
 }
 
-# 修复：将快捷键设置逻辑移动到此，确保仅在首次运行和保存脚本时执行。
-if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
-    info "⚡ 检测到你是通过 <(curl …) 临时运行的"
-    info "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
-    curl -fsSL "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
-    chmod +x "$SCRIPT_PATH"
-    set_q_shortcut  # <-- 修复：现在只在这里调用
-    sleep 2
-fi
+set_q_shortcut
 
 # ================== docker compose 兼容 ==================
 if command -v docker-compose &>/dev/null; then
@@ -146,7 +154,6 @@ update_menu_script() {
 }
 
 # ================== 主菜单 ==================
-# 修复：主菜单循环前不再调用 set_q_shortcut，避免重复提示。
 while true; do
     # 动态检测安装状态
     [[ -d /opt/moontv ]] && moon_status="✅ 已安装" || moon_status="❌ 未安装"
