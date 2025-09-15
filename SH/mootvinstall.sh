@@ -45,13 +45,13 @@ input_config() {
   echo "密码: $PASSWORD"
   echo "AUTH_TOKEN: $AUTH_TOKEN"
   echo "==============================================="
-  read -rp "是否确认保存？(y/N): " CONFIRM
-  CONFIRM=${CONFIRM:-Y}  # 默认 Y
+  read -rp "是否确认保存？(Y/n): " CONFIRM
+  CONFIRM=${CONFIRM:-Y} # 默认 Y
   [[ ! "$CONFIRM" =~ ^[Yy]$ ]] && { echo "已取消"; return 1; }
 
-  mkdir -p $WORKDIR
+  mkdir -p "$WORKDIR"
   [ -f "$ENV_FILE" ] && cp "$ENV_FILE" "$ENV_FILE.bak.$(date +%s)"
-  cat > $ENV_FILE <<EOF
+  cat > "$ENV_FILE" <<EOF
 USERNAME=$USERNAME
 PASSWORD=$PASSWORD
 AUTH_TOKEN=$AUTH_TOKEN
@@ -65,18 +65,18 @@ EOF
 # =========================
 choose_image() {
   echo "📦 请选择安装镜像："
-  echo "1) 官方镜像(默认) ghcr.io/moontechlab/lunatv:latest"
-  echo "2) Docker Hub 镜像 (官方备用镜像) featherhao/lunatv:latest"
-  echo "3) Docker Hub 镜像 （100版本号防作者删库用） featherhao/moontv:100"
-  echo "4) 小黄人大佬镜像（带弹幕） ghcr.io/szemeng76/lunatv:latest"
+  echo "1) 小黄人大佬镜像（带弹幕）(默认) ghcr.io/szemeng76/lunatv:latest"
+  echo "2) 官方镜像 ghcr.io/moontechlab/lunatv:latest"
+  echo "3) Docker Hub 镜像 (官方备用镜像) featherhao/lunatv:latest"
+  echo "4) Docker Hub 镜像 （100版本号防作者删库用） featherhao/moontv:100"
   read -rp "请输入数字 [1-4] (默认 1): " img_choice
   img_choice=${img_choice:-1}
   case "$img_choice" in
-    1) IMAGE="ghcr.io/moontechlab/lunatv:latest" ;;
-    2) IMAGE="featherhao/lunatv:latest" ;;
-    3) IMAGE="featherhao/moontv:100" ;;
-    4) IMAGE="ghcr.io/szemeng76/lunatv:latest" ;;
-    *) IMAGE="ghcr.io/moontechlab/lunatv:latest" ;;
+    1) IMAGE="ghcr.io/szemeng76/lunatv:latest" ;;
+    2) IMAGE="ghcr.io/moontechlab/lunatv:latest" ;;
+    3) IMAGE="featherhao/lunatv:latest" ;;
+    4) IMAGE="featherhao/moontv:100" ;;
+    *) IMAGE="ghcr.io/szemeng76/lunatv:latest" ;;
   esac
   echo "使用镜像: $IMAGE"
 }
@@ -86,16 +86,17 @@ choose_image() {
 # =========================
 choose_port_and_write_compose() {
   POSSIBLE_PORTS=(8181 9090 10080 18080 28080)
+  HOST_PORT=""
   for p in "${POSSIBLE_PORTS[@]}"; do
     if ! ss -tulnp | grep -q ":$p"; then
       HOST_PORT=$p
       break
     fi
   done
-  [[ -z "$HOST_PORT" ]] && { echo "没有可用端口"; return 1; }
+  [[ -z "$HOST_PORT" ]] && { echo "❌ 没有可用端口"; return 1; }
   echo "使用端口 $HOST_PORT"
 
-  cat > $COMPOSE_FILE <<EOF
+  cat > "$COMPOSE_FILE" <<EOF
 services:
   moontv-core:
     image: $IMAGE
@@ -132,40 +133,20 @@ EOF
 }
 
 # =========================
-# 安装 / 启动
-# =========================
-install_main() { 
-  install_docker
-  [[ ! -f "$ENV_FILE" ]] && input_config || echo "✅ 已存在配置文件"
-  choose_image
-  choose_port_and_write_compose
-  $DOCKER_COMPOSE -f $COMPOSE_FILE up -d
-
-  IPV4=$(curl -4 -s ifconfig.me || hostname -I | awk '{print $1}')
-  IPV6=$(curl -6 -s ifconfig.me || ip -6 addr show scope global | awk '{print $2}' | cut -d/ -f1 | head -n1)
-  HOST_PORT=$(grep -Po "(?<=- )\d+(?=:3000)" "$COMPOSE_FILE" | tr -d "'")
-  HOST_PORT=${HOST_PORT:-8181}
-
-  echo "✅ MoonTV 已启动"
-  echo "👉 IPv4 访问地址: http://$IPV4:$HOST_PORT"
-  [[ -n "$IPV6" ]] && echo "👉 IPv6 访问地址: http://[$IPV6]:$HOST_PORT"
-  echo "👉 用户名: $(grep USERNAME $ENV_FILE | cut -d '=' -f2)"
-  echo "👉 密码: $(grep PASSWORD $ENV_FILE | cut -d '=' -f2)"
-}
-
-# =========================
 # 更新
 # =========================
 update() {
   echo "🔄 请选择更新镜像："
   choose_image
-  install_docker
-  [ -f "$COMPOSE_FILE" ] || { echo "❌ 未找到 $COMPOSE_FILE，请先安装"; return 1; }
-  cd $WORKDIR
-  echo "📦 拉取镜像 $IMAGE..."
-  docker pull $IMAGE
-  $DOCKER_COMPOSE up -d
-  echo "✅ 更新完成"
+  if [ -f "$COMPOSE_FILE" ]; then
+    cd "$WORKDIR"
+    echo "📦 拉取镜像 $IMAGE..."
+    docker pull "$IMAGE"
+    $DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
+    echo "✅ 更新完成"
+  else
+    echo "❌ 未找到 $COMPOSE_FILE，请先安装"
+  fi
 }
 
 # =========================
@@ -173,21 +154,20 @@ update() {
 # =========================
 uninstall() {
   echo "⚠️ 即将卸载 MoonTV"
-  read -rp "确认？(y/N): " CONFIRM
-  CONFIRM=${CONFIRM:-Y}  # 默认 Y
+  read -rp "确认？(Y/n): " CONFIRM
+  CONFIRM=${CONFIRM:-Y} # 默认 Y
   [[ ! "$CONFIRM" =~ ^[Yy]$ ]] && { echo "已取消"; return; }
-  install_docker
   if [ -f "$COMPOSE_FILE" ]; then
-    read -rp "是否删除容器数据卷？(y/N): " DEL_VOL
-    DEL_VOL=${DEL_VOL:-Y}  # 默认 Y
+    read -rp "是否删除容器数据卷？(Y/n): " DEL_VOL
+    DEL_VOL=${DEL_VOL:-Y} # 默认 Y
     if [[ "$DEL_VOL" =~ ^[Yy]$ ]]; then
-      $DOCKER_COMPOSE -f $COMPOSE_FILE down -v
+      $DOCKER_COMPOSE -f "$COMPOSE_FILE" down -v
     else
-      $DOCKER_COMPOSE -f $COMPOSE_FILE down
+      $DOCKER_COMPOSE -f "$COMPOSE_FILE" down
     fi
   fi
-  read -rp "是否删除 $WORKDIR 目录？(y/N): " DEL_DIR
-  DEL_DIR=${DEL_DIR:-Y}  # 默认 Y
+  read -rp "是否删除 $WORKDIR 目录？(Y/n): " DEL_DIR
+  DEL_DIR=${DEL_DIR:-Y} # 默认 Y
   [[ "$DEL_DIR" =~ ^[Yy]$ ]] && rm -rf "$WORKDIR"
   echo "✅ 卸载完成"
 }
@@ -246,7 +226,17 @@ moontv_menu() {
     read -rp "请输入选项: " choice
 
     case "$choice" in
-      1) install_main ;;
+      1)
+        if [ "$STATUS" = "已安装 ✅" ]; then
+          echo "❌ MoonTV 已安装，如需重新安装请先卸载"
+        else
+          input_config
+          choose_image
+          choose_port_and_write_compose
+          $DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
+          echo "✅ MoonTV 已启动"
+        fi
+        ;;
       2) input_config ;;
       3) uninstall ;;
       4)
@@ -268,8 +258,8 @@ moontv_menu() {
       6)
         if [ "$STATUS" = "已安装 ✅" ]; then
           cd "$WORKDIR"
-          read -rp "是否持续跟踪日志？(y/N): " LOG_FOLLOW
-          LOG_FOLLOW=${LOG_FOLLOW:-Y}  # 默认 Y
+          read -rp "是否持续跟踪日志？(Y/n): " LOG_FOLLOW
+          LOG_FOLLOW=${LOG_FOLLOW:-Y} # 默认 Y
           if [[ "$LOG_FOLLOW" =~ ^[Yy]$ ]]; then
             $DOCKER_COMPOSE logs -f
           else
@@ -299,11 +289,24 @@ moontv_menu() {
 # 自动检查安装并启动菜单
 # =========================
 install_docker
-if [ -d "$WORKDIR" ] && [ -f "$COMPOSE_FILE" ]; then
-  echo "✅ MoonTV 已安装"
-else
+if [ ! -d "$WORKDIR" ] || [ ! -f "$COMPOSE_FILE" ]; then
   echo "ℹ️ MoonTV 未安装，开始初始化安装..."
-  install_main
+  input_config
+  IMAGE="ghcr.io/szemeng76/lunatv:latest" # 默认使用带弹幕的镜像
+  echo "使用默认镜像: $IMAGE"
+  choose_port_and_write_compose
+  $DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
+
+  IPV4=$(curl -4 -s ifconfig.me || hostname -I | awk '{print $1}')
+  IPV6=$(curl -6 -s ifconfig.me || ip -6 addr show scope global | awk '{print $2}' | cut -d/ -f1 | head -n1)
+  HOST_PORT=$(grep -Po "(?<=- )\d+(?=:3000)" "$COMPOSE_FILE" | tr -d "'")
+  HOST_PORT=${HOST_PORT:-8181}
+
+  echo "✅ MoonTV 已启动"
+  echo "👉 IPv4 访问地址: http://$IPV4:$HOST_PORT"
+  [[ -n "$IPV6" ]] && echo "👉 IPv6 访问地址: http://[$IPV6]:$HOST_PORT"
+  echo "👉 用户名: $(grep USERNAME "$ENV_FILE" | cut -d '=' -f2)"
+  echo "👉 密码: $(grep PASSWORD "$ENV_FILE" | cut -d '=' -f2)"
 fi
 
 moontv_menu
