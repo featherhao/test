@@ -9,7 +9,8 @@ SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/me
 SCRIPT_PATH="$HOME/menu.sh"
 
 # ================== 彩色与日志 ==================
-if [[ -t 1 ]] && command -v tput &>/dev/null; then
+# 优化：使用 || true 避免在严格模式下因 tput 不存在而导致的脚本退出
+if [[ -t 1 ]] && command -v tput &>/dev/null || true; then
     C_RESET="\e[0m"; C_BOLD="\e[1m"
     C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"; C_BLUE="\e[34m"; C_CYAN="\e[36m"
 else
