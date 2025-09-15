@@ -40,47 +40,34 @@ fi
 
 while true; do
     render_menu "🚀 勇哥ArgoSB协议管理 $argosb_status" \
-        "1) 增量添加协议节点" \
+        "1) 添加或更新协议节点" \
         "2) 查看节点信息 (agsb list)" \
-        "3) 手动更换协议变量组 (自定义变量 → agsb rep)" \
-        "4) 更新脚本 (建议卸载重装)" \
-        "5) 重启脚本 (agsb res)" \
-        "6) 卸载脚本 (agsb del)" \
-        "7) 临时切换 IPv4 / IPv6 节点显示" \
-        "8) 更改协议端口" \
+        "3) 更新脚本 (建议卸载重装)" \
+        "4) 重启脚本 (agsb res)" \
+        "5) 卸载脚本 (agsb del)" \
+        "6) 临时切换 IPv4 / IPv6 节点显示" \
+        "7) 更改协议端口" \
         "0) 返回主菜单"
     read -rp "请输入选项: " main_choice
 
     case "$main_choice" in
         1)
-            declare -A protocol_status
-            # Initialize all protocol statuses to "❌ 未安装" to prevent unbound variable errors
-            for p in vlpt xhpt vxpt sspt anpt arpt vmpt hypt tupt; do
-                protocol_status[$p]="❌ 未安装"
-            done
-
-            if [[ -f /etc/opt/ArgoSB/config.json ]]; then
-                for p in "${!protocol_status[@]}"; do
-                    grep -q "\"$p\"" /etc/opt/ArgoSB/config.json && protocol_status[$p]="✅ 已安装" || true
-                done
-            fi
-
-            echo "请选择要新增的协议（可多选，用空格分隔，例如 1 3 5）:"
-            echo "1) Vless-Reality-Vision (vlpt) ${protocol_status[vlpt]}"
-            echo "2) Vless-Xhttp-Reality (xhpt) ${protocol_status[xhpt]}"
-            echo "3) Vless-Xhttp (vxpt) ${protocol_status[vxpt]}"
-            echo "4) Shadowsocks-2022 (sspt) ${protocol_status[sspt]}"
-            echo "5) AnyTLS (anpt) ${protocol_status[anpt]}"
-            echo "6) Any-Reality (arpt) ${protocol_status[arpt]}"
-            echo "7) Vmess-ws (vmpt) ${protocol_status[vmpt]}"
-            echo "8) Hysteria2 (hypt) ${protocol_status[hypt]}"
-            echo "9) Tuic (tupt) ${protocol_status[tupt]}"
+            echo "请选择要添加或更新的协议（可多选，用空格分隔，例如 1 3 5）:"
+            echo "⚠️ 注意：该操作会覆盖现有配置，请确保输入所有需要保留的协议。"
+            echo "1) Vless-Reality-Vision (vlpt)"
+            echo "2) Vless-Xhttp-Reality (xhpt)"
+            echo "3) Vless-Xhttp (vxpt)"
+            echo "4) Shadowsocks-2022 (sspt)"
+            echo "5) AnyTLS (anpt)"
+            echo "6) Any-Reality (arpt)"
+            echo "7) Vmess-ws (vmpt)"
+            echo "8) Hysteria2 (hypt)"
+            echo "9) Tuic (tupt)"
             echo "10) Argo临时隧道CDN优选节点 (vmpt+argo=y)"
             read -rp "输入序号: " choices
 
             NEW_VARS=""
             for c in $choices; do
-                # 修复: 移除 local 关键字
                 protocol_name=""
                 case $c in
                     1) protocol_name="vlpt" ;;
@@ -107,7 +94,7 @@ while true; do
             done
 
             if [[ -n "$NEW_VARS" ]]; then
-                echo "🔹 正在增量更新节点..."
+                echo "🔹 正在更新节点..."
                 eval "$NEW_VARS ${MAIN_SCRIPT_CMD} rep"
             else
                 echo "⚠️ 未选择有效协议"
@@ -120,28 +107,19 @@ while true; do
             read -rp "按回车返回菜单..." dummy
             ;;
         3)
-            echo "👉 请输入自定义变量，例如：vlpt=\"\" sspt=\"\""
-            read -rp "变量: " custom_vars
-            if [[ -n "$custom_vars" ]]; then
-                eval "$custom_vars ${MAIN_SCRIPT_CMD} rep"
-            else
-                echo "⚠️ 没有输入变量"
-            fi
-            read -rp "按回车返回菜单..." dummy
-            ;;
-        4)
+            echo "🔹 正在更新脚本，此操作会重新加载最新配置..."
             eval "${MAIN_SCRIPT_CMD} rep"
             read -rp "按回车返回菜单..." dummy
             ;;
-        5)
+        4)
             eval "${MAIN_SCRIPT_CMD} res"
             read -rp "按回车返回菜单..." dummy
             ;;
-        6)
+        5)
             eval "${MAIN_SCRIPT_CMD} del"
             read -rp "按回车返回菜单..." dummy
             ;;
-        7)
+        6)
             echo "1) 显示 IPv4 节点配置"
             echo "2) 显示 IPv6 节点配置"
             read -rp "请输入选项: " ip_choice
@@ -152,9 +130,9 @@ while true; do
             fi
             read -rp "按回车返回菜单..." dummy
             ;;
-        8)
+        7)
             echo "👉 请输入要更改端口的协议名和新端口号，格式为：[协议名]=[端口号]"
-            echo "例如：vlpt=12345"
+            echo "⚠️ 注意：该操作会覆盖现有配置，请确保输入所有需要保留的协议。"
             read -rp "输入: " port_change_input
             if [[ -n "$port_change_input" ]]; then
                 eval "$port_change_input ${MAIN_SCRIPT_CMD} rep"
