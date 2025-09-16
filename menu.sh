@@ -170,12 +170,17 @@ while true; do
     else
         singbox_status="❌ 未安装"
     fi
-    # 检查 argosb 的安装状态，同时检查文件路径和命令
-if command -v agsb &>/dev/null || [[ -f "/usr/local/bin/argosb.sh" ]] || [[ -d "/etc/opt/ArgoSB" ]]; then
+# 检查勇哥 ArgoSB 是否安装
+if command -v agsb &>/dev/null \
+   || [[ -f "/usr/local/bin/agsb" ]] \
+   || [[ -f "/usr/bin/agsb" ]] \
+   || [[ -f "$HOME/agsb" ]] \
+   || [[ -f "$HOME/agsb.sh" ]]; then
     argosb_status="✅ 已安装"
 else
     argosb_status="❌ 未安装"
 fi
+
     
     # 使用新的 Docker 服务检查函数
     panso_status=$(check_docker_service "pansou-web")
