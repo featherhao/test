@@ -1,72 +1,70 @@
 #!/bin/bash
 set -e
 
-# ================== 显示已绑定的域名和端口 ==================
-echo "🔎 正在检查 Nginx 中已绑定的域名..."
-
-for conf_file in /etc/nginx/sites-enabled/*; do
-    if [[ -f "$conf_file" ]]; then
-        domain=$(grep -Eo 'server_name\s+[^;]+;' "$conf_file" | sed -n 's/server_name\s\+\([^;]\+\);/\1/p' | xargs)
-        port=$(grep -Eo 'proxy_pass\s+http://[^:]+:[0-9]+;' "$conf_file" | sed -n 's/proxy_pass\s\+http:\/\/[^:]\+:\([0-9]\+\);/\1/p' | xargs)
-
-        if [[ -n "$domain" && -n "$port" ]]; then
-            echo "✅ 域名: $domain -> 本地端口: $port"
+# ================== 显示已绑定域名的函数 ==================
+show_domains() {
+    echo "🔎 正在检查 Nginx 中已绑定的域名..."
+    local found=false
+    for conf_file in /etc/nginx/sites-enabled/*; do
+        if [[ -f "$conf_file" ]]; then
+            domain=$(grep -Eo 'server_name\s+[^;]+;' "$conf_file" | sed -n 's/server_name\s\+\([^;]\+\);/\1/p' | xargs)
+            port=$(grep -Eo 'proxy_pass\s+http://[^:]+:[0-9]+;' "$conf_file" | sed -n 's/proxy_pass\s\+http:\/\/[^:]\+:\([0-9]\+\);/\1/p' | xargs)
+            if [[ -n "$domain" && -n "$port" ]]; then
+                echo "✅ 域名: $domain -> 本地端口: $port"
+                found=true
+            fi
         fi
+    done
+    if [[ $found == false ]]; then
+        echo "⚠️ 暂无绑定域名"
     fi
-done
-echo "=========================================="
+    echo "=========================================="
+}
 
-# ================== 菜单 ==================
-echo "请选择操作："
-echo "1) 绑定新域名"
-echo "0) 退出"
-read -rp "请输入选项: " choice
+# ================== 绑定新域名的函数 ==================
+bind_domain() {
+    VPS_IP=$(curl -4 -fsSL https://api.ipify.org || true)
+    IP_VERSION="IPv4"
+    if [[ -z "$VPS_IP" ]]; then
+        VPS_IP="127.0.0.1"
+        IP_VERSION="Loopback"
+    fi
+    echo "🌐 VPS 公网 $IP_VERSION: $VPS_IP"
 
-if [[ "$choice" == "1" ]]; then
-    bind_domain() {
-        # 获取公网 IPv4（默认）
-        VPS_IP=$(curl -4 -fsSL https://api.ipify.org || true)
-        IP_VERSION="IPv4"
-        if [[ -z "$VPS_IP" ]]; then
-            VPS_IP="127.0.0.1"
-            IP_VERSION="Loopback"
-        fi
-        echo "🌐 VPS 公网 $IP_VERSION: $VPS_IP"
+    # 安装依赖
+    if ! command -v nginx &>/dev/null; then
+        echo "📦 正在安装 nginx..."
+        apt update -y && apt install -y nginx
+        systemctl enable nginx --now
+    fi
+    if ! command -v certbot &>/dev/null; then
+        echo "📦 正在安装 certbot..."
+        apt install -y certbot python3-certbot-nginx
+    fi
 
-        # 安装依赖
-        if ! command -v nginx &>/dev/null; then
-            echo "📦 正在安装 nginx..."
-            apt update -y && apt install -y nginx
-            systemctl enable nginx --now
-        fi
-        if ! command -v certbot &>/dev/null; then
-            echo "📦 正在安装 certbot..."
-            apt install -y certbot python3-certbot-nginx
-        fi
+    # 用户输入
+    read -rp "请输入你的域名（例如 example.com）: " DOMAIN
+    while [[ -z "$DOMAIN" ]]; do
+        read -rp "域名不能为空，请重新输入: " DOMAIN
+    done
 
-        # 用户输入
-        read -rp "请输入你的域名（例如 example.com）: " DOMAIN
-        while [[ -z "$DOMAIN" ]]; do
-            read -rp "域名不能为空，请重新输入: " DOMAIN
-        done
+    read -rp "请输入服务运行的本地端口（例如 8181）: " PORT
+    while [[ ! "$PORT" =~ ^[0-9]+$ ]]; do
+        read -rp "端口格式错误，请重新输入: " PORT
+    done
 
-        read -rp "请输入服务运行的本地端口（例如 8181）: " PORT
-        while [[ ! "$PORT" =~ ^[0-9]+$ ]]; do
-            read -rp "端口格式错误，请重新输入: " PORT
-        done
+    RANDOM_EMAIL="user$((RANDOM%100000))@random.com"
+    read -rp "请输入你的邮箱（用于 HTTPS 证书，留空则随机生成）: " EMAIL
+    if [[ -z "$EMAIL" ]]; then
+        EMAIL="$RANDOM_EMAIL"
+        echo "⚡ 使用随机邮箱: $EMAIL"
+    fi
 
-        RANDOM_EMAIL="user$((RANDOM%100000))@random.com"
-        read -rp "请输入你的邮箱（用于 HTTPS 证书，留空则随机生成）: " EMAIL
-        if [[ -z "$EMAIL" ]]; then
-            EMAIL="$RANDOM_EMAIL"
-            echo "⚡ 使用随机邮箱: $EMAIL"
-        fi
+    # 写入临时 HTTP 配置
+    NGINX_CONF="/etc/nginx/sites-enabled/$DOMAIN"
+    PROXY_PASS_IP="127.0.0.1"
 
-        # 写入临时 HTTP 配置
-        NGINX_CONF="/etc/nginx/sites-enabled/$DOMAIN"
-        PROXY_PASS_IP="127.0.0.1"
-
-        cat > "$NGINX_CONF" <<EOF
+    cat > "$NGINX_CONF" <<EOF
 server {
     listen 80;
     listen [::]:80;
@@ -85,33 +83,44 @@ server {
 }
 EOF
 
-        echo "✅ 临时 HTTP 配置已写入 $NGINX_CONF"
+    echo "✅ 临时 HTTP 配置已写入 $NGINX_CONF"
 
-        # 重载 nginx
-        if nginx -t; then
-            systemctl reload nginx
-            echo "🔹 nginx 配置测试通过，已重载 nginx"
-        else
-            echo "⚠️ nginx 配置测试失败，请检查"
-            exit 1
-        fi
+    # 重载 nginx
+    if nginx -t; then
+        systemctl reload nginx
+        echo "🔹 nginx 配置测试通过，已重载 nginx"
+    else
+        echo "⚠️ nginx 配置测试失败，请检查"
+        read -rp "按回车返回菜单..." dummy
+        return
+    fi
 
-        # 获取 HTTPS 证书
-        if certbot --nginx -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive --redirect; then
-            echo "✅ HTTPS 证书获取成功并自动配置"
-        else
-            echo "⚠️ 证书获取失败，请检查域名解析和 nginx 配置"
-        fi
+    # 获取 HTTPS 证书
+    if certbot --nginx -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive --redirect; then
+        echo "✅ HTTPS 证书获取成功并自动配置"
+    else
+        echo "⚠️ 证书获取失败，请检查域名解析和 nginx 配置"
+    fi
 
-        echo "=============================="
-        echo "域名 $DOMAIN 已绑定到本地端口: $PORT"
-        echo "HTTPS 已开启，可通过 https://$DOMAIN 访问（如果证书获取成功）"
-        echo "请确保 DNS 记录已解析到 VPS 公网 $IP_VERSION: $VPS_IP"
-        echo "=============================="
-    }
+    echo "=============================="
+    echo "域名 $DOMAIN 已绑定到本地端口: $PORT"
+    echo "HTTPS 已开启，可通过 https://$DOMAIN 访问（如果证书获取成功）"
+    echo "请确保 DNS 记录已解析到 VPS 公网 $IP_VERSION: $VPS_IP"
+    echo "=============================="
+    read -rp "按回车返回菜单..." dummy
+}
 
-    bind_domain
-else
-    echo "👋 已退出"
-    exit 0
-fi
+# ================== 主循环菜单 ==================
+while true; do
+    show_domains
+    echo "请选择操作："
+    echo "1) 绑定新域名"
+    echo "0) 返回上一级菜单"
+    read -rp "请输入选项: " choice
+
+    case "$choice" in
+        1) bind_domain ;;
+        0) break ;;
+        *) echo "⚠️ 无效选项，请重新输入" ;;
+    esac
+done
