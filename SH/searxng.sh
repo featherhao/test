@@ -15,10 +15,11 @@ error() { echo -e "${C_RED}[ERROR]${C_RESET} $*" >&2; }
 
 # ========== 获取公网 IP ==========
 get_public_ip() {
+  local port="$1"
   ipv4=$(curl -s --max-time 5 ipv4.icanhazip.com || true)
   ipv6=$(curl -s --max-time 5 ipv6.icanhazip.com || true)
-  [ -n "$ipv4" ] && echo "http://$ipv4:$1"
-  [ -n "$ipv6" ] && echo "http://[$ipv6]:$1"
+  [ -n "$ipv4" ] && echo "IPv4: http://$ipv4:$port"
+  [ -n "$ipv6" ] && echo "IPv6: http://[$ipv6]:$port"
 }
 
 # ========== 查找可用端口 ==========
@@ -56,7 +57,7 @@ version: '3'
 services:
   searxng:
     image: searxng/searxng:latest
-    container_name: searxng
+    container_name: $SERVICE_NAME
     restart: always
     ports:
       - "$port:8080"
@@ -140,6 +141,25 @@ EOF
   log "✅ 已设置开机自启！"
 }
 
+# ========== 显示安装状态和访问地址 ==========
+show_status() {
+  if [ -d "$WORKDIR" ] && [ -f "$WORKDIR/$COMPOSE_FILE" ]; then
+    log "✅ SearxNG 已安装"
+    if docker ps --format '{{.Names}}' | grep -q "^$SERVICE_NAME$"; then
+      log "服务正在运行"
+    else
+      log "⚠️ 服务未运行"
+    fi
+    port=$(get_port)
+    echo ""
+    log "🌐 访问地址："
+    get_public_ip "$port"
+    echo ""
+  else
+    log "❌ SearxNG 未安装"
+  fi
+}
+
 # ========== 菜单 ==========
 interactive_menu() {
   while true; do
@@ -176,4 +196,5 @@ EOF
 }
 
 # ========== 主程序 ==========
+show_status
 interactive_menu
