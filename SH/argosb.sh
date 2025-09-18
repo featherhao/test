@@ -77,4 +77,27 @@ main_menu() {
     read -rp "请输入选项: " choice
 
     case "$choice" in
-      1) add_or_update_proto_
+      1) add_or_update_protocol ;;
+      2) bash <(curl -Ls $SCRIPT_URL) list ;;
+      3) bash <(curl -Ls $SCRIPT_URL) rep ;;
+      4) bash <(curl -Ls $SCRIPT_URL) res ;;
+      5) bash <(curl -Ls $SCRIPT_URL) del ;;
+      6)
+        echo "1) 显示 IPv4 节点"
+        echo "2) 显示 IPv6 节点"
+        read -rp "请选择: " ip_choice
+        if [[ "$ip_choice" == "1" ]]; then
+          ippz=4 bash <(curl -Ls $SCRIPT_URL) list
+        else
+          ippz=6 bash <(curl -Ls $SCRIPT_URL) list
+        fi
+        ;;
+      7) bash <(curl -Ls $SCRIPT_URL) port ;;
+      0) exit 0 ;;
+      *) err "❌ 无效选项" ;;
+    esac
+    read -rp "按回车键返回菜单..."
+  done
+}
+
+main_menu
