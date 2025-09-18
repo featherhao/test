@@ -32,7 +32,7 @@ render_menu() {
 SCRIPT_URL="https://raw.githubusercontent.com/yonggekkk/argosbx/refs/heads/main/argosbx.sh"
 MAIN_SCRIPT_CMD="bash <(curl -Ls ${SCRIPT_URL})"
 
-if command -v agsb &>/dev/null; then
+if command -v agsbx &>/dev/null; then
     argosb_status="✅ 已安装"
 else
     argosb_status="❌ 未安装"
