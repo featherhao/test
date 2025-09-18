@@ -7,6 +7,7 @@ echo "🚀 勇哥ArgoSB协议管理"
 echo "=============================="
 
 while true; do
+    echo ""
     echo "1) 添加或更新协议节点"
     echo "2) 查看节点信息 (agsbx list)"
     echo "3) 更新脚本 (建议卸载重装)"
@@ -19,6 +20,7 @@ while true; do
 
     case $action in
         1)
+            echo ""
             echo "请选择要添加或更新的协议（可多选，用空格分隔，例如 1 3 5）:"
             echo "⚠️ 注意：该操作会覆盖现有配置，请确保输入所有需要保留的协议。"
             echo "1) Vless-Reality-Vision (vlpt)"
@@ -55,7 +57,11 @@ while true; do
                             echo "⚠️ Argo固定隧道必须启用 Vmess-ws 协议，请先选择 7) Vmess-ws"
                             continue 2
                         fi
-                        read -rp "请输入 Argo固定隧道端口 (vmpt必须启用): " val; export vmpt="$val"
+                        # 固定隧道端口保留原输入
+                        if [ -z "${vmpt:-}" ]; then
+                            read -rp "请输入 Argo固定隧道端口 (vmpt必须启用): " val
+                            export vmpt="$val"
+                        fi
                         read -rp "请输入 Argo固定隧道域名 (agn): " agn; export agn
                         read -rp "请输入 Argo固定隧道Token (agk): " agk; export agk
                         export argo="y"
@@ -81,7 +87,9 @@ while true; do
             bash <(curl -Ls "$MAIN_SCRIPT") list
             ;;
         7)
-            echo "更改协议端口请使用自定义变量组 rep 功能: bash <(curl -Ls $MAIN_SCRIPT) rep";;
+            echo "更改协议端口请使用自定义变量组 rep 功能:"
+            echo "示例: bash <(curl -Ls $MAIN_SCRIPT) rep"
+            ;;
         0) exit 0;;
         *) echo "⚠️ 无效操作，请重新选择";;
     esac
