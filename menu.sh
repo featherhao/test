@@ -7,8 +7,6 @@ trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) a
 # ================== 基础配置 ==================
 SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh"
 SCRIPT_PATH="$HOME/menu.sh"
-SINGBOX_SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/Sing-box-yg.sh"
-SINGBOX_SCRIPT_PATH="$HOME/Sing-box-yg.sh"
 
 # ================== 彩色与日志 ==================
 if [[ -t 1 ]] && command -v tput &>/dev/null || true; then
@@ -44,6 +42,10 @@ fetch() {
     curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@"
 }
 
+run_url() {
+    bash <(fetch "$1")
+}
+
 # ================== 自我初始化 ==================
 SCRIPT_IS_FIRST_RUN=false
 if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
@@ -53,14 +55,6 @@ if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
     chmod +x "$SCRIPT_PATH"
     SCRIPT_IS_FIRST_RUN=true
     sleep 2
-fi
-
-# 确保 sing-box 脚本存在
-if [[ ! -f "$SINGBOX_SCRIPT_PATH" ]]; then
-    info "🛠️ 正在自动下载并保存 Sing-box-yg.sh 脚本..."
-    fetch "${SINGBOX_SCRIPT_URL}?t=$(date +%s)" -o "$SINGBOX_SCRIPT_PATH"
-    chmod +x "$SINGBOX_SCRIPT_PATH"
-    sleep 1
 fi
 
 set_q_shortcut_auto() {
@@ -115,7 +109,12 @@ SEARXNG_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/mai
 moon_menu() { bash <(fetch "${MOONTV_SCRIPT}?t=$(date +%s)"); }
 rustdesk_menu() { bash <(fetch "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
 libretv_menu() { bash <(fetch "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
-singbox_menu() { bash "$SINGBOX_SCRIPT_PATH"; }
+singbox_menu() {
+    # 执行远程脚本
+    bash <(fetch "https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh")
+    # 暂停，等待用户按任意键返回
+    read -rp "按任意键返回主菜单..."
+}
 nginx_menu() { bash <(fetch "${NGINX_SCRIPT}?t=$(date +%s)"); }
 panso_menu() { bash <(fetch "${PANSO_SCRIPT}?t=$(date +%s)"); }
 zjsync_menu() { bash <(fetch "${ZJSYNC_SCRIPT}?t=$(date +%s)"); }
