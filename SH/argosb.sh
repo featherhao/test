@@ -41,10 +41,10 @@ fi
 while true; do
     render_menu "🚀 勇哥ArgoSB协议管理 $argosb_status" \
         "1) 添加或更新协议节点" \
-        "2) 查看节点信息 (agsb list)" \
+        "2) 查看节点信息 (agsbx list)" \
         "3) 更新脚本 (建议卸载重装)" \
-        "4) 重启脚本 (agsb res)" \
-        "5) 卸载脚本 (agsb del)" \
+        "4) 重启脚本 (agsbx res)" \
+        "5) 卸载脚本 (agsbx del)" \
         "6) 临时切换 IPv4 / IPv6 节点显示" \
         "7) 更改协议端口" \
         "0) 返回主菜单"
