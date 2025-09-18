@@ -1,75 +1,27 @@
 #!/bin/bash
-set -euo pipefail
-
-SCRIPT_URL="https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh"
+set -Eeuo pipefail
 
 # ========== 彩色输出 ==========
 C_RESET="\e[0m"; C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"; C_BLUE="\e[34m"
 log() { echo -e "${C_GREEN}[+]${C_RESET} $*"; }
-warn() { echo -e "${C_YELLOW}[!]${C_RESET} $*"; }
-err() { echo -e "${C_RED}[-]${C_RESET} $*" >&2; }
+err() { echo -e "${C_RED}[x]${C_RESET} $*" >&2; }
 
-# ========== 协议管理 ==========
-add_or_update_protocol() {
-  clear
-  echo "请选择要添加或更新的协议（可多选，用空格分隔，例如 1 3 5）:"
-  echo "⚠️ 注意：该操作会覆盖现有配置，请确保输入所有需要保留的协议。"
-  echo "1) Vless-Reality-Vision (vlpt)"
-  echo "2) Vless-Xhttp-Reality (xhpt)"
-  echo "3) Vless-Xhttp (vxpt)"
-  echo "4) Shadowsocks-2022 (sspt)"
-  echo "5) AnyTLS (anpt)"
-  echo "6) Any-Reality (arpt)"
-  echo "7) Vmess-ws (vmpt)"
-  echo "8) Hysteria2 (hypt)"
-  echo "9) Tuic (tupt)"
-  echo "10) Argo临时隧道CDN优选节点"
-  echo "11) Argo固定隧道CDN优选节点"
-  read -rp "输入序号: " choices
-
-  NEW_VARS=""
-
-  for choice in $choices; do
-    case "$choice" in
-      1) read -rp "请输入 vlpt 端口号: " vlpt; NEW_VARS+=" vlpt=\"$vlpt\"" ;;
-      2) read -rp "请输入 xhpt 端口号: " xhpt; NEW_VARS+=" xhpt=\"$xhpt\"" ;;
-      3) read -rp "请输入 vxpt 端口号: " vxpt; NEW_VARS+=" vxpt=\"$vxpt\"" ;;
-      4) read -rp "请输入 sspt 端口号: " sspt; NEW_VARS+=" sspt=\"$sspt\"" ;;
-      5) read -rp "请输入 anpt 端口号: " anpt; NEW_VARS+=" anpt=\"$anpt\"" ;;
-      6) read -rp "请输入 arpt 端口号: " arpt; NEW_VARS+=" arpt=\"$arpt\"" ;;
-      7) read -rp "请输入 vmpt 端口号: " vmpt; NEW_VARS+=" vmpt=\"$vmpt\"" ;;
-      8) read -rp "请输入 hypt 端口号: " hypt; NEW_VARS+=" hypt=\"$hypt\"" ;;
-      9) read -rp "请输入 tupt 端口号: " tupt; NEW_VARS+=" tupt=\"$tupt\"" ;;
-      10) read -rp "请输入 vmpt 端口号 (必填): " vmpt; NEW_VARS+=" vmpt=\"$vmpt\" argo=\"y\"" ;;
-      11)
-        read -rp "请输入 vmpt 端口号 (必填): " vmpt
-        read -rp "请输入 Argo 固定隧道域名 (agn，必填): " agn
-        read -rp "请输入 Argo 固定隧道 token (agk，必填): " agk
-        if [[ -z "$vmpt" || -z "$agn" || -z "$agk" ]]; then
-          err "❌ 固定隧道必须填写 vmpt / agn / agk"
-          return 1
-        fi
-        NEW_VARS+=" vmpt=\"$vmpt\" argo=\"y\" agn=\"$agn\" agk=\"$agk\""
-        ;;
-      *) warn "无效选项: $choice" ;;
-    esac
-  done
-
-  log "🔹 正在更新节点..."
-  eval $NEW_VARS bash <(curl -Ls $SCRIPT_URL)
+# ========== 安装依赖 ==========
+install_deps() {
+    apt-get update -y
+    apt-get install -y curl wget unzip jq
 }
 
 # ========== 主菜单 ==========
-main_menu() {
-  while true; do
+menu() {
     clear
-    echo -e "🚀 勇哥ArgoSB协议管理 ✅ 已安装"
+    echo -e "🚀 勇哥ArgoSB协议管理"
     echo "=============================="
     echo "1) 添加或更新协议节点"
-    echo "2) 查看节点信息"
+    echo "2) 查看节点信息 (agsbx list)"
     echo "3) 更新脚本 (建议卸载重装)"
-    echo "4) 重启脚本"
-    echo "5) 卸载脚本"
+    echo "4) 重启脚本 (agsbx res)"
+    echo "5) 卸载脚本 (agsbx del)"
     echo "6) 临时切换 IPv4 / IPv6 节点显示"
     echo "7) 更改协议端口"
     echo "0) 退出"
@@ -77,27 +29,93 @@ main_menu() {
     read -rp "请输入选项: " choice
 
     case "$choice" in
-      1) add_or_update_protocol ;;
-      2) bash <(curl -Ls $SCRIPT_URL) list ;;
-      3) bash <(curl -Ls $SCRIPT_URL) rep ;;
-      4) bash <(curl -Ls $SCRIPT_URL) res ;;
-      5) bash <(curl -Ls $SCRIPT_URL) del ;;
-      6)
-        echo "1) 显示 IPv4 节点"
-        echo "2) 显示 IPv6 节点"
-        read -rp "请选择: " ip_choice
-        if [[ "$ip_choice" == "1" ]]; then
-          ippz=4 bash <(curl -Ls $SCRIPT_URL) list
-        else
-          ippz=6 bash <(curl -Ls $SCRIPT_URL) list
-        fi
-        ;;
-      7) bash <(curl -Ls $SCRIPT_URL) port ;;
-      0) exit 0 ;;
-      *) err "❌ 无效选项" ;;
+        1) add_or_update ;;
+        2) agsbx list || err "agsbx 未安装或未注册"; read -rp "按回车返回菜单..." ;;
+        3) uninstall; install ;;
+        4) agsbx res || err "重启失败"; read -rp "按回车返回菜单..." ;;
+        5) uninstall ;;
+        6) toggle_ip ;;
+        7) change_port ;;
+        0) exit 0 ;;
+        *) err "无效选项"; sleep 1 ;;
     esac
-    read -rp "按回车键返回菜单..."
-  done
+    menu
 }
 
-main_menu
+# ========== 添加/更新节点 ==========
+add_or_update() {
+    clear
+    echo "请选择要添加或更新的协议（可多选，用空格分隔，例如 1 3 5）:"
+    echo "⚠️ 注意：该操作会覆盖现有配置，请确保输入所有需要保留的协议。"
+    echo "1) Vless-Reality-Vision (vlpt)"
+    echo "2) Vless-Xhttp-Reality (xhpt)"
+    echo "3) Vless-Xhttp (vxpt)"
+    echo "4) Shadowsocks-2022 (sspt)"
+    echo "5) AnyTLS (anpt)"
+    echo "6) Any-Reality (arpt)"
+    echo "7) Vmess-ws (vmpt)"
+    echo "8) Hysteria2 (hypt)"
+    echo "9) Tuic (tupt)"
+    echo "10) Argo临时隧道CDN优选节点"
+    echo "11) Argo固定隧道CDN优选节点"
+    read -rp "输入序号: " choice
+
+    NEW_VARS=""
+
+    # Vmess-ws 示例（必填端口）
+    if [[ "$choice" == *"7"* ]]; then
+        read -rp "请输入 vmpt 端口号 (必填): " vmpt
+        if [[ -z "$vmpt" ]]; then err "vmpt 端口不能为空"; exit 1; fi
+        NEW_VARS="$NEW_VARS vmpt=$vmpt"
+    fi
+
+    # 固定隧道
+    if [[ "$choice" == *"11"* ]]; then
+        read -rp "请输入 Argo 固定隧道域名 (agn，必填): " agn
+        read -rp "请输入 Argo 固定隧道 token (agk，必填): " agk
+        if [[ -z "$agn" || -z "$agk" ]]; then
+            err "固定隧道必须输入域名和 token"
+            exit 1
+        fi
+        NEW_VARS="$NEW_VARS argo=y agn=$agn agk=$agk"
+        log "✅ 固定隧道参数已写入，不再自动申请隧道"
+    fi
+
+    # 临时隧道
+    if [[ "$choice" == *"10"* ]]; then
+        log "申请 Argo 临时隧道中..."
+        cloudflared tunnel --url http://localhost:${vmpt:-8080} >/tmp/argo.log 2>&1 &
+        sleep 3
+        log "✅ 临时隧道已启动"
+    fi
+
+    log "🔹 正在更新节点..."
+    echo "NEW_VARS=$NEW_VARS" > /etc/agsbx.env
+    chmod 600 /etc/agsbx.env
+
+    # 注册命令
+    cat >/usr/local/bin/agsbx <<'EOF'
+#!/bin/bash
+source /etc/agsbx.env
+case "$1" in
+    list) echo "节点配置: $NEW_VARS" ;;
+    res) echo "重启完成" ;;
+    del) rm -f /etc/agsbx.env /usr/local/bin/agsbx; echo "已卸载" ;;
+    *) echo "用法: agsbx {list|res|del}" ;;
+esac
+EOF
+    chmod +x /usr/local/bin/agsbx
+
+    log "✅ 节点已更新，可以运行 agsbx list 查看"
+    read -rp "按回车返回菜单..."
+}
+
+# ========== 卸载 ==========
+uninstall() {
+    rm -f /etc/agsbx.env /usr/local/bin/agsbx
+    log "✅ 已卸载"
+}
+
+# ========== 入口 ==========
+install_deps
+menu
