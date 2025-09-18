@@ -28,7 +28,6 @@ render_menu() {
 }
 
 # ================== 勇哥ArgoSB菜单 ==================
-# 默认主脚本 URL
 SCRIPT_URL="https://raw.githubusercontent.com/yonggekkk/argosbx/refs/heads/main/argosbx.sh"
 MAIN_SCRIPT_CMD="bash <(curl -Ls ${SCRIPT_URL})"
 
@@ -63,7 +62,8 @@ while true; do
             echo "7) Vmess-ws (vmpt)"
             echo "8) Hysteria2 (hypt)"
             echo "9) Tuic (tupt)"
-            echo "10) Argo临时隧道CDN优选节点 (vmpt+argo=y)"
+            echo "10) Argo临时隧道CDN优选节点"
+            echo "11) Argo固定隧道CDN优选节点"
             read -rp "输入序号: " choices
 
             NEW_VARS=""
@@ -79,14 +79,32 @@ while true; do
                     7) protocol_name="vmpt" ;;
                     8) protocol_name="hypt" ;;
                     9) protocol_name="tupt" ;;
-                    10) 
+                    10)
                         protocol_name="vmpt"
-                        NEW_VARS="$NEW_VARS argo=\"y\"" 
+                        read -rp "为 vmpt 输入端口号 (留空则随机): " custom_port
+                        if [[ -n "$custom_port" ]]; then
+                            NEW_VARS="$protocol_name=\"$custom_port\" argo=\"y\""
+                        else
+                            NEW_VARS="$protocol_name=\"\" argo=\"y\""
+                        fi
+                        ;;
+                    11)
+                        protocol_name="vmpt"
+                        read -rp "为 vmpt 输入端口号: " custom_port
+                        NEW_VARS="$protocol_name=\"$custom_port\" argo=\"y\""
+                        read -rp "请输入 Argo 固定隧道域名 (agn): " agn
+                        read -rp "请输入 Argo 固定隧道 token (agk): " agk
+                        if [[ -n "$agn" ]]; then
+                            NEW_VARS="$NEW_VARS agn=\"$agn\""
+                        fi
+                        if [[ -n "$agk" ]]; then
+                            NEW_VARS="$NEW_VARS agk=\"$agk\""
+                        fi
                         ;;
                     *) echo "⚠️ 无效选项: $c" ;;
                 esac
 
-                if [[ -n "$protocol_name" ]]; then
+                if [[ -n "$protocol_name" && $c -lt 10 ]]; then
                     read -rp "为 $protocol_name 输入端口号 (留空则随机): " custom_port
                     if [[ -n "$custom_port" ]]; then
                         NEW_VARS="$NEW_VARS $protocol_name=\"$custom_port\""
