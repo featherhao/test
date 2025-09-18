@@ -104,12 +104,13 @@ PANSO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/
 POSTEIO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/Poste.io.sh"
 WORKDIR_SEARXNG="/opt/searxng"
 SEARXNG_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/searxng.sh"
+SINGBOX_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/Sing-box-yg.sh"
 
 # ================== 调用子脚本 ==================
 moon_menu() { bash <(fetch "${MOONTV_SCRIPT}?t=$(date +%s)"); }
 rustdesk_menu() { bash <(fetch "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
 libretv_menu() { bash <(fetch "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
-singbox_menu() { bash <(fetch "https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh"); }
+singbox_menu() { bash <(fetch "${SINGBOX_SCRIPT}?t=$(date +%s)"); }
 nginx_menu() { bash <(fetch "${NGINX_SCRIPT}?t=$(date +%s)"); }
 panso_menu() { bash <(fetch "${PANSO_SCRIPT}?t=$(date +%s)"); }
 zjsync_menu() { bash <(fetch "${ZJSYNC_SCRIPT}?t=$(date +%s)"); }
