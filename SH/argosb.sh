@@ -29,7 +29,7 @@ render_menu() {
 
 # ================== 勇哥ArgoSB菜单 ==================
 # 默认主脚本 URL
-SCRIPT_URL="https://raw.githubusercontent.com/yonggekkk/argosb/main/argosb.sh"
+SCRIPT_URL="https://raw.githubusercontent.com/yonggekkk/argosbx/refs/heads/main/argosbx.sh"
 MAIN_SCRIPT_CMD="bash <(curl -Ls ${SCRIPT_URL})"
 
 if command -v agsb &>/dev/null; then
