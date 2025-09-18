@@ -79,26 +79,33 @@ while true; do
                     7) protocol_name="vmpt" ;;
                     8) protocol_name="hypt" ;;
                     9) protocol_name="tupt" ;;
-                    10)
+                    10) # Argo 临时隧道
                         protocol_name="vmpt"
                         read -rp "为 vmpt 输入端口号 (留空则随机): " custom_port
                         if [[ -n "$custom_port" ]]; then
-                            NEW_VARS="$protocol_name=\"$custom_port\" argo=\"y\""
+                            NEW_VARS="$NEW_VARS $protocol_name=\"$custom_port\" argo=\"y\""
                         else
-                            NEW_VARS="$protocol_name=\"\" argo=\"y\""
+                            NEW_VARS="$NEW_VARS $protocol_name=\"\" argo=\"y\""
                         fi
                         ;;
-                    11)
+                    11) # Argo 固定隧道
                         protocol_name="vmpt"
-                        read -rp "为 vmpt 输入端口号: " custom_port
-                        NEW_VARS="$protocol_name=\"$custom_port\" argo=\"y\""
-                        read -rp "请输入 Argo 固定隧道域名 (agn): " agn
-                        read -rp "请输入 Argo 固定隧道 token (agk): " agk
-                        if [[ -n "$agn" ]]; then
-                            NEW_VARS="$NEW_VARS agn=\"$agn\""
-                        fi
-                        if [[ -n "$agk" ]]; then
-                            NEW_VARS="$NEW_VARS agk=\"$agk\""
+                        # 固定隧道必须输入端口
+                        while true; do
+                            read -rp "请输入 vmpt 端口号 (必填): " custom_port
+                            if [[ -n "$custom_port" ]]; then
+                                break
+                            else
+                                echo "⚠️ 固定隧道 vmpt 端口不能为空！"
+                            fi
+                        done
+                        # 固定隧道必须输入域名和 token
+                        read -rp "请输入 Argo 固定隧道域名 (agn，必填): " agn
+                        read -rp "请输入 Argo 固定隧道 token (agk，必填): " agk
+                        if [[ -z "$agn" || -z "$agk" ]]; then
+                            echo "❌ 固定隧道必须填写域名和 token，操作取消！"
+                        else
+                            NEW_VARS="$NEW_VARS $protocol_name=\"$custom_port\" argo=\"y\" agn=\"$agn\" agk=\"$agk\""
                         fi
                         ;;
                     *) echo "⚠️ 无效选项: $c" ;;
