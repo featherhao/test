@@ -1,70 +1,31 @@
 #!/bin/bash
-set -Eeuo pipefail
+# =========================
+# 🚀 勇哥ArgosBX安装与管理菜单
+# =========================
+set -euo pipefail
 
-# ========== 彩色输出 ==========
-C_RESET="\e[0m"; C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"; C_BLUE="\e[34m"
-log() { echo -e "${C_GREEN}[+]${C_RESET} $*"; }
-err() { echo -e "${C_RED}[x]${C_RESET} $*" >&2; }
+MAIN_SCRIPT_URL="https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh"
 
-# ========== 安装依赖 ==========
-install_deps() {
-    apt-get update -y
-    apt-get install -y curl wget unzip jq
-}
-
-# ========== 注册空 agsbx 命令（首次运行） ==========
-register_agsbx() {
-    if [[ ! -f /usr/local/bin/agsbx ]]; then
-        cat >/usr/local/bin/agsbx <<'EOF'
-#!/bin/bash
-if [[ -f /etc/agsbx.env ]]; then
-    source /etc/agsbx.env
+# 检查curl或wget
+download_cmd=""
+if command -v curl &>/dev/null; then
+    download_cmd="curl -Ls"
+elif command -v wget &>/dev/null; then
+    download_cmd="wget -qO-"
+else
+    echo "⚠️ 系统缺少 curl 或 wget，请先安装。"
+    exit 1
 fi
-case "$1" in
-    list) echo "节点配置: ${NEW_VARS:-未配置}" ;;
-    res) echo "重启完成" ;;
-    del) rm -f /etc/agsbx.env /usr/local/bin/agsbx; echo "已卸载" ;;
-    *) echo "用法: agsbx {list|res|del}" ;;
-esac
-EOF
-        chmod +x /usr/local/bin/agsbx
-        log "✅ 已注册 agsbx 命令"
-    fi
-}
 
-# ========== 主菜单 ==========
-menu() {
-    clear
-    echo -e "🚀 勇哥ArgoSB协议管理"
-    echo "=============================="
-    echo "1) 添加或更新协议节点"
-    echo "2) 查看节点信息 (agsbx list)"
-    echo "3) 更新脚本 (建议卸载重装)"
-    echo "4) 重启脚本 (agsbx res)"
-    echo "5) 卸载脚本 (agsbx del)"
-    echo "6) 临时切换 IPv4 / IPv6 节点显示"
-    echo "7) 更改协议端口"
-    echo "0) 退出"
-    echo "=============================="
-    read -rp "请输入选项: " choice
+# 初始化变量
+vlpt=""; xhpt=""; vxpt=""; sspt=""; anpt=""; arpt=""
+vmpt=""; hypt=""; tupt=""; argo=""; agn=""; agk=""; uuid=""
 
-    case "$choice" in
-        1) add_or_update ;;
-        2) agsbx list || err "agsbx 未安装或未注册"; read -rp "按回车返回菜单..." ;;
-        3) uninstall; install ;;
-        4) agsbx res || err "重启失败"; read -rp "按回车返回菜单..." ;;
-        5) uninstall ;;
-        6) toggle_ip ;;
-        7) change_port ;;
-        0) exit 0 ;;
-        *) err "无效选项"; sleep 1 ;;
-    esac
-    menu
-}
+# 生成随机UUID
+uuid=$(cat /proc/sys/kernel/random/uuid)
 
-# ========== 添加/更新节点 ==========
-add_or_update() {
-    clear
+function install_or_update_protocols() {
+    echo ""
     echo "请选择要添加或更新的协议（可多选，用空格分隔，例如 1 3 5）:"
     echo "⚠️ 注意：该操作会覆盖现有配置，请确保输入所有需要保留的协议。"
     echo "1) Vless-Reality-Vision (vlpt)"
@@ -78,52 +39,85 @@ add_or_update() {
     echo "9) Tuic (tupt)"
     echo "10) Argo临时隧道CDN优选节点"
     echo "11) Argo固定隧道CDN优选节点"
-    read -rp "输入序号: " choice
 
-    NEW_VARS=""
+    read -rp "输入序号: " choices
 
-    # Vmess-ws 示例（必填端口）
-    if [[ "$choice" == *"7"* ]]; then
-        read -rp "请输入 vmpt 端口号 (必填): " vmpt
-        if [[ -z "$vmpt" ]]; then err "vmpt 端口不能为空"; exit 1; fi
-        NEW_VARS="$NEW_VARS vmpt=$vmpt"
-    fi
+    for i in $choices; do
+        case $i in
+            1) read -rp "请输入 Vless-Reality-Vision 端口（留空随机）: " vlpt ;;
+            2) read -rp "请输入 Vless-Xhttp-Reality 端口（留空随机）: " xhpt ;;
+            3) read -rp "请输入 Vless-Xhttp 端口（留空随机）: " vxpt ;;
+            4) read -rp "请输入 Shadowsocks-2022 端口（留空随机）: " sspt ;;
+            5) read -rp "请输入 AnyTLS 端口（留空随机）: " anpt ;;
+            6) read -rp "请输入 Any-Reality 端口（留空随机）: " arpt ;;
+            7) read -rp "请输入 Vmess-ws 端口（留空随机）: " vmpt ;;
+            8) read -rp "请输入 Hysteria2 端口（留空随机）: " hypt ;;
+            9) read -rp "请输入 Tuic 端口（留空随机）: " tupt ;;
+            10) argo="y"; echo "启用 Argo 临时隧道" ;;
+            11) argo="y"; 
+                read -rp "请输入 Argo固定隧道端口 (vmpt必须启用): " vmpt
+                read -rp "请输入 Argo固定隧道域名 (agn): " agn
+                read -rp "请输入 Argo固定隧道Token (agk): " agk ;;
+            *) echo "无效选项: $i" ;;
+        esac
+    done
 
-    # 固定隧道
-    if [[ "$choice" == *"11"* ]]; then
-        read -rp "请输入 Argo 固定隧道域名 (agn，必填): " agn
-        read -rp "请输入 Argo 固定隧道 token (agk，必填): " agk
-        if [[ -z "$agn" || -z "$agk" ]]; then
-            err "固定隧道必须输入域名和 token"
-            exit 1
-        fi
-        NEW_VARS="$NEW_VARS argo=y agn=$agn agk=$agk"
-        log "✅ 固定隧道参数已写入，不再自动申请隧道"
-    fi
+    # 组合变量
+    vars=""
+    [ -n "$vlpt" ] && vars+="vlpt=\"$vlpt\" "
+    [ -n "$xhpt" ] && vars+="xhpt=\"$xhpt\" "
+    [ -n "$vxpt" ] && vars+="vxpt=\"$vxpt\" "
+    [ -n "$sspt" ] && vars+="sspt=\"$sspt\" "
+    [ -n "$anpt" ] && vars+="anpt=\"$anpt\" "
+    [ -n "$arpt" ] && vars+="arpt=\"$arpt\" "
+    [ -n "$vmpt" ] && vars+="vmpt=\"$vmpt\" "
+    [ -n "$hypt" ] && vars+="hypt=\"$hypt\" "
+    [ -n "$tupt" ] && vars+="tupt=\"$tupt\" "
+    [ -n "$argo" ] && vars+="argo=\"$argo\" "
+    [ -n "$agn" ] && vars+="agn=\"$agn\" "
+    [ -n "$agk" ] && vars+="agk=\"$agk\" "
+    [ -n "$uuid" ] && vars+="uuid=\"$uuid\" "
 
-    # 临时隧道
-    if [[ "$choice" == *"10"* ]]; then
-        log "申请 Argo 临时隧道中..."
-        cloudflared tunnel --url http://localhost:${vmpt:-8080} >/tmp/argo.log 2>&1 &
-        sleep 3
-        log "✅ 临时隧道已启动"
-    fi
-
-    log "🔹 正在更新节点..."
-    echo "NEW_VARS=$NEW_VARS" > /etc/agsbx.env
-    chmod 600 /etc/agsbx.env
-
-    log "✅ 节点已更新，可以运行 agsbx list 查看"
-    read -rp "按回车返回菜单..."
+    echo ""
+    echo "==============================="
+    echo "正在执行 Argosbx 主脚本..."
+    bash <($download_cmd $MAIN_SCRIPT_URL)
+    echo "安装或更新完成！"
 }
 
-# ========== 卸载 ==========
-uninstall() {
-    rm -f /etc/agsbx.env /usr/local/bin/agsbx
-    log "✅ 已卸载"
+function show_menu() {
+    echo ""
+    echo "🚀 勇哥ArgoSB协议管理"
+    echo "==============================="
+    echo "1) 添加或更新协议节点"
+    echo "2) 查看节点信息 (agsbx list)"
+    echo "3) 更新脚本 (建议卸载重装)"
+    echo "4) 重启脚本 (agsbx res)"
+    echo "5) 卸载脚本 (agsbx del)"
+    echo "6) 临时切换 IPv4 / IPv6 节点显示"
+    echo "7) 更改协议端口"
+    echo "0) 退出"
+    echo "==============================="
 }
 
-# ========== 初始化 ==========
-install_deps
-register_agsbx
-menu
+while true; do
+    show_menu
+    read -rp "请选择操作: " op
+    case $op in
+        1) install_or_update_protocols ;;
+        2) agsbx list ;;
+        3) bash <($download_cmd $MAIN_SCRIPT_URL) ;;
+        4) agsbx res ;;
+        5) agsbx del ;;
+        6)
+            read -rp "输入 4 查看IPv4节点，输入6查看IPv6节点: " ippz
+            ippz="$ippz" agsbx list
+            ;;
+        7)
+            echo "⚠️ 更改端口请重新运行安装更新协议功能"
+            install_or_update_protocols
+            ;;
+        0) echo "退出脚本"; exit 0 ;;
+        *) echo "无效选项" ;;
+    esac
+done
