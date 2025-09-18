@@ -58,39 +58,37 @@ add_or_update() {
     echo "9) Tuic (tupt)"
     echo "10) Argo临时隧道CDN优选节点"
     echo "11) Argo固定隧道CDN优选节点"
-    read -rp "输入序号: " choice
+    read -rp "输入序号: " choices
 
     NEW_VARS=""
 
-    # Vmess-ws 示例（必填端口）
-    if [[ "$choice" == *"7"* ]]; then
-        read -rp "请输入 vmpt 端口号 (必填): " vmpt
-        if [[ -z "$vmpt" ]]; then err "vmpt 端口不能为空"; exit 1; fi
-        NEW_VARS="$NEW_VARS vmpt=$vmpt"
-    fi
-
-    # 固定隧道
-    if [[ "$choice" == *"11"* ]]; then
-        read -rp "请输入 Argo 固定隧道域名 (agn，必填): " agn
-        read -rp "请输入 Argo 固定隧道 token (agk，必填): " agk
-        if [[ -z "$agn" || -z "$agk" ]]; then
-            err "固定隧道必须输入域名和 token"
-            exit 1
-        fi
-        NEW_VARS="$NEW_VARS argo=y agn=$agn agk=$agk"
-        log "✅ 固定隧道参数已写入，不再自动申请隧道"
-    fi
-
-    # 临时隧道
-    if [[ "$choice" == *"10"* ]]; then
-        log "申请 Argo 临时隧道中..."
-        cloudflared tunnel --url http://localhost:${vmpt:-8080} >/tmp/argo.log 2>&1 &
-        sleep 3
-        log "✅ 临时隧道已启动"
-    fi
+    for c in $choices; do
+        case $c in
+            1) read -rp "请输入 vlpt 端口 (留空随机): " vlpt; NEW_VARS="$NEW_VARS vlpt=${vlpt:-}";;
+            2) read -rp "请输入 xhpt 端口 (留空随机): " xhpt; NEW_VARS="$NEW_VARS xhpt=${xhpt:-}";;
+            3) read -rp "请输入 vxpt 端口 (留空随机): " vxpt; NEW_VARS="$NEW_VARS vxpt=${vxpt:-}";;
+            4) read -rp "请输入 sspt 端口 (留空随机): " sspt; NEW_VARS="$NEW_VARS sspt=${sspt:-}";;
+            5) read -rp "请输入 anpt 端口 (留空随机): " anpt; NEW_VARS="$NEW_VARS anpt=${anpt:-}";;
+            6) read -rp "请输入 arpt 端口 (留空随机): " arpt; NEW_VARS="$NEW_VARS arpt=${arpt:-}";;
+            7) read -rp "请输入 vmpt 端口 (必填): " vmpt
+               [[ -z "$vmpt" ]] && { err "vmpt 端口不能为空"; exit 1; }
+               NEW_VARS="$NEW_VARS vmpt=$vmpt";;
+            8) read -rp "请输入 hypt 端口 (留空随机): " hypt; NEW_VARS="$NEW_VARS hypt=${hypt:-}";;
+            9) read -rp "请输入 tupt 端口 (留空随机): " tupt; NEW_VARS="$NEW_VARS tupt=${tupt:-}";;
+            10) log "申请 Argo 临时隧道中..."; cloudflared tunnel --url http://localhost:${vmpt:-8080} >/tmp/argo.log 2>&1 & sleep 3; log "✅ 临时隧道已启动";;
+            11)
+                read -rp "请输入 Argo 固定隧道域名 (agn，必填): " agn
+                read -rp "请输入 Argo 固定隧道 token (agk，必填): " agk
+                [[ -z "$agn" || -z "$agk" ]] && { err "固定隧道必须输入域名和 token"; exit 1; }
+                NEW_VARS="$NEW_VARS argo=y agn=$agn agk=$agk"
+                log "✅ 固定隧道参数已写入，不再自动申请隧道"
+            ;;
+            *) err "无效选项: $c" ;;
+        esac
+    done
 
     log "🔹 正在更新节点..."
-    echo "NEW_VARS=$NEW_VARS" > /etc/agsbx.env
+    echo "NEW_VARS=\"$NEW_VARS\"" > /etc/agsbx.env
     chmod 600 /etc/agsbx.env
 
     # 注册命令
@@ -114,6 +112,23 @@ EOF
 uninstall() {
     rm -f /etc/agsbx.env /usr/local/bin/agsbx
     log "✅ 已卸载"
+    read -rp "按回车返回菜单..."
+}
+
+# ========== 切换 IPv4/IPv6 ==========
+toggle_ip() {
+    read -rp "选择显示 IPv4(4) 或 IPv6(6): " ippz
+    echo "ippz=$ippz" >> /etc/agsbx.env
+    log "✅ 切换完成"
+    read -rp "按回车返回菜单..."
+}
+
+# ========== 更改端口 ==========
+change_port() {
+    read -rp "输入要更改的协议名=端口: " port_change
+    echo "$port_change" >> /etc/agsbx.env
+    log "✅ 端口修改完成"
+    read -rp "按回车返回菜单..."
 }
 
 # ========== 入口 ==========
