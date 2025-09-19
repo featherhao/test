@@ -167,11 +167,12 @@ while true; do
     else
         singbox_status="❌ 未安装"
     fi
-    if command -v agsb &>/dev/null || [[ -f "/usr/local/bin/agsb" ]] || [[ -f "/usr/bin/agsb" ]] || [[ -f "$HOME/agsb" ]] || [[ -f "$HOME/agsb.sh" ]]; then
-        argosb_status="✅ 已安装"
-    else
-        argosb_status="❌ 未安装"
-    fi
+    if command -v argosbx &>/dev/null || [[ -f "/usr/local/bin/argosbx" ]] || [[ -f "/usr/bin/argosbx" ]] || [[ -f "$HOME/argosbx" ]] || [[ -f "$HOME/argosbx.sh" ]]; then
+    argosb_status="✅ 已安装"
+else
+    argosb_status="❌ 未安装"
+fi
+
     panso_status=$(check_docker_service "pansou-web")
     zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "✅ 已配置" || echo "❌ 未配置")
     subconverter_status=$(check_docker_service "subconverter")
