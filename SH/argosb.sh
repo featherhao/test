@@ -37,6 +37,27 @@ else
     argosb_status="❌ 未安装"
 fi
 
+# helper: 在 NEW_VARS 中设置/覆盖 key="value"
+NEW_VARS=""
+set_new_var() {
+    local key="$1" val="$2"
+
+    # 如果 NEW_VARS 为空，直接赋值
+    if [[ -z "${NEW_VARS}" ]]; then
+        NEW_VARS="${key}=\"${val}\""
+        return
+    fi
+
+    # 若已有 key，则替换；否则追加
+    if echo "${NEW_VARS}" | grep -q -E "(^|[[:space:]])${key}=\"[^\"]*\""; then
+        # 替换已有键（保留前面的空格或开头）
+        NEW_VARS=$(echo "${NEW_VARS}" | sed -E "s/(^|[[:space:]])${key}=\"[^\"]*\"/\1${key}=\"${val}\"/")
+        echo "⚠️ 注意: 已存在 ${key} 参数，已被新值覆盖（${val}）"
+    else
+        NEW_VARS="${NEW_VARS} ${key}=\"${val}\""
+    fi
+}
+
 while true; do
     render_menu "🚀 勇哥ArgoSB协议管理 $argosb_status" \
         "1) 添加或更新协议节点" \
@@ -66,7 +87,9 @@ while true; do
             echo "11) Argo固定隧道CDN优选节点"
             read -rp "输入序号: " choices
 
+            # 清空 NEW_VARS，逐项收集（不在循环里做 eval）
             NEW_VARS=""
+
             for c in $choices; do
                 protocol_name=""
                 case $c in
@@ -80,44 +103,42 @@ while true; do
                     8) protocol_name="hypt" ;;
                     9) protocol_name="tupt" ;;
                     10)
-                        # Argo 临时隧道
+                        # Argo 临时隧道：把 vmpt + argo=y 放入 NEW_VARS（不立即 eval）
                         read -rp "为 vmpt 输入端口号 (留空则随机): " custom_port
-                        if [[ -n "$custom_port" ]]; then
-                            eval "vmpt=\"$custom_port\" argo=\"y\" ${MAIN_SCRIPT_CMD} rep"
-                        else
-                            eval "vmpt=\"\" argo=\"y\" ${MAIN_SCRIPT_CMD} rep"
-                        fi
+                        set_new_var "vmpt" "${custom_port:-}"
+                        set_new_var "argo" "y"
+                        # 不立即执行，继续收集其余选项
                         continue
                         ;;
                     11)
-                        # Argo 固定隧道
+                        # Argo 固定隧道：把 vmpt + argo + agn/agk 放入 NEW_VARS
                         read -rp "为 vmpt 输入端口号: " custom_port
                         read -rp "请输入 Argo 固定隧道域名 (agn): " agn
                         read -rp "请输入 Argo 固定隧道 token (agk): " agk
-
-                        cmd="vmpt=\"$custom_port\" argo=\"y\""
-                        [[ -n "$agn" ]] && cmd="$cmd agn=\"$agn\""
-                        [[ -n "$agk" ]] && cmd="$cmd agk=\"$agk\""
-
-                        eval "$cmd ${MAIN_SCRIPT_CMD} rep"
+                        set_new_var "vmpt" "${custom_port:-}"
+                        set_new_var "argo" "y"
+                        [[ -n "${agn}" ]] && set_new_var "agn" "${agn}"
+                        [[ -n "${agk}" ]] && set_new_var "agk" "${agk}"
                         continue
                         ;;
-                    *) echo "⚠️ 无效选项: $c" ;;
+                    *)
+                        echo "⚠️ 无效选项: $c"
+                        continue
+                        ;;
                 esac
 
+                # 普通协议：收集端口到 NEW_VARS
                 if [[ -n "$protocol_name" ]]; then
                     read -rp "为 $protocol_name 输入端口号 (留空则随机): " custom_port
-                    if [[ -n "$custom_port" ]]; then
-                        NEW_VARS="$NEW_VARS $protocol_name=\"$custom_port\""
-                    else
-                        NEW_VARS="$NEW_VARS $protocol_name=\"\""
-                    fi
+                    set_new_var "$protocol_name" "${custom_port:-}"
                 fi
             done
 
+            # 循环结束后统一执行 rep（只执行一次，避免覆盖）
             if [[ -n "$NEW_VARS" ]]; then
-                echo "🔹 正在更新节点..."
-                eval "$NEW_VARS ${MAIN_SCRIPT_CMD} rep"
+                echo "🔹 正在更新节点（一次性应用所有选择）..."
+                # 注意：NEW_VARS 里是形如 key="val" key2="val2" 的字符串
+                eval "${NEW_VARS} ${MAIN_SCRIPT_CMD} rep"
             else
                 echo "⚠️ 未选择有效协议或操作已完成"
             fi
