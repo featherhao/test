@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
+# 一键安装 / 更新 / 卸载 / 查看 MTProto 代理 (Docker + seriyps/mtproto-proxy)
 set -euo pipefail
 
-IMAGE="telegrammessenger/proxy:latest"
+IMAGE="seriyps/mtproto-proxy:latest"
 CONTAINER_NAME="tg-mtproxy"
 DATA_DIR="/etc/tg-proxy"
 SECRET_FILE="${DATA_DIR}/secret"
@@ -27,7 +28,7 @@ generate_secret() {
   if [ -f "${SECRET_FILE}" ]; then
     SECRET="$(cat ${SECRET_FILE})"
   else
-    SECRET="$(openssl rand -hex 32 2>/dev/null || head -c32 /dev/urandom | od -An -t x1 | tr -d ' \n')"
+    SECRET="$(openssl rand -hex 16 2>/dev/null || head -c16 /dev/urandom | xxd -p -c32)"
     echo -n "${SECRET}" > "${SECRET_FILE}"
     chmod 600 "${SECRET_FILE}"
   fi
@@ -40,7 +41,9 @@ public_ip() {
 run_container() {
   docker run -d --name "${CONTAINER_NAME}" --restart unless-stopped \
     -p "${PORT}:443" \
+    -v "${DATA_DIR}:/data" \
     -e "SECRET=${SECRET}" \
+    -e "WORKERS=1" \
     "${IMAGE}"
 }
 
@@ -77,7 +80,6 @@ change_port() {
     fi
     PORT=$(find_free_port "$new_port")
   fi
-
   info "切换到端口: $PORT"
   docker stop "${CONTAINER_NAME}" 2>/dev/null || true
   docker rm "${CONTAINER_NAME}" 2>/dev/null || true
@@ -88,7 +90,17 @@ change_port() {
 uninstall() {
   docker stop "${CONTAINER_NAME}" 2>/dev/null || true
   docker rm "${CONTAINER_NAME}" 2>/dev/null || true
-  info "容器已移除"
+  warn "容器已移除"
+  echo -n "是否删除镜像 ${IMAGE}? (y/N): "
+  read -r yn
+  if [[ "$yn" =~ ^[Yy]$ ]]; then
+    docker rmi "${IMAGE}" || true
+  fi
+  echo -n "是否删除数据目录 ${DATA_DIR}? (y/N): "
+  read -r yn2
+  if [[ "$yn2" =~ ^[Yy]$ ]]; then
+    rm -rf "${DATA_DIR}"
+  fi
 }
 
 show_info() {
@@ -98,10 +110,11 @@ show_info() {
 
   echo
   info "————— Telegram MTProto 代理 信息 —————"
-  echo "端口：   ${PORT}"
-  echo "secret： ${SECRET}"
+  echo "容器名:   ${CONTAINER_NAME}"
+  echo "端口:     ${PORT}"
+  echo "secret:   ${SECRET}"
   echo
-  echo "tg:// 复制链接:"
+  echo "tg:// 链接 (客户端直接导入):"
   echo "${PROXY_LINK}"
   echo
   echo "t.me 分享链接:"
