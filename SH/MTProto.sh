@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # 一键安装 / 更新 / 卸载 / 查看 Telegram MTProto 代理
+# 基于 telegrammessenger/proxy，已去掉错误的 -u 参数
 set -euo pipefail
 
 IMAGE="telegrammessenger/proxy:latest"
@@ -13,6 +14,7 @@ SECRET=""
 info() { echo -e "\e[1;34m$*\e[0m"; }
 warn() { echo -e "\e[1;33m$*\e[0m"; }
 
+# 查找空闲端口
 find_free_port() {
   local port=$1
   while ss -ltn 2>/dev/null | awk '{print $4}' | grep -q ":$port\$"; do
@@ -21,6 +23,7 @@ find_free_port() {
   echo "$port"
 }
 
+# 生成 secret
 generate_secret() {
   mkdir -p "$DATA_DIR"
   if [[ -f "$SECRET_FILE" ]]; then
@@ -31,10 +34,12 @@ generate_secret() {
   fi
 }
 
+# 获取公网 IP
 public_ip() {
-  curl -fs https://api.ipify.org || echo "UNKNOWN"
+  curl -fs --max-time 5 https://api.ipify.org || echo "UNKNOWN"
 }
 
+# 启动容器
 run_container() {
   docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
     -p "${PORT}:${PORT}" \
@@ -45,6 +50,7 @@ run_container() {
     -S "$SECRET"
 }
 
+# 安装
 install() {
   generate_secret
   PORT=$(find_free_port "$DEFAULT_PORT")
@@ -53,6 +59,7 @@ install() {
   show_info
 }
 
+# 更新
 update() {
   generate_secret
   PORT=$(find_free_port "$DEFAULT_PORT")
@@ -63,6 +70,7 @@ update() {
   show_info
 }
 
+# 更改端口
 change_port() {
   read -rp "请输入新的端口号 (留空自动选择): " new_port
   if [[ -z "$new_port" ]]; then
@@ -76,6 +84,7 @@ change_port() {
   show_info
 }
 
+# 卸载
 uninstall() {
   docker stop "$CONTAINER_NAME" 2>/dev/null || true
   docker rm "$CONTAINER_NAME" 2>/dev/null || true
@@ -88,6 +97,7 @@ uninstall() {
   [[ "$yn2" =~ ^[Yy]$ ]] && rm -rf "$DATA_DIR"
 }
 
+# 显示节点信息
 show_info() {
   IP=$(public_ip)
   PROXY_LINK="tg://proxy?server=${IP}&port=${PORT}&secret=${SECRET}"
@@ -107,6 +117,7 @@ show_info() {
   echo "———————————————————————————————"
 }
 
+# 菜单
 menu() {
   cat <<EOF
 请选择操作：
