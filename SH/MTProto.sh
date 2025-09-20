@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# 一键安装 / 更新 / 卸载 / 查看 Telegram MTProto 代理
-# 基于 telegrammessenger/proxy，已去掉错误的 -u 参数
+# 一键安装 / 更新 / 卸载 / 查看 Telegram MTProto 代理 (Docker)
 set -euo pipefail
 
 IMAGE="telegrammessenger/proxy:latest"
@@ -42,12 +41,10 @@ public_ip() {
 # 启动容器
 run_container() {
   docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
-    -p "${PORT}:${PORT}" \
+    -p "${PORT}:443" \
     -v "${DATA_DIR}:/data" \
-    "$IMAGE" \
-    -p "$PORT" \
-    -H "$(public_ip)" \
-    -S "$SECRET"
+    -e "MTPROXY_SECRET=$SECRET" \
+    telegrammessenger/proxy:latest
 }
 
 # 安装
