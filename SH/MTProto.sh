@@ -6,11 +6,9 @@ IMAGE="telegrammessenger/proxy:latest"
 CONTAINER_NAME="tg-mtproxy"
 DATA_DIR="/etc/tg-proxy"
 SECRET_FILE="${DATA_DIR}/secret"
-TAG_FILE="${DATA_DIR}/tag"
 DEFAULT_PORT=6688
 PORT=""
 SECRET=""
-TAG=""
 
 info() { echo -e "\e[1;34m$*\e[0m"; }
 warn() { echo -e "\e[1;33m$*\e[0m"; }
@@ -33,16 +31,6 @@ generate_secret() {
   fi
 }
 
-generate_tag() {
-  if [[ -f "$TAG_FILE" ]]; then
-    TAG=$(cat "$TAG_FILE")
-  else
-    # 不用推广码也能用，tag 可以是空
-    TAG=""
-    echo -n "$TAG" > "$TAG_FILE"
-  fi
-}
-
 public_ip() {
   curl -fs https://api.ipify.org || echo "UNKNOWN"
 }
@@ -52,16 +40,13 @@ run_container() {
     -p "${PORT}:${PORT}" \
     -v "${DATA_DIR}:/data" \
     "$IMAGE" \
-    -u "$(id -u)" \
     -p "$PORT" \
     -H "$(public_ip)" \
-    -S "$SECRET" \
-    -P "$TAG"
+    -S "$SECRET"
 }
 
 install() {
   generate_secret
-  generate_tag
   PORT=$(find_free_port "$DEFAULT_PORT")
   docker pull "$IMAGE"
   run_container
@@ -70,7 +55,6 @@ install() {
 
 update() {
   generate_secret
-  generate_tag
   PORT=$(find_free_port "$DEFAULT_PORT")
   docker stop "$CONTAINER_NAME" 2>/dev/null || true
   docker rm "$CONTAINER_NAME" 2>/dev/null || true
