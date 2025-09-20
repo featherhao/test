@@ -104,15 +104,14 @@ PANSO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/
 POSTEIO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/Poste.io.sh"
 WORKDIR_SEARXNG="/opt/searxng"
 SEARXNG_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/searxng.sh"
+MTPROTO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/MTProto_docker.sh"
 
 # ================== 调用子脚本 ==================
 moon_menu() { bash <(fetch "${MOONTV_SCRIPT}?t=$(date +%s)"); }
 rustdesk_menu() { bash <(fetch "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
 libretv_menu() { bash <(fetch "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
 singbox_menu() {
-    # 执行远程脚本
     bash <(fetch "https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh")
-    # 暂停，等待用户按任意键返回
     read -rp "按任意键返回主菜单..."
 }
 nginx_menu() { bash <(fetch "${NGINX_SCRIPT}?t=$(date +%s)"); }
@@ -123,6 +122,7 @@ shlink_menu() { bash <(fetch "${SHLINK_SCRIPT}?t=$(date +%s)"); }
 argosb_menu() { bash <(fetch "${ARGOSB_SCRIPT}?t=$(date +%s)"); }
 posteio_menu() { bash <(fetch "${POSTEIO_SCRIPT}?t=$(date +%s)"); }
 searxng_menu() { bash <(fetch "${SEARXNG_SCRIPT}?t=$(date +%s)"); }
+mtproto_menu() { bash <(fetch "${MTPROTO_SCRIPT}?t=$(date +%s)"); read -rp "按任意键返回主菜单..."; }
 
 # ================== Docker 服务检查 ==================
 check_docker_service() {
@@ -158,7 +158,6 @@ update_menu_script() {
 
 # ================== 主菜单 ==================
 while true; do
-    # 动态检测安装状态
     [[ -d /opt/moontv ]] && moon_status="✅ 已安装" || moon_status="❌ 未安装"
     [[ -d /opt/rustdesk ]] && rustdesk_status="✅ 已安装" || rustdesk_status="❌ 未安装"
     [[ -d /opt/libretv ]] && libretv_status="✅ 已安装" || libretv_status="❌ 未安装"
@@ -167,19 +166,16 @@ while true; do
     else
         singbox_status="❌ 未安装"
     fi
-  if command -v agsbx &>/dev/null || [[ -f "/usr/local/bin/agsbx" ]] || [[ -f "/usr/bin/agsbx" ]] || [[ -f "$HOME/agsbx" ]] || [[ -f "$HOME/agsbx.sh" ]]; then
-    argosb_status="✅ 已安装"
-else
-    argosb_status="❌ 未安装"
-fi
-
-
+    if command -v agsbx &>/dev/null || [[ -f "/usr/local/bin/agsbx" ]] || [[ -f "/usr/bin/agsbx" ]] || [[ -f "$HOME/agsbx" ]] || [[ -f "$HOME/agsbx.sh" ]]; then
+        argosb_status="✅ 已安装"
+    else
+        argosb_status="❌ 未安装"
+    fi
     panso_status=$(check_docker_service "pansou-web")
     zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "✅ 已配置" || echo "❌ 未配置")
     subconverter_status=$(check_docker_service "subconverter")
     shlink_status=$(check_docker_service "shlink")
     posteio_status=$(check_docker_service "posteio")
-    # 新增 SearxNG 状态
     searxng_status=$(check_docker_service "searxng")
     kejilion_status="⚡ 远程调用"
     nginx_status="⚡ 远程调用"
@@ -198,6 +194,7 @@ fi
         "11) Poste.io 邮件服务器        $posteio_status" \
         "12) Shlink 短链接生成          $shlink_status" \
         "13) SearxNG 一键安装/更新/卸载 $searxng_status" \
+        "14) Telegram MTProto 代理       ⚡ 远程调用" \
         "00) 更新菜单脚本 menu.sh" \
         "0) 退出" \
         "" \
@@ -219,6 +216,7 @@ fi
         11) posteio_menu ;;
         12) shlink_menu ;;
         13) searxng_menu ;;
+        14) mtproto_menu ;;
         00) update_menu_script ;;
         0) exit 0 ;;
         *) error "❌ 无效输入"; sleep 1 ;;
