@@ -13,7 +13,32 @@ SECRET=""
 info() { echo -e "\e[1;34m$*\e[0m"; }
 warn() { echo -e "\e[1;33m$*\e[0m"; }
 
-# 查找空闲端口
+# ================= 系统依赖检查 =================
+check_deps() {
+  local pkgs="curl docker"
+  local install_cmd=""
+
+  if command -v apt >/dev/null 2>&1; then
+    install_cmd="apt update && apt install -y"
+  elif command -v yum >/dev/null 2>&1; then
+    install_cmd="yum install -y"
+  elif command -v apk >/dev/null 2>&1; then
+    install_cmd="apk add --no-cache"
+  fi
+
+  for p in bash openssl $pkgs; do
+    if ! command -v $p >/dev/null 2>&1; then
+      if [ -n "$install_cmd" ]; then
+        info "正在安装缺失依赖: $p"
+        sh -c "$install_cmd $p"
+      else
+        warn "未找到包管理器，请手动安装 $p"
+      fi
+    fi
+  done
+}
+
+# ================= 查找空闲端口 =================
 find_free_port() {
   local port=$1
   while ss -ltn 2>/dev/null | awk '{print $4}' | grep -q ":$port\$"; do
@@ -22,33 +47,41 @@ find_free_port() {
   echo "$port"
 }
 
-# 生成 secret
+# ================= 生成 secret =================
 generate_secret() {
   mkdir -p "$DATA_DIR"
-  if [[ -f "$SECRET_FILE" ]]; then
+  if [ -f "$SECRET_FILE" ]; then
     SECRET=$(cat "$SECRET_FILE")
   else
-    SECRET=$(openssl rand -hex 16)
+    if command -v openssl >/dev/null 2>&1; then
+      SECRET=$(openssl rand -hex 16)
+    else
+      SECRET=$(head -c 16 /dev/urandom | hexdump -e '16/1 "%02x"')
+    fi
     echo -n "$SECRET" > "$SECRET_FILE"
   fi
 }
 
-# 获取公网 IP
+# ================= 获取公网 IP =================
 public_ip() {
-  curl -fs --max-time 5 https://api.ipify.org || echo "UNKNOWN"
+  curl -fs --max-time 5 https://api.ipify.org \
+  || curl -fs --max-time 5 https://ip.sb \
+  || curl -fs --max-time 5 https://ipinfo.io/ip \
+  || echo "UNKNOWN"
 }
 
-# 启动容器
+# ================= 启动容器 =================
 run_container() {
   docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
-    -p "${PORT}:443" \
-    -v "${DATA_DIR}:/data" \
+    -p "${PORT}:${PORT}" \
     -e "MTPROXY_SECRET=$SECRET" \
-    telegrammessenger/proxy:latest
+    -e "MTPROXY_PORT=$PORT" \
+    "$IMAGE"
 }
 
-# 安装
+# ================= 安装 =================
 install() {
+  check_deps
   generate_secret
   PORT=$(find_free_port "$DEFAULT_PORT")
   docker pull "$IMAGE"
@@ -56,8 +89,9 @@ install() {
   show_info
 }
 
-# 更新
+# ================= 更新 =================
 update() {
+  check_deps
   generate_secret
   PORT=$(find_free_port "$DEFAULT_PORT")
   docker stop "$CONTAINER_NAME" 2>/dev/null || true
@@ -67,10 +101,10 @@ update() {
   show_info
 }
 
-# 更改端口
+# ================= 更改端口 =================
 change_port() {
   read -rp "请输入新的端口号 (留空自动选择): " new_port
-  if [[ -z "$new_port" ]]; then
+  if [ -z "$new_port" ]; then
     PORT=$(find_free_port "$DEFAULT_PORT")
   else
     PORT=$(find_free_port "$new_port")
@@ -81,7 +115,17 @@ change_port() {
   show_info
 }
 
-# 卸载
+# ================= 更改 secret =================
+change_secret() {
+  SECRET=$(openssl rand -hex 16 2>/dev/null || head -c 16 /dev/urandom | hexdump -e '16/1 "%02x"')
+  echo -n "$SECRET" > "$SECRET_FILE"
+  docker stop "$CONTAINER_NAME" 2>/dev/null || true
+  docker rm "$CONTAINER_NAME" 2>/dev/null || true
+  run_container
+  show_info
+}
+
+# ================= 卸载 =================
 uninstall() {
   docker stop "$CONTAINER_NAME" 2>/dev/null || true
   docker rm "$CONTAINER_NAME" 2>/dev/null || true
@@ -94,7 +138,7 @@ uninstall() {
   [[ "$yn2" =~ ^[Yy]$ ]] && rm -rf "$DATA_DIR"
 }
 
-# 显示节点信息
+# ================= 显示节点信息 =================
 show_info() {
   IP=$(public_ip)
   PROXY_LINK="tg://proxy?server=${IP}&port=${PORT}&secret=${SECRET}"
@@ -114,7 +158,7 @@ show_info() {
   echo "———————————————————————————————"
 }
 
-# 菜单
+# ================= 菜单 =================
 menu() {
   cat <<EOF
 请选择操作：
@@ -123,15 +167,17 @@ menu() {
  3) 卸载
  4) 查看信息
  5) 更改端口
- 6) 退出
+ 6) 更改 secret
+ 7) 退出
 EOF
-  read -r choice
+  read -rp "请输入选项 [1-7]: " choice
   case "$choice" in
     1) install ;;
     2) update ;;
     3) uninstall ;;
     4) show_info ;;
     5) change_port ;;
+    6) change_secret ;;
     *) exit 0 ;;
   esac
 }
