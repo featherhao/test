@@ -37,14 +37,6 @@ check_deps() {
         service docker start || true
     fi
 
-    # 检查磁盘空间
-    disk_free=$(df / | tail -1 | awk '{print $4}')
-    inodes_free=$(df -i / | tail -1 | awk '{print $4}')
-    if [ "$disk_free" -lt 1048576 ] || [ "$inodes_free" -lt 1024 ]; then
-        warn "磁盘空间或 inode 不足，请清理后再运行 Docker"
-        exit 1
-    fi
-
     # 检查 docker 可用性
     if ! docker info >/dev/null 2>&1; then
         warn "Docker 未启动或无权限访问 /var/run/docker.sock"
@@ -86,7 +78,6 @@ public_ip() {
 
 # ================= 启动容器 =================
 run_container() {
-    # 停止并删除同名容器
     docker stop "$CONTAINER_NAME" 2>/dev/null || true
     docker rm "$CONTAINER_NAME" 2>/dev/null || true
 
@@ -95,7 +86,7 @@ run_container() {
         -e "MTPROXY_SECRET=$SECRET" \
         -e "MTPROXY_PORT=$PORT" \
         "$IMAGE" || {
-            warn "Docker 容器启动失败，请检查磁盘配额或权限"
+            warn "Docker 容器启动失败，请检查权限或磁盘空间"
             exit 1
         }
 }
