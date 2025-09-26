@@ -62,8 +62,8 @@ check_deps() {
 
   # 检查 docker 可用性
   if ! docker info >/dev/null 2>&1; then
-    warn "Docker 似乎未启动或当前用户没有权限访问 /var/run/docker.sock"
-    warn "请确保 Docker 已启动，并且当前用户可访问 docker"
+    warn "Docker 未启动或当前用户无权限访问 /var/run/docker.sock"
+    warn "请确保 Docker 已启动，并且当前用户可访问 Docker"
     exit 1
   fi
 }
@@ -102,6 +102,10 @@ public_ip() {
 
 # ================= 启动容器 =================
 run_container() {
+  # 停止并删除同名容器
+  docker stop "$CONTAINER_NAME" 2>/dev/null || true
+  docker rm "$CONTAINER_NAME" 2>/dev/null || true
+
   if ! docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
       -p "${PORT}:${PORT}" \
       -e "MTPROXY_SECRET=$SECRET" \
@@ -127,8 +131,6 @@ update() {
   check_deps
   generate_secret
   PORT=$(find_free_port "$DEFAULT_PORT")
-  docker stop "$CONTAINER_NAME" 2>/dev/null || true
-  docker rm "$CONTAINER_NAME" 2>/dev/null || true
   docker pull "$IMAGE"
   run_container
   show_info
@@ -142,8 +144,6 @@ change_port() {
   else
     PORT=$(find_free_port "$new_port")
   fi
-  docker stop "$CONTAINER_NAME" 2>/dev/null || true
-  docker rm "$CONTAINER_NAME" 2>/dev/null || true
   run_container
   show_info
 }
@@ -152,8 +152,6 @@ change_port() {
 change_secret() {
   SECRET=$(openssl rand -hex 16 2>/dev/null || head -c 16 /dev/urandom | hexdump -e '16/1 "%02x"')
   echo -n "$SECRET" > "$SECRET_FILE"
-  docker stop "$CONTAINER_NAME" 2>/dev/null || true
-  docker rm "$CONTAINER_NAME" 2>/dev/null || true
   run_container
   show_info
 }
