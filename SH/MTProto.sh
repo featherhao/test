@@ -13,6 +13,16 @@ SECRET=""
 info() { echo -e "\e[1;34m$*\e[0m"; }
 warn() { echo -e "\e[1;33m$*\e[0m"; }
 
+# ================= 自动切换 bash =================
+if [ -z "$BASH_VERSION" ]; then
+  if command -v bash >/dev/null 2>&1; then
+    exec bash "$0" "$@"
+  else
+    warn "当前 shell 不是 bash，且系统没有 bash，请先安装 bash"
+    exit 1
+  fi
+fi
+
 # ================= 系统依赖检查 =================
 check_deps() {
   local pkgs="curl docker"
@@ -36,6 +46,12 @@ check_deps() {
       fi
     fi
   done
+
+  # Alpine 启动 docker
+  if command -v rc-status >/dev/null 2>&1; then
+    rc-update add docker boot
+    service docker start || true
+  fi
 }
 
 # ================= 查找空闲端口 =================
@@ -125,6 +141,11 @@ change_secret() {
   show_info
 }
 
+# ================= 查看日志 =================
+show_logs() {
+  docker logs -f "$CONTAINER_NAME"
+}
+
 # ================= 卸载 =================
 uninstall() {
   docker stop "$CONTAINER_NAME" 2>/dev/null || true
@@ -160,7 +181,8 @@ show_info() {
 
 # ================= 菜单 =================
 menu() {
-  cat <<EOF
+  while true; do
+    cat <<EOF
 请选择操作：
  1) 安装
  2) 更新
@@ -168,18 +190,22 @@ menu() {
  4) 查看信息
  5) 更改端口
  6) 更改 secret
- 7) 退出
+ 7) 查看日志
+ 8) 退出
 EOF
-  read -rp "请输入选项 [1-7]: " choice
-  case "$choice" in
-    1) install ;;
-    2) update ;;
-    3) uninstall ;;
-    4) show_info ;;
-    5) change_port ;;
-    6) change_secret ;;
-    *) exit 0 ;;
-  esac
+    read -rp "请输入选项 [1-8]: " choice
+    case "$choice" in
+      1) install ;;
+      2) update ;;
+      3) uninstall ;;
+      4) show_info ;;
+      5) change_port ;;
+      6) change_secret ;;
+      7) show_logs ;;
+      *) exit 0 ;;
+    esac
+  done
 }
 
+# 启动菜单
 menu
