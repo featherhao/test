@@ -18,7 +18,7 @@ if [ -z "$BASH_VERSION" ]; then
   if command -v bash >/dev/null 2>&1; then
     exec bash "$0" "$@"
   else
-    warn "当前 shell 不是 bash，且系统没有 bash，请先安装 bash"
+    echo "请先安装 bash"
     exit 1
   fi
 fi
@@ -47,10 +47,17 @@ check_deps() {
     fi
   done
 
-  # Alpine 启动 docker
+  # Alpine 自动启动 Docker
   if command -v rc-status >/dev/null 2>&1; then
     rc-update add docker boot
     service docker start || true
+  fi
+
+  # 检查 docker 是否可用
+  if ! docker info >/dev/null 2>&1; then
+    warn "Docker 似乎未启动或当前用户没有权限"
+    warn "请确保 Docker 已启动并且当前用户可访问 /var/run/docker.sock"
+    exit 1
   fi
 }
 
