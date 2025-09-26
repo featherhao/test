@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# 一键安装 / 更新 / 卸载 / 查看 Telegram MTProto 代理 (Docker)
 set -euo pipefail
 
 IMAGE="telegrammessenger/proxy:latest"
@@ -53,10 +52,18 @@ check_deps() {
     service docker start || true
   fi
 
-  # 检查 docker 是否可用
+  # 检查磁盘空间
+  local disk_free=$(df / | tail -1 | awk '{print $4}')
+  local inodes_free=$(df -i / | tail -1 | awk '{print $4}')
+  if [[ $disk_free -lt 1048576 || $inodes_free -lt 1024 ]]; then
+    warn "磁盘空间或 inode 不足，请清理后再运行 Docker"
+    exit 1
+  fi
+
+  # 检查 docker 可用性
   if ! docker info >/dev/null 2>&1; then
-    warn "Docker 似乎未启动或当前用户没有权限"
-    warn "请确保 Docker 已启动并且当前用户可访问 /var/run/docker.sock"
+    warn "Docker 似乎未启动或当前用户没有权限访问 /var/run/docker.sock"
+    warn "请确保 Docker 已启动，并且当前用户可访问 docker"
     exit 1
   fi
 }
@@ -95,11 +102,14 @@ public_ip() {
 
 # ================= 启动容器 =================
 run_container() {
-  docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
-    -p "${PORT}:${PORT}" \
-    -e "MTPROXY_SECRET=$SECRET" \
-    -e "MTPROXY_PORT=$PORT" \
-    "$IMAGE"
+  if ! docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
+      -p "${PORT}:${PORT}" \
+      -e "MTPROXY_SECRET=$SECRET" \
+      -e "MTPROXY_PORT=$PORT" \
+      "$IMAGE"; then
+    warn "Docker 容器启动失败，请检查磁盘配额或 session keyring 限制"
+    exit 1
+  fi
 }
 
 # ================= 安装 =================
