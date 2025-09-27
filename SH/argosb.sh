@@ -33,17 +33,32 @@ MAIN_SCRIPT_CMD="bash <(curl -Ls ${SCRIPT_URL})"
 INSTALLED_FLAG="/opt/argosb/installed.flag"
 mkdir -p /opt/argosb
 
-# ================== 安装检查 ==================
-if [[ -f "$INSTALLED_FLAG" ]]; then
-    argosb_status="✅ 已安装"
-else
-    argosb_status="❌ 未安装"
-fi
+# ================== 安装状态检查 ==================
+argosb_status_check() {
+    # 标记文件
+    [[ -f "$INSTALLED_FLAG" ]] && { echo "✅ 已安装"; return; }
+
+    # 命令检测：兼容老版本 agsb 和新版本 agsbx
+    if command -v agsbx &>/dev/null || command -v agsb &>/dev/null; then
+        echo "✅ 已安装"; return
+    fi
+
+    # 文件路径检测
+    for f in /usr/local/bin/agsbx /usr/local/bin/agsb \
+             /usr/bin/agsbx /usr/bin/agsb \
+             "$HOME/agsbx" "$HOME/agsb" \
+             "$HOME/agsbx.sh" "$HOME/agsb.sh"; do
+        [[ -f "$f" ]] && { echo "✅ 已安装"; return; }
+    done
+
+    echo "❌ 未安装"
+}
 
 # ================== 设置变量收集 ==================
 NEW_VARS=""
 set_new_var() {
     local key="$1" val="$2"
+    val="${val:-}"
     if [[ -z "${NEW_VARS}" ]]; then
         NEW_VARS="${key}=\"${val}\""
         return
@@ -58,7 +73,7 @@ set_new_var() {
 
 # ================== 主菜单 ==================
 while true; do
-    argosb_status=$([[ -f "$INSTALLED_FLAG" ]] && echo "✅ 已安装" || echo "❌ 未安装")
+    argosb_status=$(argosb_status_check)
 
     render_menu "🚀 勇哥ArgoSB协议管理 $argosb_status" \
         "1) 添加或更新协议节点" \
@@ -115,7 +130,7 @@ while true; do
             if [[ -n "$NEW_VARS" ]]; then
                 echo "🔹 正在更新节点..."
                 eval "${NEW_VARS} ${MAIN_SCRIPT_CMD} rep"
-                touch "$INSTALLED_FLAG"
+                [[ ! -f "$INSTALLED_FLAG" ]] && touch "$INSTALLED_FLAG"
             else
                 echo "⚠️ 未选择有效协议或操作已完成"
             fi
