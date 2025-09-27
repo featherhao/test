@@ -9,6 +9,7 @@ DATA_DIR="/opt/mtproxy"
 
 # ****** 关键修正：伪装 Secret 伪装域名 ******
 # 伪装域名：www.microsoft.com 的 16 字节 Hex 编码
+# 7777772e6d6963726f736f66742e636f6d
 FAKE_TLS_DOMAIN_HEX="7777772e6d6963726f736f66742e636f6d"
 
 # 全局变量，用于存储当前运行的端口和 Secret
@@ -36,6 +37,7 @@ check_docker() {
 }
 
 # ---------------- 自动获取运行配置 (兼容旧版 Docker) ----------------
+# 尝试从容器环境中提取当前的 PORT 和 SECRET，并更新全局变量
 update_global_config() {
     if docker inspect -f '{{.State.Running}}' "$MT_NAME" &>/dev/null; then
         # 1. 提取映射的端口
@@ -51,7 +53,8 @@ update_global_config() {
         fi
         return 0 # 成功
     else
-        return 1 # 容器未运行
+        # 容器不存在或未运行
+        return 1
     fi
 }
 
@@ -62,14 +65,19 @@ get_status() {
     if update_global_config; then
         PUBLIC_IP=$(curl -s ifconfig.me)
 
-        log "当前配置 - IP: ${PUBLIC_IP} | 端口: ${PORT} | Secret: ${SECRET}"
-        echo "—————————————————————————————————————"
-        docker ps --filter "name=$MT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-        
-        echo "———————————————— Telegram MTProto 代理链接 ————————————————"
-        echo "tg:// 链接: tg://proxy?server=${PUBLIC_IP}&port=${PORT}&secret=${SECRET}"
-        echo "t.me 分享链接: https://t.me/proxy?server=${PUBLIC_IP}&port=${PORT}&secret=${SECRET}"
-        echo "—————————————————————————————————————————————————————————"
+        # 确保 SECRET 不为空，且包含 'A' 前缀
+        if [[ -n "$SECRET" ]]; then
+            log "当前配置 - IP: ${PUBLIC_IP} | 端口: ${PORT} | Secret: ${SECRET}"
+            echo "—————————————————————————————————————"
+            docker ps --filter "name=$MT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+            
+            echo "———————————————— Telegram MTProto 代理链接 ————————————————"
+            echo "tg:// 链接: tg://proxy?server=${PUBLIC_IP}&port=${PORT}&secret=${SECRET}"
+            echo "t.me 分享链接: https://t.me/proxy?server=${PUBLIC_IP}&port=${PORT}&secret=${SECRET}"
+            echo "—————————————————————————————————————————————————————————"
+        else
+            error "无法从容器中提取 Secret，请尝试重新运行安装或检查日志。"
+        fi
     else
         warn "MTProxy 容器 ($MT_NAME) 未运行或不存在。"
         echo "—————————————————————————————————————"
@@ -78,14 +86,17 @@ get_status() {
 }
 
 
-# ---------------- 自动生成合法的 64 位 Secret (Fake TLS) ----------------
+# ---------------- 自动生成合法的 A-Prefix Fake TLS Secret ----------------
 generate_secret() {
     local PURE_SECRET
     # 1. 生成纯 32 位 Hex Secret
     PURE_SECRET=$(openssl rand -hex 16)
     
     # 2. 拼接为 64 位 Hex (纯Secret + 伪装域名Hex)
-    echo "${PURE_SECRET}${FAKE_TLS_DOMAIN_HEX}"
+    local FULL_64_HEX="${PURE_SECRET}${FAKE_TLS_DOMAIN_HEX}"
+    
+    # 3. ****** 关键：添加 'A' 前缀，启用 Fake TLS 模式 ******
+    echo "A${FULL_64_HEX}"
 }
 
 # ---------------- 安装 MTProxy ----------------
@@ -95,10 +106,10 @@ install_mtproxy() {
     read -rp "请输入端口号 (留空使用默认 $DEFAULT_PORT): " INPUT_PORT
     PORT=${INPUT_PORT:-$DEFAULT_PORT}
 
-    # SECRET 现在是完整的 64 位 Hex
+    # SECRET 现在是完整的 A + 64 位 Hex
     SECRET=$(generate_secret)
 
-    log "生成 64 位 Secret (Fake TLS): $SECRET"
+    log "生成 A-Prefix Secret (Fake TLS): $SECRET"
 
     mkdir -p "$DATA_DIR"
 
@@ -234,7 +245,7 @@ change_secret() {
     
     if [[ -z "$NEW_SECRET_INPUT" ]]; then
         NEW_SECRET_INPUT=$(generate_secret)
-        log "自动生成新的 64 位 Secret: $NEW_SECRET_INPUT"
+        log "自动生成新的 A-Prefix Secret: $NEW_SECRET_INPUT"
     fi
     
     log "准备修改 Secret..."
@@ -250,7 +261,7 @@ show_logs() {
 # ---------------- 主菜单 ----------------
 while true; do
     echo
-    echo "—————— Telegram MTProxy 管理脚本 (Fake TLS) ——————"
+    echo "—————— Telegram MTProxy 管理脚本 (A-Prefix Fake TLS) ——————"
     echo "当前容器名: ${MT_NAME} | 默认端口: ${DEFAULT_PORT}"
     echo "请选择操作："
     echo " 1) ${C_GREEN}安装/全新部署${C_RESET}"
