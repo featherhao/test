@@ -27,30 +27,36 @@ render_menu() {
     echo "=============================="
 }
 
+# ================== 脚本和安装路径 ==================
 SCRIPT_URL="https://raw.githubusercontent.com/yonggekkk/argosbx/refs/heads/main/argosbx.sh"
-MAIN_SCRIPT_CMD="bash <(curl -Ls ${SCRIPT_URL})"
-
 INSTALLED_FLAG="/opt/argosb/installed.flag"
 mkdir -p /opt/argosb
 
-# ================== 安装状态检查 ==================
+# ================== 兼容命令 ==================
+if command -v agsbx &>/dev/null; then
+    ARGO_CMD="agsbx"
+elif command -v agsb &>/dev/null; then
+    ARGO_CMD="agsb"
+else
+    ARGO_CMD="bash <(curl -Ls ${SCRIPT_URL})"
+fi
+
+# ================== 安装状态检测 ==================
 argosb_status_check() {
-    # 标记文件
-    [[ -f "$INSTALLED_FLAG" ]] && { echo "✅ 已安装"; return; }
-
-    # 命令检测：兼容老版本 agsb 和新版本 agsbx
-    if command -v agsbx &>/dev/null || command -v agsb &>/dev/null; then
-        echo "✅ 已安装"; return
+    if [[ -f "$INSTALLED_FLAG" ]]; then
+        echo "✅ 已安装"
+        return
     fi
-
-    # 文件路径检测
+    if command -v agsbx &>/dev/null || command -v agsb &>/dev/null; then
+        echo "✅ 已安装"
+        return
+    fi
     for f in /usr/local/bin/agsbx /usr/local/bin/agsb \
              /usr/bin/agsbx /usr/bin/agsb \
              "$HOME/agsbx" "$HOME/agsb" \
              "$HOME/agsbx.sh" "$HOME/agsb.sh"; do
         [[ -f "$f" ]] && { echo "✅ 已安装"; return; }
     done
-
     echo "❌ 未安装"
 }
 
@@ -58,7 +64,6 @@ argosb_status_check() {
 NEW_VARS=""
 set_new_var() {
     local key="$1" val="$2"
-    val="${val:-}"
     if [[ -z "${NEW_VARS}" ]]; then
         NEW_VARS="${key}=\"${val}\""
         return
@@ -77,10 +82,10 @@ while true; do
 
     render_menu "🚀 勇哥ArgoSB协议管理 $argosb_status" \
         "1) 添加或更新协议节点" \
-        "2) 查看节点信息 (agsbx list)" \
+        "2) 查看节点信息 ($ARGO_CMD list)" \
         "3) 更新脚本 (建议卸载重装)" \
-        "4) 重启脚本 (agsbx res)" \
-        "5) 卸载脚本 (agsbx del)" \
+        "4) 重启脚本 ($ARGO_CMD res)" \
+        "5) 卸载脚本 ($ARGO_CMD del)" \
         "6) 临时切换 IPv4 / IPv6 节点显示" \
         "7) 更改协议端口" \
         "0) 返回主菜单"
@@ -129,33 +134,33 @@ while true; do
             done
             if [[ -n "$NEW_VARS" ]]; then
                 echo "🔹 正在更新节点..."
-                eval "${NEW_VARS} ${MAIN_SCRIPT_CMD} rep"
-                [[ ! -f "$INSTALLED_FLAG" ]] && touch "$INSTALLED_FLAG"
+                eval "${NEW_VARS} ${ARGO_CMD} rep"
+                touch "$INSTALLED_FLAG"
             else
                 echo "⚠️ 未选择有效协议或操作已完成"
             fi
             read -rp "按回车返回菜单..." dummy
             ;;
-        2) eval "${MAIN_SCRIPT_CMD} list"; read -rp "按回车返回菜单..." dummy ;;
-        3) eval "${MAIN_SCRIPT_CMD} rep"; read -rp "按回车返回菜单..." dummy ;;
-        4) eval "${MAIN_SCRIPT_CMD} res"; read -rp "按回车返回菜单..." dummy ;;
-        5) eval "${MAIN_SCRIPT_CMD} del"; rm -f "$INSTALLED_FLAG"; read -rp "按回车返回菜单..." dummy ;;
+        2) eval "${ARGO_CMD} list"; read -rp "按回车返回菜单..." dummy ;;
+        3) eval "${ARGO_CMD} rep"; read -rp "按回车返回菜单..." dummy ;;
+        4) eval "${ARGO_CMD} res"; read -rp "按回车返回菜单..." dummy ;;
+        5) eval "${ARGO_CMD} del"; rm -f "$INSTALLED_FLAG"; read -rp "按回车返回菜单..." dummy ;;
         6)
             echo "1) 显示 IPv4 节点配置"
             echo "2) 显示 IPv6 节点配置"
             read -rp "选项: " ip_choice
             if [[ "$ip_choice" == "1" ]]; then
-                eval "ippz=4 ${MAIN_SCRIPT_CMD} list"
+                eval "ippz=4 ${ARGO_CMD} list"
             else
-                eval "ippz=6 ${MAIN_SCRIPT_CMD} list"
+                eval "ippz=6 ${ARGO_CMD} list"
             fi
             read -rp "按回车返回菜单..." dummy
             ;;
         7)
             read -rp "请输入要更改端口的协议名和新端口号，格式: [协议名]=[端口号]: " port_change
             if [[ -n "$port_change" ]]; then
-                eval "$port_change ${MAIN_SCRIPT_CMD} rep"
-                eval "${MAIN_SCRIPT_CMD} res"
+                eval "$port_change ${ARGO_CMD} rep"
+                eval "${ARGO_CMD} res"
             fi
             read -rp "按回车返回菜单..." dummy
             ;;
