@@ -38,13 +38,8 @@ render_menu() {
     echo "=============================="
 }
 
-fetch() {
-    curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@"
-}
-
-run_url() {
-    bash <(fetch "$1")
-}
+fetch() { curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@"; }
+run_url() { bash <(fetch "$1"); }
 
 # ================== 自我初始化 ==================
 SCRIPT_IS_FIRST_RUN=false
@@ -125,6 +120,11 @@ mtproto_menu() { bash <(fetch "${MTPROTO_SCRIPT}?t=$(date +%s)"); read -rp "按�
 system_tool_menu() { bash <(fetch "${SYSTEM_TOOL_SCRIPT}?t=$(date +%s)"); read -rp "按任意键返回主菜单..."; }
 clean_vps_menu() { bash <(curl -fsSL "${CLEAN_VPS_SCRIPT}?t=$(date +%s)"); }
 
+# ================== ArgoSB 状态检测 ==================
+argosb_status_check() {
+    [[ -f "/opt/argosb/installed.flag" ]] && echo "✅ 已安装" || echo "❌ 未安装"
+}
+
 # ================== Docker 服务检查 ==================
 check_docker_service() {
     local service_name="$1"
@@ -149,7 +149,6 @@ check_docker_service() {
 
 # ================== MTProto 状态检测 ==================
 mtproto_status() {
-    # 1. systemctl 服务检测
     if systemctl list-unit-files 2>/dev/null | grep -q "mtg.service"; then
         if systemctl is-active --quiet mtg; then
             echo "✅ 运行中 (systemctl)"
@@ -158,8 +157,6 @@ mtproto_status() {
         fi
         return
     fi
-
-    # 2. Docker 容器检测（匹配镜像名含 mtproto/mtg）
     if command -v docker &>/dev/null; then
         local cid
         cid=$(docker ps -a --filter "ancestor=telegrammessenger/proxy" --format '{{.ID}}' | head -n1)
@@ -175,8 +172,6 @@ mtproto_status() {
             return
         fi
     fi
-
-    # 3. 默认未安装
     echo "❌ 未安装"
 }
 
@@ -200,11 +195,7 @@ while true; do
     else
         singbox_status="❌ 未安装"
     fi
-    if command -v agsbx &>/dev/null || [[ -f "/usr/local/bin/agsbx" ]] || [[ -f "/usr/bin/agsbx" ]] || [[ -f "$HOME/agsbx" ]] || [[ -f "$HOME/agsbx.sh" ]]; then
-        argosb_status="✅ 已安装"
-    else
-        argosb_status="❌ 未安装"
-    fi
+    argosb_status=$(argosb_status_check)
     panso_status=$(check_docker_service "pansou-web")
     zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "✅ 已配置" || echo "❌ 未配置")
     subconverter_status=$(check_docker_service "subconverter")
@@ -236,7 +227,6 @@ while true; do
         "快捷键提示：此脚本已自动设置 q 或 Q 为快捷键，首次安装重启终端其生效"
 
     read -rp "请输入选项: " main_choice
-
     case "${main_choice}" in
         1) moon_menu ;;
         2) rustdesk_menu ;;
