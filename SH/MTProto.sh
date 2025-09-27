@@ -1,8 +1,8 @@
 #!/bin/bash
 ###
- # @Author: Vincent Young (中文化 by ChatGPT)
+ # @Author: Vincent Young (中文化 & 增强版 by ChatGPT)
  # @Date: 2022-07-01
- # @LastEditors: Vincent Young
+ # @LastEditors: ChatGPT
  # @FilePath: /MTProxy/mtproxy.sh
  # 
  # Copyright © 2022 by Vincent, All Rights Reserved.
@@ -19,6 +19,26 @@ plain='\033[0m'
 
 # 必须使用 root 运行
 [[ $EUID -ne 0 ]] && echo -e "[${red}错误${plain}] 请使用 root 用户运行该脚本！" && exit 1
+
+# 显示连接信息
+show_info(){
+    if [[ -f "/etc/mtg.toml" ]]; then
+        port=$(grep 'bind-to' /etc/mtg.toml | sed -E 's/.*:([0-9]+).*/\1/')
+        secret=$(grep 'secret' /etc/mtg.toml | sed -E 's/.*"([^"]+)".*/\1/')
+        public_ip=$(curl -s ipv4.ip.sb)
+        subscription_config="tg://proxy?server=${public_ip}&port=${port}&secret=${secret}"
+        subscription_link="https://t.me/proxy?server=${public_ip}&port=${port}&secret=${secret}"
+        echo -e "\n========== MTProxy 当前配置信息 =========="
+        echo -e "服务器IP   : ${green}${public_ip}${plain}"
+        echo -e "监听端口   : ${green}${port}${plain}"
+        echo -e "Secret     : ${green}${secret}${plain}"
+        echo -e "TG 配置链接: ${yellow}${subscription_config}${plain}"
+        echo -e "一键链接   : ${yellow}${subscription_link}${plain}"
+        echo -e "=========================================\n"
+    else
+        echo -e "${red}未检测到配置文件 /etc/mtg.toml${plain}"
+    fi
+}
 
 download_file(){
 	echo "检查系统架构..."
@@ -84,12 +104,7 @@ configure_systemctl(){
     systemctl stop firewalld 2>/dev/null
     ufw disable 2>/dev/null
     echo "mtg 已启动！"
-    echo ""
-    public_ip=$(curl -s ipv4.ip.sb)
-    subscription_config="tg://proxy?server=${public_ip}&port=${port}&secret=${secret}"
-    subscription_link="https://t.me/proxy?server=${public_ip}&port=${port}&secret=${secret}"
-    echo -e "客户端配置链接：\n${subscription_config}"
-    echo -e "点击直连链接：\n${subscription_link}"
+    show_info
 }
 
 change_port(){
@@ -99,6 +114,7 @@ change_port(){
     echo "正在重启 MTProxy..."
     systemctl restart mtg
     echo "端口修改成功，MTProxy 已重启！"
+    show_info
 }
 
 change_secret(){
@@ -110,6 +126,7 @@ change_secret(){
     echo "正在重启 MTProxy..."
     systemctl restart mtg
     echo "MTProxy 已重启！"
+    show_info
 }
 
 update_mtg(){
@@ -118,6 +135,7 @@ update_mtg(){
     echo "更新完成，正在重启 MTProxy..."
     systemctl restart mtg
     echo "MTProxy 已更新并重启！"
+    show_info
 }
 
 start_menu() {
@@ -134,10 +152,12 @@ start_menu() {
  ${green} 7.${plain} 修改 Secret
  ${green} 8.${plain} 更新 MTProxy
 ————————————
+ ${green} 9.${plain} 查看配置信息
+————————————
  ${green} 0.${plain} 退出
 ————————————" && echo
 
-    read -e -p "请输入选项 [0-8]: " num
+    read -e -p "请输入选项 [0-9]: " num
     case "$num" in
     1)
         download_file
@@ -158,6 +178,7 @@ start_menu() {
         systemctl start mtg
         systemctl enable mtg
         echo "MTProxy 启动成功！"
+        show_info
         ;;
     4) 
         echo "正在停止 MTProxy..."
@@ -169,6 +190,7 @@ start_menu() {
         echo "正在重启 MTProxy..."
         systemctl restart mtg
         echo "MTProxy 重启成功！"
+        show_info
         ;;
     6) 
         change_port
@@ -179,11 +201,23 @@ start_menu() {
     8)
         update_mtg
         ;;
+    9)
+        show_info
+        ;;
     0) exit 0
         ;;
-    *) echo -e "${red}输入错误！请输入正确的数字 [0-8]。${plain}"
+    *) echo -e "${red}输入错误！请输入正确的数字 [0-9]。${plain}"
         ;;
     esac
 }
 
-start_menu
+# 主逻辑：先检测是否已安装
+if [[ -f "/usr/bin/mtg" && -f "/etc/mtg.toml" ]]; then
+    echo -e "${green}检测到已安装 MTProxy，直接显示配置信息：${plain}"
+    show_info
+    echo ""
+    read -p "是否打开管理菜单？(y/n): " yn
+    [[ "$yn" == "y" || "$yn" == "Y" ]] && start_menu
+else
+    start_menu
+fi
