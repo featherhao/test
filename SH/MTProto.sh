@@ -3,12 +3,12 @@ set -Eeuo pipefail
 
 # ---------------- 基础配置 ----------------
 MT_NAME="mtproxy"
-DEFAULT_PORT=6688
+DEFAULT_PORT=443  # 最终建议使用 443 端口以获得最佳抗封锁效果
 DOCKER_IMAGE="telegrammessenger/proxy:latest"
 DATA_DIR="/opt/mtproxy"
 
-# ****** 关键修正：伪装 Secret 伪装域名 ******
-# 伪装域名：www.microsoft.com 的 16 字节 Hex 编码
+# ****** 关键修正：伪装域名 Hex ******
+# 使用 www.microsoft.com 的 16 字节 Hex 编码
 FAKE_TLS_DOMAIN_HEX="7777772e6d6963726f736f66742e636f6d"
 
 # 全局变量，用于存储当前运行的端口和 Secret
@@ -35,33 +35,27 @@ check_docker() {
     fi
 }
 
-# ---------------- 自动获取运行配置 (兼容旧版 Docker) ----------------
-# 尝试从容器环境中提取当前的 PORT 和 SECRET，并更新全局变量
+# ---------------- 自动获取运行配置 ----------------
 update_global_config() {
-    # 在 Host 模式下，无法通过 Ports 字段获取 HostPort，
-    # 只能通过检查容器是否运行来判断状态。
     if docker inspect -f '{{.State.Running}}' "$MT_NAME" &>/dev/null; then
         
-        # 1. 提取 Secret (使用 grep/awk 兼容旧版 Docker)
+        # 提取 Secret
         GLOBAL_SECRET_RAW=$(docker inspect "$MT_NAME" | grep '"SECRET="' | awk -F'"' '{print $4}')
         if [[ -n "$GLOBAL_SECRET_RAW" ]]; then
             SECRET=$GLOBAL_SECRET_RAW
         fi
         
-        # 2. 提取端口 (从容器启动参数中获取)
-        GLOBAL_PORT_RAW=$(docker inspect "$MT_NAME" | grep "cmd" -A 10 | grep -oP '\-\-port \K\d+')
+        # 提取端口 (Host 模式下从 ENV 变量获取)
+        GLOBAL_PORT_RAW=$(docker inspect "$MT_NAME" | grep '"PORT="' | awk -F'"' '{print $4}')
         if [[ -n "$GLOBAL_PORT_RAW" ]]; then
              PORT=$GLOBAL_PORT_RAW
-        fi
-        
-        # 如果端口未能从 inspect 提取（取决于镜像 CMD 的定义），则使用默认端口作为回退
-        if [[ -z "$PORT" ]]; then
+        elif [[ -z "$PORT" ]]; then
+            # 最终回退到默认端口
             PORT=$DEFAULT_PORT
         fi
-
-        return 0 # 成功
+        
+        return 0
     else
-        # 容器不存在或未运行
         return 1
     fi
 }
@@ -73,11 +67,10 @@ get_status() {
     if update_global_config; then
         PUBLIC_IP=$(curl -s ifconfig.me)
 
-        # 确保 SECRET 不为空
         if [[ -n "$SECRET" ]]; then
             log "当前配置 - IP: ${PUBLIC_IP} | 端口: ${PORT} | Secret: ${SECRET}"
             echo "—————————————————————————————————————"
-            # Host 模式下 PORTS 字段会显示空白，但服务已在宿主机端口运行
+            # Host 模式下 PORTS 字段会显示空白，这是正常的。
             docker ps --filter "name=$MT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
             
             echo "———————————————— Telegram MTProto 代理链接 ————————————————"
@@ -95,7 +88,7 @@ get_status() {
 }
 
 
-# ---------------- 自动生成合法的 A-Prefix Fake TLS Secret ----------------
+# ---------------- 自动生成合法的 EE-Prefix Fake TLS Secret ----------------
 generate_secret() {
     local PURE_SECRET
     # 1. 生成纯 32 位 Hex Secret
@@ -104,21 +97,22 @@ generate_secret() {
     # 2. 拼接为 64 位 Hex (纯Secret + 伪装域名Hex)
     local FULL_64_HEX="${PURE_SECRET}${FAKE_TLS_DOMAIN_HEX}"
     
-    # 3. ****** 关键：添加 'A' 前缀，启用 Fake TLS 模式 ******
-    echo "A${FULL_64_HEX}"
+    # 3. ****** 关键修正：添加 'ee' 前缀，启用 Fake TLS 模式 ******
+    # 最终长度是 66 位 (ee + 64位 Hex)
+    echo "ee${FULL_64_HEX}"
 }
 
 # ---------------- 安装 MTProxy ----------------
 install_mtproxy() {
     check_docker
 
-    read -rp "请输入端口号 (留空使用默认 $DEFAULT_PORT): " INPUT_PORT
+    read -rp "请输入端口号 (强烈建议使用 443，留空使用默认 $DEFAULT_PORT): " INPUT_PORT
     PORT=${INPUT_PORT:-$DEFAULT_PORT}
 
-    # SECRET 现在是完整的 A + 64 位 Hex
+    # SECRET 现在是完整的 ee + 64 位 Hex
     SECRET=$(generate_secret)
 
-    log "生成 A-Prefix Secret (Fake TLS): $SECRET"
+    log "生成 EE-Prefix Secret (Fake TLS): $SECRET"
 
     mkdir -p "$DATA_DIR"
 
@@ -127,8 +121,7 @@ install_mtproxy() {
 
     log "开始启动 MTProxy 容器 (Host 网络模式)..."
     
-    # ****** 核心修正：使用 --network host，绕过端口映射问题 ******
-    # 注意：MTProxy 官方镜像默认通过读取 PORT 环境变量来确定监听端口
+    # ****** 核心修正：使用 --network host，并传递 PORT 环境变量 ******
     docker run -d --name "$MT_NAME" \
         --restart always \
         --network host \
@@ -142,8 +135,7 @@ install_mtproxy() {
     
     log "MTProxy 安装完成！请检查运行状态。"
     get_status
-    log "****** 请注意：Host 模式下 PORTS 字段会显示空白，这是正常的。******"
-    log "****** 最终步骤：请务必检查云服务商安全组是否开放了端口 $PORT 的 TCP/UDP 流量。******"
+    log "****** 最终步骤：请务必检查 VPS 控制面板/安全组是否开放了端口 $PORT 的 TCP/UDP 流量。******"
 }
 
 # ---------------- 更改端口/Secret 的通用重启函数 ----------------
@@ -151,17 +143,14 @@ restart_with_new_config() {
     local NEW_PORT="$1"
     local NEW_SECRET="$2"
     
-    # 尝试获取旧配置
     if ! update_global_config; then
-        error "无法获取当前容器配置，请先运行安装 (选项 1) 或手动确定 Secret。"
+        error "无法获取当前容器配置，请先运行安装 (选项 1)。"
         return 1
     fi
 
-    # 如果有新端口，则使用新端口
     if [[ -n "$NEW_PORT" ]]; then
         PORT="$NEW_PORT"
     fi
-    # 如果有新 Secret，则使用新 Secret
     if [[ -n "$NEW_SECRET" ]]; then
         SECRET="$NEW_SECRET"
     fi
@@ -187,26 +176,24 @@ restart_with_new_config() {
         
     log "MTProxy 已使用新配置重启。"
     get_status
-    log "请务必检查云服务商安全组是否开放了端口 $PORT 的 TCP/UDP 流量。"
+    log "请务必检查 VPS 控制面板/安全组是否开放了端口 $PORT 的 TCP/UDP 流量。"
 }
 
-# ---------------- 更新镜像 ----------------
+# ---------------- (其余功能函数不变) ----------------
+
 update_mtproxy() {
     check_docker
     log "开始拉取最新镜像..."
     docker pull "$DOCKER_IMAGE"
     
-    # 检查容器是否存在
     if docker ps -a --filter "name=$MT_NAME" --format "{{.Names}}" | grep -q "$MT_NAME"; then
         log "容器存在，将停止、删除并使用新镜像重启..."
-        # 使用通用重启函数，保留当前的 PORT 和 SECRET
         restart_with_new_config "" ""
     else
         log "容器不存在，请选择 (1) 安装 MTProxy。"
     fi
 }
 
-# ---------------- 卸载 ----------------
 uninstall_mtproxy() {
     read -rp "警告: 确定要卸载 MTProxy 容器和镜像吗? [y/N]: " CONFIRM
     if [[ "$CONFIRM" != [yY] ]]; then
@@ -230,9 +217,7 @@ uninstall_mtproxy() {
 }
 
 
-# ---------------- 修改端口 ----------------
 change_port() {
-    # 确保能获取到当前配置
     if ! update_global_config; then
          error "MTProxy 容器未运行，请先运行安装 (选项 1)。"
          return 1
@@ -248,9 +233,7 @@ change_port() {
     restart_with_new_config "$NEW_PORT_INPUT" ""
 }
 
-# ---------------- 修改 secret ----------------
 change_secret() {
-    # 确保能获取到当前配置
     if ! update_global_config; then
          error "MTProxy 容器未运行，请先运行安装 (选项 1)。"
          return 1
@@ -260,14 +243,13 @@ change_secret() {
     
     if [[ -z "$NEW_SECRET_INPUT" ]]; then
         NEW_SECRET_INPUT=$(generate_secret)
-        log "自动生成新的 A-Prefix Secret: $NEW_SECRET_INPUT"
+        log "自动生成新的 EE-Prefix Secret: $NEW_SECRET_INPUT"
     fi
     
     log "准备修改 Secret..."
     restart_with_new_config "" "$NEW_SECRET_INPUT"
 }
 
-# ---------------- 查看日志 ----------------
 show_logs() {
     log "正在查看 MTProxy 容器日志 (按 Ctrl+C 退出)..."
     docker logs -f "$MT_NAME"
@@ -276,7 +258,7 @@ show_logs() {
 # ---------------- 主菜单 ----------------
 while true; do
     echo
-    echo "—————— Telegram MTProxy 管理脚本 (Host 网络模式) ——————"
+    echo "—————— Telegram MTProxy 管理脚本 (Host 网络模式/EE-Prefix) ——————"
     echo "当前容器名: ${MT_NAME} | 默认端口: ${DEFAULT_PORT}"
     echo "请选择操作："
     echo " 1) ${C_GREEN}安装/全新部署${C_RESET}"
