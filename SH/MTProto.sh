@@ -51,13 +51,16 @@ install_alpine() {
     curl -L -o "$MTBIN" https://github.com/TelegramMessenger/MTProxy/releases/download/v0.01/mtproto-proxy
     chmod +x "$MTBIN"
 
+    # 生成 secret
     local secret
     secret=$(gen_secret)
     echo "$secret" > "$WORKDIR/secret"
 
+    # 内部监听端口固定 6688
     local PORT=6688
     echo "$PORT" > "$WORKDIR/port"
 
+    # 写 OpenRC 服务
     cat >/etc/init.d/$SERVICE_NAME <<EOF
 #!/sbin/openrc-run
 command="$MTBIN"
@@ -81,19 +84,11 @@ install_debian() {
     if ! command -v docker >/dev/null 2>&1; then
         echo "Docker 未安装，正在安装..."
         apt-get update -y
-        apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release || {
-            echo "依赖安装失败，请手动安装后再运行脚本"
-            exit 1
-        }
-
+        apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | \
-            tee /etc/apt/sources.list.d/docker.list > /dev/null
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list
         apt-get update -y
-        apt-get install -y docker-ce docker-ce-cli containerd.io || {
-            echo "Docker 安装失败，请手动安装 Docker 后再运行脚本"
-            exit 1
-        }
+        apt-get install -y docker-ce docker-ce-cli containerd.io
         systemctl enable docker
         systemctl start docker
     else
@@ -113,7 +108,7 @@ install_debian() {
         -p ${port}:443 \
         -v $WORKDIR:/data \
         telegrammessenger/proxy:latest \
-        -p 443 -H 443 -S $secret
+        -S $secret --aes-pwd /data/proxy-secret /data/proxy-multi.conf -M 1
 
     show_info
 }
@@ -128,13 +123,13 @@ change_secret() {
     if [[ "$ID" == "alpine" ]]; then
         rc-service $SERVICE_NAME restart
     else
-        docker stop tg-mtproxy || true
-        docker rm tg-mtproxy || true
+        docker stop tg-mtproxy
+        docker rm tg-mtproxy
         docker run -d --name tg-mtproxy --restart always \
             -p 6688:443 \
             -v $WORKDIR:/data \
             telegrammessenger/proxy:latest \
-            -p 443 -H 443 -S $SECRET
+            -S $SECRET --aes-pwd /data/proxy-secret /data/proxy-multi.conf -M 1
     fi
     show_info
 }
@@ -168,10 +163,10 @@ while true; do
     echo " 2) 卸载"
     echo " 3) 查看信息"
     echo " 4) 修改 secret"
-    echo " 5) 退出"
+    echo " 0) 退出"
     echo "=============================="
-    echo -n "请输入选项 [1-5]: "
-    read -r choice
+    echo -n "请输入选项 [0-4]: "
+    read choice
 
     case $choice in
         1)
@@ -184,7 +179,7 @@ while true; do
         2) uninstall ;;
         3) show_info ;;
         4) change_secret ;;
-        5) exit 0 ;;
+        0) exit 0 ;;
         *) echo "无效选项" ;;
     esac
 done
