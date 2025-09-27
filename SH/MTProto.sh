@@ -139,8 +139,10 @@ update_mtg(){
 }
 
 start_menu() {
-    clear
-    echo -e "  MTProxy v2 一键管理脚本
+    while true; do
+        clear
+        show_info
+        echo -e "  MTProxy v2 一键管理脚本
 ---- by Vincent | github.com/missuo/MTProxy ----
  ${green} 1.${plain} 安装 MTProxy
  ${green} 2.${plain} 卸载 MTProxy
@@ -152,72 +154,60 @@ start_menu() {
  ${green} 7.${plain} 修改 Secret
  ${green} 8.${plain} 更新 MTProxy
 ————————————
- ${green} 9.${plain} 查看配置信息
-————————————
- ${green} 0.${plain} 退出
+ ${green} 0.${plain} 退出子脚本
 ————————————" && echo
 
-    read -e -p "请输入选项 [0-9]: " num
-    case "$num" in
-    1)
-        download_file
-        configure_mtg
-        configure_systemctl
-        ;;
-    2)
-        echo "正在卸载 MTProxy..."
-        systemctl stop mtg
-        systemctl disable mtg
-        rm -rf /usr/bin/mtg
-        rm -rf /etc/mtg.toml
-        rm -rf /etc/systemd/system/mtg.service
-        echo "MTProxy 卸载成功！"
-        ;;
-    3) 
-        echo "正在启动 MTProxy..."
-        systemctl start mtg
-        systemctl enable mtg
-        echo "MTProxy 启动成功！"
-        show_info
-        ;;
-    4) 
-        echo "正在停止 MTProxy..."
-        systemctl stop mtg
-        systemctl disable mtg
-        echo "MTProxy 已停止！"
-        ;;
-    5)  
-        echo "正在重启 MTProxy..."
-        systemctl restart mtg
-        echo "MTProxy 重启成功！"
-        show_info
-        ;;
-    6) 
-        change_port
-        ;;
-    7)
-        change_secret
-        ;;
-    8)
-        update_mtg
-        ;;
-    9)
-        show_info
-        ;;
-    0) exit 0
-        ;;
-    *) echo -e "${red}输入错误！请输入正确的数字 [0-9]。${plain}"
-        ;;
-    esac
+        read -e -p "请输入选项 [0-8]: " num
+        case "$num" in
+        1)
+            download_file
+            configure_mtg
+            configure_systemctl
+            ;;
+        2)
+            echo "正在卸载 MTProxy..."
+            systemctl stop mtg
+            systemctl disable mtg
+            rm -rf /usr/bin/mtg
+            rm -rf /etc/mtg.toml
+            rm -rf /etc/systemd/system/mtg.service
+            echo "MTProxy 卸载成功！"
+            ;;
+        3) 
+            echo "正在启动 MTProxy..."
+            systemctl start mtg
+            systemctl enable mtg
+            echo "MTProxy 启动成功！"
+            ;;
+        4) 
+            echo "正在停止 MTProxy..."
+            systemctl stop mtg
+            systemctl disable mtg
+            echo "MTProxy 已停止！"
+            ;;
+        5)  
+            echo "正在重启 MTProxy..."
+            systemctl restart mtg
+            echo "MTProxy 重启成功！"
+            ;;
+        6) 
+            change_port
+            ;;
+        7)
+            change_secret
+            ;;
+        8)
+            update_mtg
+            ;;
+        0) break
+            ;;
+        *) echo -e "${red}输入错误！请输入正确的数字 [0-8]。${plain}"
+            ;;
+        esac
+        echo -e "\n按任意键返回菜单..."
+        read -n 1
+    done
 }
 
-# 主逻辑：先检测是否已安装
-if [[ -f "/usr/bin/mtg" && -f "/etc/mtg.toml" ]]; then
-    echo -e "${green}检测到已安装 MTProxy，直接显示配置信息：${plain}"
-    show_info
-    echo ""
-    read -p "是否打开管理菜单？(y/n): " yn
-    [[ "$yn" == "y" || "$yn" == "Y" ]] && start_menu
-else
-    start_menu
-fi
+# 主逻辑：直接显示信息 + 进入管理菜单
+start_menu
