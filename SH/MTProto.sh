@@ -3,24 +3,20 @@ set -Eeuo pipefail
 
 # ---------------- 基础配置 ----------------
 MT_NAME="mtproxy"
-# 推荐使用 443 端口以获得最佳抗封锁效果
+# 推荐使用 443 端口以获得最佳抗封锁效果，但我们将让用户选择 26666
 DEFAULT_PORT=443
-# ****** 核心修正：换回官方镜像，但修正启动参数 ******
+# 换回官方镜像，但使用修正后的启动参数
 DOCKER_IMAGE="telegrammessenger/proxy:latest" 
 DATA_DIR="/opt/mtproxy"
 
-# ****** 关键修正：伪装域名 Hex ******
-# 使用 www.microsoft.com 的 16 字节 Hex 编码
+# ****** 关键修正：伪装域名 Hex 和纯域名 ******
 FAKE_TLS_DOMAIN_HEX="7777772e6d6963726f736f66742e636f6d"
+FAKE_TLS_DOMAIN="www.microsoft.com" 
 
 # 全局变量，用于存储当前运行的端口和 Secret
 PORT=$DEFAULT_PORT
 SECRET=""
-# 用于存储纯 Secret (只在启动容器时使用)
 PURE_SECRET="" 
-
-# 用于启动官方镜像所需的 FAKE_TLS_DOMAIN 变量
-FAKE_TLS_DOMAIN="www.microsoft.com" 
 
 C_RESET="\e[0m"; C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"
 
@@ -33,7 +29,6 @@ warn()  { echo -e "${C_YELLOW}[WARN]${C_RESET} $1"; }
 check_docker() {
     if ! command -v docker &>/dev/null; then
         log "Docker 未安装，开始安装..."
-        # 适用于 Debian/Ubuntu
         sudo apt update
         sudo apt install -y docker.io
         sudo systemctl enable docker
@@ -44,7 +39,6 @@ check_docker() {
 
 # ---------------- 自动获取运行配置 ----------------
 update_global_config() {
-    # 尝试从容器环境中提取当前的 PORT 和 SECRET，并更新全局变量
     if docker inspect -f '{{.State.Running}}' "$MT_NAME" &>/dev/null; then
         
         # 提取 PURE_SECRET
@@ -77,8 +71,13 @@ get_status() {
 
         if [[ -n "$SECRET" ]]; then
             log "当前配置 - IP: ${PUBLIC_IP} | 端口: ${PORT} | Secret: ${SECRET}"
+            
+            # 最终检查端口监听状态
             echo "—————————————————————————————————————"
-            # Host 模式下 PORTS 字段会显示空白，这是正常的。
+            log "正在检查宿主机端口 $PORT 是否在监听..."
+            sudo ss -tuln | grep "$PORT" || log "宿主机端口 $PORT 未监听（请检查日志或外部防火墙）"
+            echo "—————————————————————————————————————"
+
             docker ps --filter "name=$MT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
             
             echo "———————————————— Telegram MTProto 代理链接 ————————————————"
@@ -94,7 +93,6 @@ get_status() {
         docker ps -a --filter "name=$MT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
     fi
 }
-
 
 # ---------------- 自动生成合法的 EE-Prefix Fake TLS Secret ----------------
 generate_secret() {
@@ -113,7 +111,16 @@ generate_secret() {
 install_mtproxy() {
     check_docker
 
-    read -rp "请输入端口号 (强烈建议使用 443，留空使用默认 $DEFAULT_PORT): " INPUT_PORT
+    # ****** 核心步骤：强制清理环境，避免冲突 ******
+    log "强制清理残留容器和Docker网络配置..."
+    docker rm -f "$MT_NAME" &>/dev/null || true
+    sudo systemctl daemon-reload
+    sudo systemctl restart docker
+    sleep 3
+    log "清理完成，Docker已重启。"
+    # **********************************************
+
+    read -rp "请输入端口号 (推荐 26666 或 443，留空使用默认 $DEFAULT_PORT): " INPUT_PORT
     PORT=${INPUT_PORT:-$DEFAULT_PORT}
 
     # SECRET 是完整的 66位 ee... Secret，用于生成链接
@@ -128,9 +135,6 @@ install_mtproxy() {
 
     mkdir -p "$DATA_DIR"
 
-    # 停止并删除旧容器
-    docker rm -f "$MT_NAME" &>/dev/null || true
-
     log "开始启动 MTProxy 容器 (Host 网络模式, 官方镜像/EE修正)..."
     
     # ****** 核心启动：分离 SECRET 和 FAKE_TLS_DOMAIN 参数 ******
@@ -139,7 +143,7 @@ install_mtproxy() {
         --network host \
         -e SECRET="$PURE_SECRET" \
         -e PORT="$PORT" \
-        -e 'FAKE_TLS_DOMAIN=www.microsoft.com' \
+        -e "FAKE_TLS_DOMAIN=$FAKE_TLS_DOMAIN" \
         -v "$DATA_DIR":/data \
         "$DOCKER_IMAGE"
 
@@ -148,7 +152,7 @@ install_mtproxy() {
     
     log "MTProxy 安装完成！请检查运行状态。"
     get_status
-    log "****** 最终步骤：请务必检查 VPS 控制面板/安全组是否开放了端口 $PORT 的 TCP/UDP 流量。******"
+    log "****** 最终提醒：如果仍不通，请检查 VPS 控制面板/安全组是否开放了端口 $PORT 的 TCP/UDP 流量。******"
 }
 
 # ---------------- 更改端口/Secret 的通用重启函数 ----------------
@@ -187,7 +191,7 @@ restart_with_new_config() {
         --network host \
         -e SECRET="$PURE_SECRET" \
         -e PORT="$PORT" \
-        -e 'FAKE_TLS_DOMAIN=www.microsoft.com' \
+        -e "FAKE_TLS_DOMAIN=$FAKE_TLS_DOMAIN" \
         -v "$DATA_DIR":/data \
         "$DOCKER_IMAGE"
         
@@ -275,10 +279,10 @@ show_logs() {
 # ---------------- 主菜单 ----------------
 while true; do
     echo
-    echo "—————— Telegram MTProxy 管理脚本 (官方镜像/EE-修正) ——————"
+    echo "—————— Telegram MTProxy 管理脚本 (官方镜像/强制清理) ——————"
     echo "当前容器名: ${MT_NAME} | 默认端口: ${DEFAULT_PORT}"
     echo "请选择操作："
-    echo " 1) ${C_GREEN}安装/全新部署${C_RESET}"
+    echo " 1) ${C_GREEN}安装/全新部署 (包含强制清理)${C_RESET}"
     echo " 2) 更新镜像并重启"
     echo " 3) 卸载"
     echo " 4) 查看信息 (状态/IP/链接)"
