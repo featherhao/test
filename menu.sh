@@ -145,16 +145,37 @@ check_docker_service() {
     fi
 }
 
+# ================== MTProto 状态检测 ==================
 mtproto_status() {
-    if docker ps -a --format '{{.Names}}' | grep -q "^tg-mtproxy$"; then
-        if docker ps --format '{{.Names}}' | grep -q "^tg-mtproxy$"; then
-            echo "✅ 运行中"
+    # 1. systemctl 服务检测
+    if systemctl list-unit-files 2>/dev/null | grep -q "mtg.service"; then
+        if systemctl is-active --quiet mtg; then
+            echo "✅ 运行中 (systemctl)"
         else
-            echo "⚠️ 已停止"
+            echo "⚠️ 已停止 (systemctl)"
         fi
-    else
-        echo "❌ 未安装"
+        return
     fi
+
+    # 2. Docker 容器检测（匹配镜像名含 mtproto/mtg）
+    if command -v docker &>/dev/null; then
+        local cid
+        cid=$(docker ps -a --filter "ancestor=telegrammessenger/proxy" --format '{{.ID}}' | head -n1)
+        if [[ -z "$cid" ]]; then
+            cid=$(docker ps -a --filter "ancestor=mtproto" --format '{{.ID}}' | head -n1)
+        fi
+        if [[ -n "$cid" ]]; then
+            if docker ps --filter "id=$cid" --format '{{.ID}}' | grep -q .; then
+                echo "✅ 运行中 (docker)"
+            else
+                echo "⚠️ 已停止 (docker)"
+            fi
+            return
+        fi
+    fi
+
+    # 3. 默认未安装
+    echo "❌ 未安装"
 }
 
 # ================== 更新菜单脚本 ==================
