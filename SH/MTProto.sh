@@ -4,6 +4,7 @@ set -Eeuo pipefail
 # 统一错误处理
 trap 'status=$?; line=${BASH_LINENO[0]}; echo -e "\e[31m❌ 发生错误 (exit=$status) at line $line\e[0m" >&2; exit $status' ERR
 
+# 配置
 MT_NAME="mtproxy"
 DEFAULT_PORT=6688
 DOCKER_IMAGE="telegrammessenger/proxy:latest"
@@ -25,26 +26,9 @@ check_docker() {
     fi
 }
 
-# 获取节点信息
+# 获取容器运行状态
 get_status() {
-    if docker ps --filter "name=$MT_NAME" --format '{{.Names}}' | grep -q "$MT_NAME"; then
-        PORT=$(docker port "$MT_NAME" | awk -F: '{print $2}')
-        SECRET=$(cat "$DATA_DIR/secret" 2>/dev/null || echo "未知")
-        NODE_IP=$(curl -s ifconfig.me)
-        echo -e "————— Telegram MTProto 代理 信息 —————"
-        echo "IP: $NODE_IP"
-        echo "端口: $PORT"
-        echo "secret: $SECRET"
-        echo
-        echo "tg:// 链接:"
-        echo "tg://proxy?server=$NODE_IP&port=$PORT&secret=$SECRET"
-        echo
-        echo "t.me 分享链接:"
-        echo "https://t.me/proxy?server=$NODE_IP&port=$PORT&secret=$SECRET"
-        echo "———————————————————————————————"
-    else
-        log "MTProxy 未运行"
-    fi
+    docker ps --filter "name=$MT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 }
 
 # 安装 MTProxy
@@ -54,18 +38,31 @@ install_mtproxy() {
     read -rp "请输入端口号 (留空使用默认 $DEFAULT_PORT): " PORT
     PORT=${PORT:-$DEFAULT_PORT}
 
-    SECRET=$(openssl rand -hex 16)
+    read -rp "请输入 secret (留空自动生成): " SECRET
+    SECRET=${SECRET:-$(openssl rand -hex 16)}
+
     mkdir -p "$DATA_DIR"
-    echo "$SECRET" > "$DATA_DIR/secret"
 
     docker run -d --name "$MT_NAME" \
         -p "$PORT:$PORT" \
         -v "$DATA_DIR":/data \
         "$DOCKER_IMAGE" \
-        -u nobody -p "$PORT" -H 0.0.0.0 -S "$SECRET"
+        -p "$PORT" -H 0.0.0.0 -S "$SECRET"
 
     log "MTProxy 已启动"
-    get_status
+
+    IP=$(curl -s ifconfig.me)
+    echo -e "\n————— Telegram MTProto 代理 信息 —————"
+    echo "IP: $IP"
+    echo "端口: $PORT"
+    echo "secret: $SECRET"
+    echo
+    echo "tg:// 链接:"
+    echo "tg://proxy?server=$IP&port=$PORT&secret=$SECRET"
+    echo
+    echo "t.me 分享链接:"
+    echo "https://t.me/proxy?server=$IP&port=$PORT&secret=$SECRET"
+    echo "———————————————————————————————"
 }
 
 # 更新镜像
@@ -84,34 +81,23 @@ uninstall_mtproxy() {
 
 # 更改端口
 change_port() {
-    if ! docker ps --filter "name=$MT_NAME" --format '{{.Names}}' | grep -q "$MT_NAME"; then
-        error "MTProxy 未运行"
-        return
-    fi
     read -rp "请输入新端口: " NEW_PORT
-    SECRET=$(cat "$DATA_DIR/secret")
+    CONTAINER_SECRET=$(docker inspect -f '{{index .Config.Env 0}}' "$MT_NAME" | cut -d'=' -f2)
     docker stop "$MT_NAME"
     docker rm "$MT_NAME"
-    docker run -d --name "$MT_NAME" -p "$NEW_PORT:$NEW_PORT" -v "$DATA_DIR":/data "$DOCKER_IMAGE" -u nobody -p "$NEW_PORT" -H 0.0.0.0 -S "$SECRET"
+    docker run -d --name "$MT_NAME" -p "$NEW_PORT:$NEW_PORT" -v "$DATA_DIR":/data "$DOCKER_IMAGE" -p "$NEW_PORT" -H 0.0.0.0 -S "$CONTAINER_SECRET"
     log "端口已修改为 $NEW_PORT"
-    get_status
 }
 
 # 更改 secret
 change_secret() {
-    if ! docker ps --filter "name=$MT_NAME" --format '{{.Names}}' | grep -q "$MT_NAME"; then
-        error "MTProxy 未运行"
-        return
-    fi
     read -rp "请输入新 secret (留空自动生成): " NEW_SECRET
     NEW_SECRET=${NEW_SECRET:-$(openssl rand -hex 16)}
-    echo "$NEW_SECRET" > "$DATA_DIR/secret"
-    PORT=$(docker port "$MT_NAME" | awk -F: '{print $2}')
+    CONTAINER_PORT=$(docker inspect -f '{{(index .NetworkSettings.Ports "'$DEFAULT_PORT'/tcp").0.HostPort}}' "$MT_NAME" 2>/dev/null || echo "$DEFAULT_PORT")
     docker stop "$MT_NAME"
     docker rm "$MT_NAME"
-    docker run -d --name "$MT_NAME" -p "$PORT:$PORT" -v "$DATA_DIR":/data "$DOCKER_IMAGE" -u nobody -p "$PORT" -H 0.0.0.0 -S "$NEW_SECRET"
+    docker run -d --name "$MT_NAME" -p "$CONTAINER_PORT:$CONTAINER_PORT" -v "$DATA_DIR":/data "$DOCKER_IMAGE" -p "$CONTAINER_PORT" -H 0.0.0.0 -S "$NEW_SECRET"
     log "Secret 已修改: $NEW_SECRET"
-    get_status
 }
 
 # 查看日志
