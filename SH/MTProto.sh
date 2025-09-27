@@ -6,7 +6,10 @@ MT_NAME="mtproxy"
 DEFAULT_PORT=6688
 DOCKER_IMAGE="telegrammessenger/proxy:latest"
 DATA_DIR="/opt/mtproxy"
-APP_NAME="myapp" # Telegram app 名称，可修改
+
+# ****** 关键修正：伪装 Secret 伪装域名 ******
+# 伪装域名：www.microsoft.com 的 16 字节 Hex 编码
+FAKE_TLS_DOMAIN_HEX="7777772e6d6963726f736f66742e636f6d"
 
 # 全局变量，用于存储当前运行的端口和 Secret
 PORT=$DEFAULT_PORT
@@ -33,11 +36,9 @@ check_docker() {
 }
 
 # ---------------- 自动获取运行配置 (兼容旧版 Docker) ----------------
-# 尝试从容器环境中提取当前的 PORT 和 SECRET，并更新全局变量
 update_global_config() {
     if docker inspect -f '{{.State.Running}}' "$MT_NAME" &>/dev/null; then
         # 1. 提取映射的端口
-        # 使用 Go 模板提取 HostPort (兼容性较好)
         GLOBAL_PORT_RAW=$(docker inspect --format='{{range $p, $conf := .NetworkSettings.Ports}}{{(index $conf 0).HostPort}}{{end}}' "$MT_NAME")
         if [[ -n "$GLOBAL_PORT_RAW" ]]; then
              PORT=$GLOBAL_PORT_RAW
@@ -77,13 +78,14 @@ get_status() {
 }
 
 
-# ---------------- 自动生成合法 secret ----------------
+# ---------------- 自动生成合法的 64 位 Secret (Fake TLS) ----------------
 generate_secret() {
-    local NEW_SECRET
-    # 16 字节 => 32 hex
-    NEW_SECRET=$(openssl rand -hex 16)
-    # 将 APP_NAME 附加到末尾，形成正确的 Secret 格式
-    echo "${NEW_SECRET}${APP_NAME}"
+    local PURE_SECRET
+    # 1. 生成纯 32 位 Hex Secret
+    PURE_SECRET=$(openssl rand -hex 16)
+    
+    # 2. 拼接为 64 位 Hex (纯Secret + 伪装域名Hex)
+    echo "${PURE_SECRET}${FAKE_TLS_DOMAIN_HEX}"
 }
 
 # ---------------- 安装 MTProxy ----------------
@@ -93,9 +95,10 @@ install_mtproxy() {
     read -rp "请输入端口号 (留空使用默认 $DEFAULT_PORT): " INPUT_PORT
     PORT=${INPUT_PORT:-$DEFAULT_PORT}
 
+    # SECRET 现在是完整的 64 位 Hex
     SECRET=$(generate_secret)
 
-    log "生成 secret: $SECRET"
+    log "生成 64 位 Secret (Fake TLS): $SECRET"
 
     mkdir -p "$DATA_DIR"
 
@@ -231,7 +234,7 @@ change_secret() {
     
     if [[ -z "$NEW_SECRET_INPUT" ]]; then
         NEW_SECRET_INPUT=$(generate_secret)
-        log "自动生成新的 secret: $NEW_SECRET_INPUT"
+        log "自动生成新的 64 位 Secret: $NEW_SECRET_INPUT"
     fi
     
     log "准备修改 Secret..."
@@ -247,7 +250,7 @@ show_logs() {
 # ---------------- 主菜单 ----------------
 while true; do
     echo
-    echo "—————— Telegram MTProxy 管理脚本 ——————"
+    echo "—————— Telegram MTProxy 管理脚本 (Fake TLS) ——————"
     echo "当前容器名: ${MT_NAME} | 默认端口: ${DEFAULT_PORT}"
     echo "请选择操作："
     echo " 1) ${C_GREEN}安装/全新部署${C_RESET}"
