@@ -3,8 +3,10 @@ set -Eeuo pipefail
 
 # ---------------- 基础配置 ----------------
 MT_NAME="mtproxy"
-DEFAULT_PORT=443  # 最终建议使用 443 端口以获得最佳抗封锁效果
-DOCKER_IMAGE="telegrammessenger/proxy:latest"
+# 推荐使用 443 端口以获得最佳抗封锁效果
+DEFAULT_PORT=443
+# ****** 核心修正：切换到社区维护的、更宽容的镜像 ******
+DOCKER_IMAGE="tehsamma/mtproto-proxy:latest" 
 DATA_DIR="/opt/mtproxy"
 
 # ****** 关键修正：伪装域名 Hex ******
@@ -70,7 +72,7 @@ get_status() {
         if [[ -n "$SECRET" ]]; then
             log "当前配置 - IP: ${PUBLIC_IP} | 端口: ${PORT} | Secret: ${SECRET}"
             echo "—————————————————————————————————————"
-            # Host 模式下 PORTS 字段会显示空白，这是正常的。
+            # Host 模式下 PORTS 字段会显示空白，但服务已在宿主机端口运行
             docker ps --filter "name=$MT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
             
             echo "———————————————— Telegram MTProto 代理链接 ————————————————"
@@ -97,7 +99,7 @@ generate_secret() {
     # 2. 拼接为 64 位 Hex (纯Secret + 伪装域名Hex)
     local FULL_64_HEX="${PURE_SECRET}${FAKE_TLS_DOMAIN_HEX}"
     
-    # 3. ****** 关键修正：添加 'ee' 前缀，启用 Fake TLS 模式 ******
+    # 3. ****** 核心修正：添加 'ee' 前缀，启用 Fake TLS 模式 ******
     # 最终长度是 66 位 (ee + 64位 Hex)
     echo "ee${FULL_64_HEX}"
 }
@@ -119,9 +121,9 @@ install_mtproxy() {
     # 停止并删除旧容器
     docker rm -f "$MT_NAME" &>/dev/null || true
 
-    log "开始启动 MTProxy 容器 (Host 网络模式)..."
+    log "开始启动 MTProxy 容器 (Host 网络模式, 社区镜像)..."
     
-    # ****** 核心修正：使用 --network host，并传递 PORT 环境变量 ******
+    # ****** 核心启动：使用 Host 网络模式，并传递 PORT 环境变量 ******
     docker run -d --name "$MT_NAME" \
         --restart always \
         --network host \
@@ -144,7 +146,7 @@ restart_with_new_config() {
     local NEW_SECRET="$2"
     
     if ! update_global_config; then
-        error "无法获取当前容器配置，请先运行安装 (选项 1)。"
+        error "无法获取当前容器配置，请先运行安装 (选项 1) 或手动确定 Secret。"
         return 1
     fi
 
@@ -165,7 +167,7 @@ restart_with_new_config() {
 
     log "使用新配置 (Host 模式, 端口: $PORT, Secret: $SECRET) 启动容器..."
     
-    # ****** 核心修正：使用 --network host，并传递 PORT 环境变量 ******
+    # ****** 核心启动：使用 Host 网络模式，并传递 PORT 环境变量 ******
     docker run -d --name "$MT_NAME" \
         --restart always \
         --network host \
