@@ -20,9 +20,12 @@ gen_secret() {
 }
 
 show_info() {
-    local ip=$(curl -s ifconfig.me || echo "0.0.0.0")
-    local port=$(cat "$WORKDIR/port" 2>/dev/null || echo "6688")
-    local secret=$(cat "$WORKDIR/secret" 2>/dev/null || echo "none")
+    local ip
+    ip=$(curl -s ifconfig.me || echo "0.0.0.0")
+    local port
+    port=$(cat "$WORKDIR/port" 2>/dev/null || echo "6688")
+    local secret
+    secret=$(cat "$WORKDIR/secret" 2>/dev/null || echo "none")
     echo
     echo "————— Telegram MTProto 代理 信息 —————"
     echo "IP:       $ip"
@@ -48,15 +51,13 @@ install_alpine() {
     curl -L -o "$MTBIN" https://github.com/TelegramMessenger/MTProxy/releases/download/v0.01/mtproto-proxy
     chmod +x "$MTBIN"
 
-    # 生成 secret
-    local secret=$(gen_secret)
+    local secret
+    secret=$(gen_secret)
     echo "$secret" > "$WORKDIR/secret"
 
-    # 内部监听端口固定 6688
-    PORT=6688
+    local PORT=6688
     echo "$PORT" > "$WORKDIR/port"
 
-    # 写 OpenRC 服务
     cat >/etc/init.d/$SERVICE_NAME <<EOF
 #!/sbin/openrc-run
 command="$MTBIN"
@@ -76,12 +77,32 @@ EOF
 
 # ================== Ubuntu/Debian 安装 ==================
 install_debian() {
-    echo "正在安装依赖..."
-    apt-get update -y
-    apt-get install -y docker.io openssl curl
+    echo "检查 Docker 是否已安装..."
+    if ! command -v docker >/dev/null 2>&1; then
+        echo "Docker 未安装，正在安装..."
+        apt-get update -y
+        apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release || {
+            echo "依赖安装失败，请手动安装后再运行脚本"
+            exit 1
+        }
+
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | \
+            tee /etc/apt/sources.list.d/docker.list > /dev/null
+        apt-get update -y
+        apt-get install -y docker-ce docker-ce-cli containerd.io || {
+            echo "Docker 安装失败，请手动安装 Docker 后再运行脚本"
+            exit 1
+        }
+        systemctl enable docker
+        systemctl start docker
+    else
+        echo "检测到 Docker 已安装"
+    fi
 
     mkdir -p "$WORKDIR"
-    local secret=$(gen_secret)
+    local secret
+    secret=$(gen_secret)
     echo "$secret" > "$WORKDIR/secret"
     local port=6688
     echo "$port" > "$WORKDIR/port"
@@ -100,14 +121,15 @@ install_debian() {
 # ================== 修改 secret ==================
 change_secret() {
     load_conf
+    local SECRET
     SECRET=$(gen_secret)
     echo "$SECRET" > "$WORKDIR/secret"
 
     if [[ "$ID" == "alpine" ]]; then
         rc-service $SERVICE_NAME restart
     else
-        docker stop tg-mtproxy
-        docker rm tg-mtproxy
+        docker stop tg-mtproxy || true
+        docker rm tg-mtproxy || true
         docker run -d --name tg-mtproxy --restart always \
             -p 6688:443 \
             -v $WORKDIR:/data \
@@ -117,7 +139,7 @@ change_secret() {
     show_info
 }
 
-# 读配置
+# ================== 读配置 ==================
 load_conf() {
     [ -f "$WORKDIR/port" ] && PORT=$(cat "$WORKDIR/port")
     [ -f "$WORKDIR/secret" ] && SECRET=$(cat "$WORKDIR/secret")
@@ -149,7 +171,7 @@ while true; do
     echo " 5) 退出"
     echo "=============================="
     echo -n "请输入选项 [1-5]: "
-    read choice
+    read -r choice
 
     case $choice in
         1)
