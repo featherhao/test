@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE="telegrammessenger/proxy:latest"
-CONTAINER_NAME="tg-mtproxy"
-DATA_DIR="/etc/tg-proxy"
+DATA_DIR="/etc/mtproxy"
 SECRET_FILE="${DATA_DIR}/secret"
 DEFAULT_PORT=6688
 PORT=""
 SECRET=""
+LOG_FILE="${DATA_DIR}/mtproxy.log"
 
 # ================= 彩色输出 =================
 info() { printf "\033[1;34m%s\033[0m\n" "$*"; }
@@ -16,7 +15,7 @@ error() { printf "\033[1;31m%s\033[0m\n" "$*"; exit 1; }
 
 # ================= 系统依赖检查 =================
 check_deps() {
-    for cmd in curl docker openssl iptables; do
+    for cmd in curl git make g++ libssl-dev iptables; do
         if ! command -v $cmd >/dev/null 2>&1; then
             if command -v apt >/dev/null 2>&1; then
                 info "安装依赖 $cmd"
@@ -24,18 +23,11 @@ check_deps() {
             elif command -v yum >/dev/null 2>&1; then
                 info "安装依赖 $cmd"
                 yum install -y $cmd
-            elif command -v apk >/dev/null 2>&1; then
-                info "安装依赖 $cmd"
-                apk add --no-cache $cmd
             else
-                warn "未找到包管理器，请手动安装 $cmd"
+                warn "请手动安装 $cmd"
             fi
         fi
     done
-
-    if ! docker info >/dev/null 2>&1; then
-        error "Docker 未启动或无权限访问 /var/run/docker.sock"
-    fi
 }
 
 # ================= 查找空闲端口 =================
@@ -53,7 +45,7 @@ generate_secret() {
     if [ -f "$SECRET_FILE" ]; then
         SECRET=$(cat "$SECRET_FILE")
     else
-        SECRET=$(openssl rand -hex 32)  # 32 字节 = 64 hex
+        SECRET=$(openssl rand -hex 32)  # 64 hex
         echo -n "$SECRET" > "$SECRET_FILE"
     fi
 }
@@ -75,23 +67,94 @@ open_port() {
     sudo iptables -I INPUT -p tcp --dport "$port" -j ACCEPT || true
 }
 
-# ================= 启动容器 =================
-run_container() {
-    docker stop "$CONTAINER_NAME" 2>/dev/null || true
-    docker rm "$CONTAINER_NAME" 2>/dev/null || true
+# ================= 安装 MTProxy =================
+install_mtproxy() {
+    check_deps
+    generate_secret
+    read -r -p "请输入端口号 (留空使用默认 $DEFAULT_PORT): " input_port
+    PORT=$(find_free_port "${input_port:-$DEFAULT_PORT}")
+    open_port "$PORT"
 
-    if ! docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
-        --network host \
-        -e "MTPROXY_SECRET=$SECRET" \
-        -e "MTPROXY_PORT=$PORT" \
-        "$IMAGE"; then
-        LOG=$(docker logs "$CONTAINER_NAME" 2>&1 || true)
-        error "Docker 容器启动失败，日志：\n$LOG"
+    # 下载并编译 MTProxy
+    mkdir -p /opt/mtproxy
+    cd /opt
+    if [ ! -d "MTProxy" ]; then
+        git clone https://github.com/TelegramMessenger/MTProxy
     fi
+    cd MTProxy
+    make -j$(nproc)
+
+    # 写 systemd 服务
+    mkdir -p "$DATA_DIR"
+    cat > /etc/systemd/system/mtproxy.service <<EOF
+[Unit]
+Description=MTProxy
+After=network.target
+
+[Service]
+Type=simple
+User=nobody
+WorkingDirectory=/opt/MTProxy
+ExecStart=/opt/MTProxy/objs/bin/mtproto-proxy -u nobody -p $PORT -H 443 -S $SECRET --aes-pwd $DATA_DIR/proxy-secret $DATA_DIR/proxy-multi.conf -M 1
+Restart=on-failure
+StandardOutput=file:$LOG_FILE
+StandardError=file:$LOG_FILE
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    systemctl daemon-reload
+    systemctl enable mtproxy
+    systemctl restart mtproxy
+    info "MTProxy 安装完成并启动"
 }
 
-# ================= 显示节点信息 =================
+# ================= 更新 =================
+update_mtproxy() {
+    cd /opt/MTProxy
+    git pull
+    make -j$(nproc)
+    systemctl restart mtproxy
+    info "MTProxy 已更新并重启"
+}
+
+# ================= 更改端口 =================
+change_port() {
+    read -r -p "请输入新的端口号 (留空自动选择): " new_port
+    PORT=$(find_free_port "${new_port:-$DEFAULT_PORT}")
+    sed -i -r "s/-p [0-9]+/-p $PORT/" /etc/systemd/system/mtproxy.service
+    open_port "$PORT"
+    systemctl daemon-reload
+    systemctl restart mtproxy
+    info "端口已修改为 $PORT"
+}
+
+# ================= 更改 secret =================
+change_secret() {
+    SECRET=$(openssl rand -hex 32)
+    echo -n "$SECRET" > "$SECRET_FILE"
+    sed -i -r "s/-S [0-9a-f]{64}/-S $SECRET/" /etc/systemd/system/mtproxy.service
+    systemctl daemon-reload
+    systemctl restart mtproxy
+    info "Secret 已更新"
+}
+
+# ================= 卸载 =================
+uninstall_mtproxy() {
+    systemctl stop mtproxy || true
+    systemctl disable mtproxy || true
+    rm -f /etc/systemd/system/mtproxy.service
+    rm -rf /opt/MTProxy "$DATA_DIR"
+    systemctl daemon-reload
+    info "MTProxy 已卸载"
+}
+
+# ================= 查看信息 =================
 show_info() {
+    if [ -f "$SECRET_FILE" ]; then
+        SECRET=$(cat "$SECRET_FILE")
+    fi
     IP=$(public_ip)
     PROXY_LINK="tg://proxy?server=${IP}&port=${PORT}&secret=${SECRET}"
     TME_LINK="https://t.me/proxy?server=${IP}&port=${PORT}&secret=${SECRET}"
@@ -108,61 +171,9 @@ show_info() {
     echo "———————————————————————————————"
 }
 
-# ================= 安装 =================
-install() {
-    check_deps
-    generate_secret
-    read -r -p "请输入端口号 (留空使用默认 $DEFAULT_PORT): " input_port
-    PORT=$(find_free_port "${input_port:-$DEFAULT_PORT}")
-    open_port "$PORT"
-    docker pull "$IMAGE"
-    run_container
-    show_info
-}
-
-# ================= 更新 =================
-update() {
-    check_deps
-    generate_secret
-    OLD_PORT=$(docker inspect -f '{{range .Config.Env}}{{if hasPrefix . "MTPROXY_PORT"}}{{.}}{{end}}{{end}}' "$CONTAINER_NAME" 2>/dev/null | cut -d '=' -f 2)
-    PORT=${OLD_PORT:-$(find_free_port "$DEFAULT_PORT")}
-    open_port "$PORT"
-    docker pull "$IMAGE"
-    run_container
-    show_info
-}
-
-# ================= 更改端口 =================
-change_port() {
-    read -r -p "请输入新的端口号 (留空自动选择): " new_port
-    PORT=$(find_free_port "${new_port:-$DEFAULT_PORT}")
-    open_port "$PORT"
-    run_container
-    show_info
-}
-
-# ================= 更改 secret =================
-change_secret() {
-    SECRET=$(openssl rand -hex 32)
-    echo -n "$SECRET" > "$SECRET_FILE"
-    run_container
-    show_info
-}
-
 # ================= 查看日志 =================
 show_logs() {
-    docker logs -f "$CONTAINER_NAME"
-}
-
-# ================= 卸载 =================
-uninstall() {
-    docker stop "$CONTAINER_NAME" 2>/dev/null || true
-    docker rm "$CONTAINER_NAME" 2>/dev/null || true
-    warn "容器已移除"
-    read -r -p "是否删除镜像 $IMAGE? (y/N): " yn
-    [[ "$yn" =~ ^[Yy]$ ]] && docker rmi "$IMAGE"
-    read -r -p "是否删除数据目录 $DATA_DIR? (y/N): " yn2
-    [[ "$yn2" =~ ^[Yy]$ ]] && rm -rf "$DATA_DIR"
+    tail -f "$LOG_FILE"
 }
 
 # ================= 菜单 =================
@@ -179,9 +190,9 @@ menu() {
         echo " 8) 退出"
         read -r -p "请输入选项 [1-8]: " choice
         case "$choice" in
-            1) install ;;
-            2) update ;;
-            3) uninstall ;;
+            1) install_mtproxy ;;
+            2) update_mtproxy ;;
+            3) uninstall_mtproxy ;;
             4) show_info ;;
             5) change_port ;;
             6) change_secret ;;
