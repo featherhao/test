@@ -33,7 +33,6 @@ check_deps() {
         fi
     done
 
-    # 检查 Docker 是否可用
     if ! docker info >/dev/null 2>&1; then
         error "Docker 未启动或无权限访问 /var/run/docker.sock"
     fi
@@ -54,7 +53,7 @@ generate_secret() {
     if [ -f "$SECRET_FILE" ]; then
         SECRET=$(cat "$SECRET_FILE")
     else
-        SECRET=$(openssl rand -hex 32)
+        SECRET=$(openssl rand -hex 32)  # 32 字节 = 64 hex
         echo -n "$SECRET" > "$SECRET_FILE"
     fi
 }
@@ -70,11 +69,9 @@ public_ip() {
 # ================= 开放端口 =================
 open_port() {
     local port="$1"
-    # ufw
     if command -v ufw >/dev/null 2>&1; then
         sudo ufw allow "$port"/tcp || true
     fi
-    # iptables
     sudo iptables -I INPUT -p tcp --dport "$port" -j ACCEPT || true
 }
 
@@ -84,7 +81,7 @@ run_container() {
     docker rm "$CONTAINER_NAME" 2>/dev/null || true
 
     if ! docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
-        -p "${PORT}:${PORT}" \
+        --network host \
         -e "MTPROXY_SECRET=$SECRET" \
         -e "MTPROXY_PORT=$PORT" \
         "$IMAGE"; then
