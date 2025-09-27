@@ -106,6 +106,7 @@ WORKDIR_SEARXNG="/opt/searxng"
 SEARXNG_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/searxng.sh"
 MTPROTO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/MTProto.sh"
 SYSTEM_TOOL_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/system_tool.sh"
+CLEAN_VPS_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/clean_vps.sh"
 
 # ================== 调用子脚本 ==================
 moon_menu() { bash <(fetch "${MOONTV_SCRIPT}?t=$(date +%s)"); }
@@ -122,6 +123,7 @@ posteio_menu() { bash <(fetch "${POSTEIO_SCRIPT}?t=$(date +%s)"); }
 searxng_menu() { bash <(fetch "${SEARXNG_SCRIPT}?t=$(date +%s)"); }
 mtproto_menu() { bash <(fetch "${MTPROTO_SCRIPT}?t=$(date +%s)"); read -rp "按任意键返回主菜单..."; }
 system_tool_menu() { bash <(fetch "${SYSTEM_TOOL_SCRIPT}?t=$(date +%s)"); read -rp "按任意键返回主菜单..."; }
+clean_vps_menu() { bash <(curl -fsSL "${CLEAN_VPS_SCRIPT}?t=$(date +%s)"); }
 
 # ================== Docker 服务检查 ==================
 check_docker_service() {
@@ -227,6 +229,7 @@ while true; do
         "13) SearxNG 一键安装/更新/卸载    $searxng_status" \
         "14) Telegram MTProto 代理         $(mtproto_status)" \
         "15) 系统工具（Swap 管理 + 主机名修改） ⚡" \
+        "16) VPS 容器/残留服务清理         ⚡" \
         "00) 更新菜单脚本 menu.sh" \
         "0) 退出" \
         "" \
@@ -250,6 +253,7 @@ while true; do
         13) searxng_menu ;;
         14) mtproto_menu ;;
         15) system_tool_menu ;;
+        16) clean_vps_menu ;;
         00) update_menu_script ;;
         0) exit 0 ;;
         *) error "❌ 无效输入"; sleep 1 ;;
