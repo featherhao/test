@@ -3,8 +3,8 @@ set -Eeuo pipefail
 
 # ================== 基础配置 ==================
 SERVICE_NAME="mtproxy"
-MTBIN="/usr/local/bin/mtproto-proxy"
 WORKDIR="/etc/mtproxy"
+MTBIN="$WORKDIR/mtproto-proxy"
 
 # ================== 系统判断 ==================
 if [[ -f /etc/os-release ]]; then
@@ -14,7 +14,7 @@ else
     exit 1
 fi
 
-# ================== 公用函数 ==================
+# ================== 公共函数 ==================
 gen_secret() {
     openssl rand -hex 16
 }
@@ -23,6 +23,7 @@ show_info() {
     local ip=$(curl -s ifconfig.me || echo "0.0.0.0")
     local port=$(cat "$WORKDIR/port" 2>/dev/null || echo "6688")
     local secret=$(cat "$WORKDIR/secret" 2>/dev/null || echo "none")
+    echo
     echo "————— Telegram MTProto 代理 信息 —————"
     echo "IP:       $ip"
     echo "端口:     $port"
@@ -36,7 +37,7 @@ show_info() {
     echo "————————————————————————————"
 }
 
-# ================== Alpine 部署 ==================
+# ================== Alpine 安装 ==================
 install_alpine() {
     echo "正在安装依赖..."
     apk add --no-cache curl openssl su-exec
@@ -51,16 +52,15 @@ install_alpine() {
     local secret=$(gen_secret)
     echo "$secret" > "$WORKDIR/secret"
 
-    # 让用户输入母机外部端口
-    echo -n "请输入母机映射的外部端口（例如 10000）: "
-    read port
-    echo "$port" > "$WORKDIR/port"
+    # 内部监听端口固定 6688
+    PORT=6688
+    echo "$PORT" > "$WORKDIR/port"
 
     # 写 OpenRC 服务
     cat >/etc/init.d/$SERVICE_NAME <<EOF
 #!/sbin/openrc-run
 command="$MTBIN"
-command_args="-u nobody -p 0.0.0.0:6688 -S $secret --aes-pwd $WORKDIR/proxy-secret $WORKDIR/proxy-multi.conf -M 1"
+command_args="-u nobody -p 0.0.0.0:$PORT -S $secret --aes-pwd $WORKDIR/proxy-secret $WORKDIR/proxy-multi.conf -M 1"
 command_background="yes"
 pidfile="/var/run/$SERVICE_NAME.pid"
 depend() {
@@ -74,7 +74,7 @@ EOF
     show_info
 }
 
-# ================== Ubuntu/Debian 部署 ==================
+# ================== Ubuntu/Debian 安装 ==================
 install_debian() {
     echo "正在安装依赖..."
     apt-get update -y
@@ -97,16 +97,55 @@ install_debian() {
     show_info
 }
 
-# ================== 主菜单 ==================
-menu() {
-    clear
+# ================== 修改 secret ==================
+change_secret() {
+    load_conf
+    SECRET=$(gen_secret)
+    echo "$SECRET" > "$WORKDIR/secret"
+
+    if [[ "$ID" == "alpine" ]]; then
+        rc-service $SERVICE_NAME restart
+    else
+        docker stop tg-mtproxy
+        docker rm tg-mtproxy
+        docker run -d --name tg-mtproxy --restart always \
+            -p 6688:443 \
+            -v $WORKDIR:/data \
+            telegrammessenger/proxy:latest \
+            -p 443 -H 443 -S $SECRET
+    fi
+    show_info
+}
+
+# 读配置
+load_conf() {
+    [ -f "$WORKDIR/port" ] && PORT=$(cat "$WORKDIR/port")
+    [ -f "$WORKDIR/secret" ] && SECRET=$(cat "$WORKDIR/secret")
+}
+
+# ================== 卸载 ==================
+uninstall() {
+    if [[ "$ID" == "alpine" ]]; then
+        rc-service $SERVICE_NAME stop || true
+        rc-update del $SERVICE_NAME default || true
+        rm -f /etc/init.d/$SERVICE_NAME $MTBIN
+    else
+        docker rm -f tg-mtproxy || true
+    fi
+    rm -rf "$WORKDIR"
+    echo "已卸载完成"
+}
+
+# ================== 菜单 ==================
+while true; do
+    echo
     echo "=============================="
     echo "   Telegram MTProto 管理菜单"
     echo "=============================="
     echo " 1) 安装"
-    echo " 2) 更新"
-    echo " 3) 卸载"
-    echo " 4) 查看信息"
+    echo " 2) 卸载"
+    echo " 3) 查看信息"
+    echo " 4) 修改 secret"
     echo " 5) 退出"
     echo "=============================="
     echo -n "请输入选项 [1-5]: "
@@ -120,24 +159,10 @@ menu() {
                 *) echo "暂不支持此系统: $ID" ;;
             esac
             ;;
-        2)
-            echo "更新功能待实现"
-            ;;
-        3)
-            if [[ "$ID" == "alpine" ]]; then
-                rc-service $SERVICE_NAME stop || true
-                rc-update del $SERVICE_NAME default || true
-                rm -f /etc/init.d/$SERVICE_NAME $MTBIN
-            else
-                docker rm -f tg-mtproxy || true
-            fi
-            rm -rf "$WORKDIR"
-            echo "已卸载完成"
-            ;;
-        4) show_info ;;
+        2) uninstall ;;
+        3) show_info ;;
+        4) change_secret ;;
         5) exit 0 ;;
         *) echo "无效选项" ;;
     esac
-}
-
-menu
+done
