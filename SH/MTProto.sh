@@ -1,175 +1,228 @@
-#!/bin/bash
-set -Eeuo pipefail
+#!/usr/bin/env bash
+set -e
 
-# ================== 基础配置 ==================
-SERVICE_NAME="mtproxy"
-WORKDIR="/etc/mtproxy"
-MTBIN="$WORKDIR/mtproto-proxy"
+IMAGE="telegrammessenger/proxy:latest"
+CONTAINER_NAME="tg-mtproxy"
+DATA_DIR="/etc/tg-proxy"
+SECRET_FILE="${DATA_DIR}/secret"
+DEFAULT_PORT=6688
+PORT=""
+SECRET=""
 
-# ================== 系统判断 ==================
-if [[ -f /etc/os-release ]]; then
-    . /etc/os-release
-else
-    echo "无法识别系统类型"
+# 确保脚本使用 Bash 运行
+if [ -z "$BASH_VERSION" ]; then
+    echo -e "\033[1;31m错误：请使用 Bash 运行此脚本，例如: bash $0\033[0m"
     exit 1
 fi
 
-# ================== 公共函数 ==================
-gen_secret() {
-    openssl rand -hex 16
+info() { printf "\033[1;34m%s\033[0m\n" "$*"; }
+warn() { printf "\033[1;33m%s\033[0m\n" "$*"; }
+error() { printf "\033[1;31m%s\033[0m\n" "$*"; exit 1; }
+
+# ================= 系统依赖检查 =================
+check_deps() {
+    for cmd in curl docker openssl; do
+        if ! command -v $cmd >/dev/null 2>&1; then
+            if command -v apk >/dev/null 2>&1; then
+                info "安装依赖 $cmd"
+                apk add --no-cache $cmd
+                # 修复 Alpine 缺少 ss 命令的问题
+                [ "$cmd" == "docker" ] && apk add --no-cache iproute2
+            elif command -v apt >/dev/null 2>&1; then
+                info "安装依赖 $cmd"
+                apt update && apt install -y $cmd iproute2
+            elif command -v yum >/dev/null 2>&1; then
+                info "安装依赖 $cmd"
+                yum install -y $cmd iproute2
+            else
+                warn "未找到包管理器，请手动安装 $cmd 和 iproute2"
+            fi
+        fi
+    done
+
+    # Alpine 自动启动 Docker (不会影响 systemd/Ubuntu)
+    if command -v rc-status >/dev/null 2>&1; then
+        rc-update add docker boot 2>/dev/null || true
+        service docker start || true
+    fi
+
+    # 检查 docker 可用性
+    if ! docker info >/dev/null 2>&1; then
+        error "Docker 未启动或无权限访问 /var/run/docker.sock"
+    fi
 }
 
+# ================= 查找空闲端口 =================
+find_free_port() {
+    port="$1"
+    # 使用 ss 检查端口占用，依赖 iproute2
+    while ss -ltn 2>/dev/null | awk '{print $4}' | grep -q ":$port\$"; do
+        port=$((port + 1))
+    done
+    echo "$port"
+}
+
+# ================= 生成 secret (保持不变) =================
+generate_secret() {
+    mkdir -p "$DATA_DIR"
+    if [ -f "$SECRET_FILE" ]; then
+        SECRET=$(cat "$SECRET_FILE")
+    else
+        if command -v openssl >/dev/null 2>&1; then
+            SECRET=$(openssl rand -hex 16)
+        else
+            SECRET=$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')
+        fi
+        echo -n "$SECRET" > "$SECRET_FILE"
+    fi
+}
+
+# ================= 获取公网 IP (保持不变) =================
+public_ip() {
+    curl -fs --max-time 5 https://api.ipify.org \
+    || curl -fs --max-time 5 https://ip.sb \
+    || curl -fs --max-time 5 https://ipinfo.io/ip \
+    || echo "UNKNOWN"
+}
+
+# ================= 启动容器 (增加错误处理) =================
+run_container() {
+    docker stop "$CONTAINER_NAME" 2>/dev/null || true
+    docker rm "$CONTAINER_NAME" 2>/dev/null || true
+
+    if ! docker run -d --name "$CONTAINER_NAME" --restart unless-stopped \
+        -p "${PORT}:${PORT}" \
+        -e "MTPROXY_SECRET=$SECRET" \
+        -e "MTPROXY_PORT=$PORT" \
+        "$IMAGE"; then
+            
+            # 捕获 LXC/Quota 错误
+            LOG=$(docker logs "$CONTAINER_NAME" 2>&1 || true)
+            if echo "$LOG" | grep -q "disk quota exceeded"; then
+                error "
+Docker 容器启动失败，错误原因很可能是您运行在 LXC/容器化的 VPS 上，存在 **Keyring 限制**。
+
+请执行以下步骤修复：
+1.  编辑 Docker 配置文件： \033[1;33msudo mkdir -p /etc/docker && sudo echo '{\"userns-remap\": \"default\"}' > /etc/docker/daemon.json\033[0m
+2.  重启 Docker 服务： \033[1;33msudo service docker restart\033[0m
+3.  \033[1;34m再次运行此脚本\033[0m
+                "
+            else
+                error "Docker 容器启动失败，请检查权限或磁盘空间。详细日志：\n$(docker logs "$CONTAINER_NAME" 2>&1 || true)"
+            fi
+        fi
+}
+
+# ================= 安装 =================
+install() {
+    check_deps
+    generate_secret
+    PORT=$(find_free_port "$DEFAULT_PORT")
+    docker pull "$IMAGE"
+    run_container
+    show_info
+}
+
+# ================= 更新 =================
+update() {
+    check_deps
+    generate_secret
+    # 尝试使用旧端口，否则寻找新端口
+    OLD_PORT=$(docker inspect -f '{{range .Config.Env}}{{if hasPrefix . "MTPROXY_PORT"}}{{.}}{{end}}{{end}}' "$CONTAINER_NAME" 2>/dev/null | cut -d '=' -f 2)
+    PORT=${OLD_PORT:-$(find_free_port "$DEFAULT_PORT")}
+    
+    docker pull "$IMAGE"
+    run_container
+    show_info
+}
+
+# ================= 更改端口 =================
+change_port() {
+    # 避免在 ash 中出现 'syntax error: bad substitution'
+    read -r -p "请输入新的端口号 (留空自动选择): " new_port
+    if [ -z "$new_port" ]; then
+        PORT=$(find_free_port "$DEFAULT_PORT")
+    else
+        PORT=$(find_free_port "$new_port")
+    fi
+    run_container
+    show_info
+}
+
+# ================= 更改 secret =================
+change_secret() {
+    if command -v openssl >/dev/null 2>&1; then
+        SECRET=$(openssl rand -hex 16)
+    else
+        SECRET=$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')
+    fi
+    echo -n "$SECRET" > "$SECRET_FILE"
+    run_container
+    show_info
+}
+
+# ================= 查看日志 (保持不变) =================
+show_logs() {
+    docker logs -f "$CONTAINER_NAME"
+}
+
+# ================= 卸载 (保持不变) =================
+uninstall() {
+    docker stop "$CONTAINER_NAME" 2>/dev/null || true
+    docker rm "$CONTAINER_NAME" 2>/dev/null || true
+    warn "容器已移除"
+    read -r -p "是否删除镜像 $IMAGE? (y/N): " yn
+    [ "$yn" = "y" ] || [ "$yn" = "Y" ] && docker rmi "$IMAGE"
+    read -r -p "是否删除数据目录 $DATA_DIR? (y/N): " yn2
+    [ "$yn2" = "y" ] || [ "$yn2" = "Y" ] && rm -rf "$DATA_DIR"
+}
+
+# ================= 显示节点信息 (保持不变) =================
 show_info() {
-    local ip=$(curl -s ifconfig.me || echo "0.0.0.0")
-    local port=$(cat "$WORKDIR/port" 2>/dev/null || echo "6688")
-    local secret=$(cat "$WORKDIR/secret" 2>/dev/null || echo "none")
-    echo
-    echo "————— Telegram MTProto 代理 信息 —————"
-    echo "IP:       $ip"
-    echo "端口:     $port"
-    echo "secret:   $secret"
+    IP=$(public_ip)
+    # 此处的变量替换在 bash 中无碍，现在脚本已强制使用 bash 运行。
+    PROXY_LINK="tg://proxy?server=${IP}&port=${PORT}&secret=${SECRET}"
+    TME_LINK="https://t.me/proxy?server=${IP}&port=${PORT}&secret=${SECRET}"
+
+    info "————— Telegram MTProto 代理 信息 —————"
+    echo "IP:       $IP"
+    echo "端口:     $PORT"
+    echo "secret:   $SECRET"
     echo
     echo "tg:// 链接:"
-    echo "tg://proxy?server=$ip&port=$port&secret=dd$secret"
+    echo "$PROXY_LINK"
     echo
     echo "t.me 分享链接:"
-    echo "https://t.me/proxy?server=$ip&port=$port&secret=dd$secret"
-    echo "————————————————————————————"
+    echo "$TME_LINK"
+    echo "———————————————————————————————"
 }
 
-# ================== Alpine 安装 ==================
-install_alpine() {
-    echo "正在安装依赖..."
-    apk add --no-cache curl openssl su-exec
-
-    mkdir -p "$WORKDIR"
-
-    echo "正在下载 MTProxy 二进制..."
-    curl -L -o "$MTBIN" https://github.com/TelegramMessenger/MTProxy/releases/download/v0.01/mtproto-proxy
-    chmod +x "$MTBIN"
-
-    # 生成 secret
-    local secret=$(gen_secret)
-    echo "$secret" > "$WORKDIR/secret"
-
-    # 内部监听端口固定 6688
-    PORT=6688
-    echo "$PORT" > "$WORKDIR/port"
-
-    # 写 OpenRC 服务
-    cat >/etc/init.d/$SERVICE_NAME <<EOF
-#!/sbin/openrc-run
-command="$MTBIN"
-command_args="-u nobody -p 0.0.0.0:$PORT -S $secret --aes-pwd $WORKDIR/proxy-secret $WORKDIR/proxy-multi.conf -M 1"
-command_background="yes"
-pidfile="/var/run/$SERVICE_NAME.pid"
-depend() {
-    need net
-}
-EOF
-    chmod +x /etc/init.d/$SERVICE_NAME
-    rc-update add $SERVICE_NAME default
-    rc-service $SERVICE_NAME restart
-
-    show_info
+# ================= 菜单 (保持不变) =================
+menu() {
+    while :; do
+        echo "请选择操作："
+        echo " 1) 安装"
+        echo " 2) 更新"
+        echo " 3) 卸载"
+        echo " 4) 查看信息"
+        echo " 5) 更改端口"
+        echo " 6) 更改 secret"
+        echo " 7) 查看日志"
+        echo " 8) 退出"
+        read -r -p "请输入选项 [1-8]: " choice
+        case "$choice" in
+            1) install ;;
+            2) update ;;
+            3) uninstall ;;
+            4) show_info ;;
+            5) change_port ;;
+            6) change_secret ;;
+            7) show_logs ;;
+            8) exit 0 ;;
+            *) warn "输入无效，请重新输入" ;;
+        esac
+    done
 }
 
-# ================== Ubuntu/Debian 安装 ==================
-install_debian() {
-    echo "检查 Docker 是否已安装..."
-    if ! command -v docker >/dev/null 2>&1; then
-        echo "Docker 未安装，正在安装..."
-        apt-get update -y
-        apt-get install -y docker.io curl openssl
-        systemctl enable docker
-        systemctl start docker
-    else
-        echo "检测到 Docker 已安装"
-    fi
-
-    mkdir -p "$WORKDIR"
-    local secret=$(gen_secret)
-    echo "$secret" > "$WORKDIR/secret"
-    local port=6688
-    echo "$port" > "$WORKDIR/port"
-
-    docker rm -f tg-mtproxy >/dev/null 2>&1 || true
-
-    docker run -d --name tg-mtproxy --restart always \
-        -p ${port}:443 \
-        -v $WORKDIR:/data \
-        telegrammessenger/proxy:latest \
-        /bin/sh -c "/usr/bin/mtproto-proxy -S $secret --aes-pwd /data/proxy-secret /data/proxy-multi.conf -M 1"
-
-    show_info
-}
-
-# ================== 修改 secret ==================
-change_secret() {
-    load_conf
-    SECRET=$(gen_secret)
-    echo "$SECRET" > "$WORKDIR/secret"
-
-    if [[ "$ID" == "alpine" ]]; then
-        rc-service $SERVICE_NAME restart
-    else
-        docker stop tg-mtproxy
-        docker rm tg-mtproxy
-        docker run -d --name tg-mtproxy --restart always \
-            -p 6688:443 \
-            -v $WORKDIR:/data \
-            telegrammessenger/proxy:latest \
-            /bin/sh -c "/usr/bin/mtproto-proxy -S $SECRET --aes-pwd /data/proxy-secret /data/proxy-multi.conf -M 1"
-    fi
-    show_info
-}
-
-# 读配置
-load_conf() {
-    [ -f "$WORKDIR/port" ] && PORT=$(cat "$WORKDIR/port")
-    [ -f "$WORKDIR/secret" ] && SECRET=$(cat "$WORKDIR/secret")
-}
-
-# ================== 卸载 ==================
-uninstall() {
-    if [[ "$ID" == "alpine" ]]; then
-        rc-service $SERVICE_NAME stop || true
-        rc-update del $SERVICE_NAME default || true
-        rm -f /etc/init.d/$SERVICE_NAME $MTBIN
-    else
-        docker rm -f tg-mtproxy || true
-    fi
-    rm -rf "$WORKDIR"
-    echo "已卸载完成"
-}
-
-# ================== 菜单 ==================
-while true; do
-    echo
-    echo "=============================="
-    echo "   Telegram MTProto 管理菜单"
-    echo "=============================="
-    echo " 1) 安装"
-    echo " 2) 卸载"
-    echo " 3) 查看信息"
-    echo " 4) 修改 secret"
-    echo " 0) 退出"
-    echo "=============================="
-    echo -n "请输入选项 [0-4]: "
-    read choice
-
-    case $choice in
-        1)
-            case "$ID" in
-                alpine) install_alpine ;;
-                ubuntu|debian) install_debian ;;
-                *) echo "暂不支持此系统: $ID" ;;
-            esac
-            ;;
-        2) uninstall ;;
-        3) show_info ;;
-        4) change_secret ;;
-        0) exit 0 ;;
-        *) echo "无效选项" ;;
-    esac
-done
+# 启动菜单
+menu
