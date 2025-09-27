@@ -41,8 +41,72 @@ fetch() {
     curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@"
 }
 
+run_url() {
+    bash <(fetch "$1")
+}
+
+# ================== 自我初始化 ==================
+SCRIPT_IS_FIRST_RUN=false
+if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
+    info "⚡ 检测到你是通过 <(curl …) 临时运行的"
+    info "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
+    curl -fsSL "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
+    chmod +x "$SCRIPT_PATH"
+    SCRIPT_IS_FIRST_RUN=true
+    sleep 2
+fi
+
+# ================== 快捷键 q/Q ==================
+set_q_shortcut_auto() {
+    local shell_rc=""
+    local script_cmd="bash ~/menu.sh"
+
+    if command -v apk &>/dev/null; then
+        shell_rc="$HOME/.profile"
+        script_cmd="sh ~/menu.sh"
+    elif [[ -n "${ZSH_VERSION:-}" ]]; then
+        shell_rc="$HOME/.zshrc"
+    else
+        shell_rc="$HOME/.bashrc"
+    fi
+
+    if ! grep -q "alias Q='${script_cmd}'" "$shell_rc" 2>/dev/null; then
+        echo "alias Q='${script_cmd}'" >> "$shell_rc"
+        echo "alias q='${script_cmd}'" >> "$shell_rc"
+        if $SCRIPT_IS_FIRST_RUN; then
+            info "✅ 已自动设置快捷键，下次可直接输入 q 或 Q 运行。"
+            info "👉 请执行 'source $shell_rc' 或重启终端以使其生效。"
+        fi
+    fi
+}
+set_q_shortcut_auto
+
+# ================== docker compose 兼容 ==================
+if command -v docker-compose &>/dev/null; then
+    COMPOSE="docker-compose"
+else
+    COMPOSE="docker compose"
+fi
+
 # ================== 子脚本路径 ==================
+WORKDIR_MOONTV="/opt/moontv"
+MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/mootvinstall.sh"
+WORKDIR_RUSTDESK="/opt/rustdesk"
+RUSTDESK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_rustdesk.sh"
+WORKDIR_LIBRETV="/opt/libretv"
+LIBRETV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_libretv.sh"
+ZJSYNC_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/zjsync.sh"
+NGINX_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/nginx"
+SUB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/subconverter-api.sh"
+SHLINK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_shlink.sh"
+ARGOSB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/argosb.sh"
+PANSO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/pansou.sh"
+POSTEIO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/Poste.io.sh"
+WORKDIR_SEARXNG="/opt/searxng"
+SEARXNG_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/searxng.sh"
+MTPROTO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/MTProto.sh"
 SYSTEM_TOOL_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/system_tool.sh"
+CLEAN_VPS_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/clean_vps.sh"
 
 # ================== 调用子脚本 ==================
 moon_menu() { bash <(fetch "${MOONTV_SCRIPT}?t=$(date +%s)"); }
@@ -59,6 +123,86 @@ posteio_menu() { bash <(fetch "${POSTEIO_SCRIPT}?t=$(date +%s)"); }
 searxng_menu() { bash <(fetch "${SEARXNG_SCRIPT}?t=$(date +%s)"); }
 mtproto_menu() { bash <(fetch "${MTPROTO_SCRIPT}?t=$(date +%s)"); read -rp "按任意键返回主菜单..."; }
 system_tool_menu() { bash <(fetch "${SYSTEM_TOOL_SCRIPT}?t=$(date +%s)"); read -rp "按任意键返回主菜单..."; }
+
+# ================== Docker 服务检查 ==================
+check_docker_service() {
+    local service_name="$1"
+    if ! command -v docker &>/dev/null; then
+        echo "❌ Docker 未安装"
+        return
+    fi
+    if ! docker info &>/dev/null; then
+        echo "❌ Docker 未运行"
+        return
+    fi
+    if docker ps -a --format '{{.Names}}' | grep -q "^${service_name}$"; then
+        if docker ps --format '{{.Names}}' | grep -q "^${service_name}$"; then
+            echo "✅ 运行中"
+        else
+            echo "⚠️ 已停止"
+        fi
+    else
+        echo "❌ 未安装"
+    fi
+}
+
+# ================== MTProto 状态检测 ==================
+mtproto_status() {
+    if systemctl list-unit-files 2>/dev/null | grep -q "mtg.service"; then
+        if systemctl is-active --quiet mtg; then
+            echo "✅ 运行中 (systemctl)"
+        else
+            echo "⚠️ 已停止 (systemctl)"
+        fi
+        return
+    fi
+    if command -v docker &>/dev/null; then
+        local cid
+        cid=$(docker ps -a --filter "ancestor=telegrammessenger/proxy" --format '{{.ID}}' | head -n1)
+        if [[ -z "$cid" ]]; then
+            cid=$(docker ps -a --filter "ancestor=mtproto" --format '{{.ID}}' | head -n1)
+        fi
+        if [[ -n "$cid" ]]; then
+            if docker ps --filter "id=$cid" --format '{{.ID}}' | grep -q .; then
+                echo "✅ 运行中 (docker)"
+            else
+                echo "⚠️ 已停止 (docker)"
+            fi
+            return
+        fi
+    fi
+    echo "❌ 未安装"
+}
+
+# ================== ArgoSB 状态检测 ==================
+argosb_status_check() {
+    if [[ -f "/opt/argosb/installed.flag" ]]; then
+        echo "✅ 已安装 (标记文件)"
+        return
+    fi
+    if command -v agsbx &>/dev/null || command -v agsb &>/dev/null; then
+        echo "✅ 已安装 (命令可用)"
+        return
+    fi
+    if [[ -f "/usr/local/bin/agsbx" ]] || [[ -f "/usr/local/bin/agsb" ]] || \
+       [[ -f "/usr/bin/agsbx" ]] || [[ -f "/usr/bin/agsb" ]] || \
+       [[ -f "$HOME/agsbx" ]] || [[ -f "$HOME/agsb" ]] || \
+       [[ -f "$HOME/agsbx.sh" ]] || [[ -f "$HOME/agsb.sh" ]]; then
+        echo "✅ 已安装 (文件存在)"
+        return
+    fi
+    echo "❌ 未安装"
+}
+
+# ================== 更新菜单脚本 ==================
+update_menu_script() {
+    info "🔄 正在更新 menu.sh..."
+    fetch "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
+    chmod +x "$SCRIPT_PATH"
+    info "✅ menu.sh 已更新到 $SCRIPT_PATH"
+    info "👉 以后可直接执行：bash ~/menu.sh"
+    sleep 2
+}
 
 # ================== 主菜单 ==================
 while true; do
@@ -94,7 +238,7 @@ while true; do
         "12) Shlink 短链接生成            $shlink_status" \
         "13) SearxNG 一键安装/更新/卸载    $searxng_status" \
         "14) Telegram MTProto 代理         $(mtproto_status)" \
-        "15) 系统工具（Swap/主机名/VPS清理） ⚡" \
+        "15) 系统工具（Swap 管理 + 主机名修改） ⚡" \
         "00) 更新菜单脚本 menu.sh" \
         "0) 退出" \
         "" \
