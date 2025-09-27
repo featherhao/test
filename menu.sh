@@ -176,24 +176,29 @@ mtproto_status() {
 }
 
 # ================== ArgoSB 状态检测 ==================
+# ================== ArgoSB 状态检测 ==================
 argosb_status_check() {
-    # 新安装标记文件
+    # 1. 新安装标记文件
     if [[ -f "/opt/argosb/installed.flag" ]]; then
         echo "✅ 已安装 (标记文件)"
         return
     fi
-    # 命令检测
-    if command -v agsbx &>/dev/null; then
+    # 2. 命令检测（兼容老版本 agsb 和新版本 agsbx）
+    if command -v agsbx &>/dev/null || command -v agsb &>/dev/null; then
         echo "✅ 已安装 (命令可用)"
         return
     fi
-    # 文件路径检测
-    if [[ -f "/usr/local/bin/agsbx" ]] || [[ -f "/usr/bin/agsbx" ]] || [[ -f "$HOME/agsbx" ]] || [[ -f "$HOME/agsbx.sh" ]]; then
+    # 3. 文件路径检测（兼容老版本和新版本）
+    if [[ -f "/usr/local/bin/agsbx" ]] || [[ -f "/usr/local/bin/agsb" ]] || \
+       [[ -f "/usr/bin/agsbx" ]] || [[ -f "/usr/bin/agsb" ]] || \
+       [[ -f "$HOME/agsbx" ]] || [[ -f "$HOME/agsb" ]] || \
+       [[ -f "$HOME/agsbx.sh" ]] || [[ -f "$HOME/agsb.sh" ]]; then
         echo "✅ 已安装 (文件存在)"
         return
     fi
     echo "❌ 未安装"
 }
+
 
 # ================== 更新菜单脚本 ==================
 update_menu_script() {
