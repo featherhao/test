@@ -20,12 +20,9 @@ gen_secret() {
 }
 
 show_info() {
-    local ip
-    ip=$(curl -s ifconfig.me || echo "0.0.0.0")
-    local port
-    port=$(cat "$WORKDIR/port" 2>/dev/null || echo "6688")
-    local secret
-    secret=$(cat "$WORKDIR/secret" 2>/dev/null || echo "none")
+    local ip=$(curl -s ifconfig.me || echo "0.0.0.0")
+    local port=$(cat "$WORKDIR/port" 2>/dev/null || echo "6688")
+    local secret=$(cat "$WORKDIR/secret" 2>/dev/null || echo "none")
     echo
     echo "————— Telegram MTProto 代理 信息 —————"
     echo "IP:       $ip"
@@ -52,12 +49,11 @@ install_alpine() {
     chmod +x "$MTBIN"
 
     # 生成 secret
-    local secret
-    secret=$(gen_secret)
+    local secret=$(gen_secret)
     echo "$secret" > "$WORKDIR/secret"
 
     # 内部监听端口固定 6688
-    local PORT=6688
+    PORT=6688
     echo "$PORT" > "$WORKDIR/port"
 
     # 写 OpenRC 服务
@@ -84,11 +80,7 @@ install_debian() {
     if ! command -v docker >/dev/null 2>&1; then
         echo "Docker 未安装，正在安装..."
         apt-get update -y
-        apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list
-        apt-get update -y
-        apt-get install -y docker-ce docker-ce-cli containerd.io
+        apt-get install -y docker.io curl openssl
         systemctl enable docker
         systemctl start docker
     else
@@ -96,8 +88,7 @@ install_debian() {
     fi
 
     mkdir -p "$WORKDIR"
-    local secret
-    secret=$(gen_secret)
+    local secret=$(gen_secret)
     echo "$secret" > "$WORKDIR/secret"
     local port=6688
     echo "$port" > "$WORKDIR/port"
@@ -108,7 +99,7 @@ install_debian() {
         -p ${port}:443 \
         -v $WORKDIR:/data \
         telegrammessenger/proxy:latest \
-        -S $secret --aes-pwd /data/proxy-secret /data/proxy-multi.conf -M 1
+        /bin/sh -c "/usr/bin/mtproto-proxy -S $secret --aes-pwd /data/proxy-secret /data/proxy-multi.conf -M 1"
 
     show_info
 }
@@ -116,7 +107,6 @@ install_debian() {
 # ================== 修改 secret ==================
 change_secret() {
     load_conf
-    local SECRET
     SECRET=$(gen_secret)
     echo "$SECRET" > "$WORKDIR/secret"
 
@@ -129,12 +119,12 @@ change_secret() {
             -p 6688:443 \
             -v $WORKDIR:/data \
             telegrammessenger/proxy:latest \
-            -S $SECRET --aes-pwd /data/proxy-secret /data/proxy-multi.conf -M 1
+            /bin/sh -c "/usr/bin/mtproto-proxy -S $SECRET --aes-pwd /data/proxy-secret /data/proxy-multi.conf -M 1"
     fi
     show_info
 }
 
-# ================== 读配置 ==================
+# 读配置
 load_conf() {
     [ -f "$WORKDIR/port" ] && PORT=$(cat "$WORKDIR/port")
     [ -f "$WORKDIR/secret" ] && SECRET=$(cat "$WORKDIR/secret")
