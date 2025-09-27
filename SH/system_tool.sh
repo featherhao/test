@@ -1,6 +1,6 @@
 #!/bin/bash
 # system_tool.sh - 系统工具脚本
-# 功能: 1. Swap 管理  2. 修改系统主机名
+# 功能: 1. Swap 管理  2. 修改系统主机名  3. VPS 容器/残留服务清理
 # 用法: sudo bash system_tool.sh
 
 set -e
@@ -27,26 +27,22 @@ create_swap() {
     SIZE=$1
     echo "[INFO] 设置 Swap 大小为 $SIZE"
 
-    # 关闭旧 swap
     if swapon --show | grep -q "$SWAPFILE"; then
         echo "[INFO] 关闭旧的 swap..."
         swapoff $SWAPFILE
     fi
 
-    # 删除旧 swap 文件
     if [ -f "$SWAPFILE" ]; then
         echo "[INFO] 删除旧的 swap 文件..."
         rm -f $SWAPFILE
     fi
 
-    # 创建新 swap
     echo "[INFO] 创建新的 swap 文件..."
     fallocate -l $SIZE $SWAPFILE || dd if=/dev/zero of=$SWAPFILE bs=1M count=${SIZE%G*}k
     chmod 600 $SWAPFILE
     mkswap $SWAPFILE
     swapon $SWAPFILE
 
-    # 持久化
     if ! grep -q "$SWAPFILE" /etc/fstab; then
         echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
     fi
@@ -72,6 +68,15 @@ change_hostname() {
     show_hostname
 }
 
+# ===== VPS 清理 =====
+CLEAN_VPS_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/clean_vps.sh"
+
+clean_vps() {
+    echo "[INFO] 正在执行 VPS 容器/残留服务清理..."
+    bash <(curl -fsSL "${CLEAN_VPS_SCRIPT}?t=$(date +%s)")
+    echo "[OK] 清理完成"
+}
+
 # ===== 菜单 =====
 menu() {
     while true; do
@@ -81,8 +86,9 @@ menu() {
         echo "请选择操作:"
         echo "1) Swap 管理"
         echo "2) 修改系统主机名"
+        echo "3) VPS 容器/残留服务清理"
         echo "0) 退出"
-        read -p "请输入选项 [0-2]: " choice
+        read -p "请输入选项 [0-3]: " choice
 
         case "$choice" in
             1)
@@ -105,6 +111,7 @@ menu() {
                 esac
                 ;;
             2) change_hostname ;;
+            3) clean_vps ;;
             0) echo "退出"; exit 0 ;;
             *) echo "[WARN] 无效选项";;
         esac
