@@ -1,7 +1,7 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-# 统一失败处理
+# ================== 统一失败处理 ==================
 trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
 
 # ================== 基础配置 ==================
@@ -31,15 +31,19 @@ render_menu() {
     local title="$1"; shift
     clear
     print_header "$title"
-    local item
     for item in "$@"; do
         echo -e "$item"
     done
     echo "=============================="
 }
 
-fetch() { curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@"; }
-run_url() { bash <(fetch "$1"); }
+fetch() {
+    curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@"
+}
+
+run_url() {
+    bash <(fetch "$1")
+}
 
 # ================== 自我初始化 ==================
 SCRIPT_IS_FIRST_RUN=false
@@ -52,6 +56,7 @@ if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
     sleep 2
 fi
 
+# ================== 快捷键 q/Q ==================
 set_q_shortcut_auto() {
     local shell_rc=""
     local script_cmd="bash ~/menu.sh"
@@ -120,11 +125,6 @@ mtproto_menu() { bash <(fetch "${MTPROTO_SCRIPT}?t=$(date +%s)"); read -rp "按�
 system_tool_menu() { bash <(fetch "${SYSTEM_TOOL_SCRIPT}?t=$(date +%s)"); read -rp "按任意键返回主菜单..."; }
 clean_vps_menu() { bash <(curl -fsSL "${CLEAN_VPS_SCRIPT}?t=$(date +%s)"); }
 
-# ================== ArgoSB 状态检测 ==================
-argosb_status_check() {
-    [[ -f "/opt/argosb/installed.flag" ]] && echo "✅ 已安装" || echo "❌ 未安装"
-}
-
 # ================== Docker 服务检查 ==================
 check_docker_service() {
     local service_name="$1"
@@ -171,6 +171,26 @@ mtproto_status() {
             fi
             return
         fi
+    fi
+    echo "❌ 未安装"
+}
+
+# ================== ArgoSB 状态检测 ==================
+argosb_status_check() {
+    # 新安装标记文件
+    if [[ -f "/opt/argosb/installed.flag" ]]; then
+        echo "✅ 已安装 (标记文件)"
+        return
+    fi
+    # 命令检测
+    if command -v agsbx &>/dev/null; then
+        echo "✅ 已安装 (命令可用)"
+        return
+    fi
+    # 文件路径检测
+    if [[ -f "/usr/local/bin/agsbx" ]] || [[ -f "/usr/bin/agsbx" ]] || [[ -f "$HOME/agsbx" ]] || [[ -f "$HOME/agsbx.sh" ]]; then
+        echo "✅ 已安装 (文件存在)"
+        return
     fi
     echo "❌ 未安装"
 }
@@ -227,6 +247,7 @@ while true; do
         "快捷键提示：此脚本已自动设置 q 或 Q 为快捷键，首次安装重启终端其生效"
 
     read -rp "请输入选项: " main_choice
+
     case "${main_choice}" in
         1) moon_menu ;;
         2) rustdesk_menu ;;
