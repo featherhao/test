@@ -1,213 +1,193 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-# ---------------- 基础配置 ----------------
-MT_NAME="mtproxy"
-DEFAULT_PORT=443
-# ****** 最终决定：使用官方镜像 ******
-DOCKER_IMAGE="telegrammessenger/proxy:latest" 
-DATA_DIR="/opt/mtproxy"
-
-# ****** 关键修正：伪装域名 Hex 和纯域名 ******
-FAKE_TLS_DOMAIN_HEX="7777772e6d6963726f736f66742e636f6d"
-FAKE_TLS_DOMAIN="www.microsoft.com" 
-
-# 全局变量
-PORT=$DEFAULT_PORT
-SECRET="" 
-PURE_SECRET=""
+# --- 变量定义 ---
+SCRIPT_DIR="/home/mtproxy"
+DOCKER_IMAGE="ellermister/mtproxy"
+DOCKER_NAME="mtproxy"
 
 C_RESET="\e[0m"; C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"
-# (省略日志和检查 Docker 等基础函数)
-
 log()   { echo -e "${C_GREEN}[INFO]${C_RESET} $1"; }
 error() { echo -e "${C_RED}[ERROR]${C_RESET} $1"; }
 warn()  { echo -e "${C_YELLOW}[WARN]${C_RESET} $1"; }
+
+# --- 基础工具函数 ---
 check_docker() {
     if ! command -v docker &>/dev/null; then
-        log "Docker 未安装，开始安装..."
-        sudo apt update
-        sudo apt install -y docker.io
-        sudo systemctl enable docker
-        sudo systemctl start docker
-        log "Docker 安装并启动成功。"
-    fi
-}
-update_global_config() {
-    if docker inspect -f '{{.State.Running}}' "$MT_NAME" &>/dev/null; then
-        
-        # 提取 PURE_SECRET
-        GLOBAL_PURE_SECRET_RAW=$(docker inspect "$MT_NAME" | grep '"SECRET="' | awk -F'"' '{print $4}')
-        if [[ -n "$GLOBAL_PURE_SECRET_RAW" ]]; then
-            # 组合回完整的 EE-Secret 用于链接显示
-            SECRET="ee${GLOBAL_PURE_SECRET_RAW}${FAKE_TLS_DOMAIN_HEX}"
-        fi
-        
-        # 提取端口 (从容器的Ports映射中获取外部端口号)
-        GLOBAL_PORT_RAW=$(docker inspect "$MT_NAME" --format '{{(index (index .NetworkSettings.Ports "443/tcp") 0).HostPort}}' 2>/dev/null || echo "")
-        if [[ -n "$GLOBAL_PORT_RAW" ]]; then
-             PORT=$GLOBAL_PORT_RAW
-        elif [[ -z "$PORT" ]]; then
-            PORT=$DEFAULT_PORT
-        fi
-        
-        return 0
-    else
-        return 1
-    fi
-}
-get_status() {
-    log "MTProxy 容器状态："
-    
-    if update_global_config; then
-        PUBLIC_IP=$(curl -s ifconfig.me)
-
-        if [[ -n "$SECRET" ]]; then
-            log "当前配置 - IP: ${PUBLIC_IP} | 端口: ${PORT} | Secret: ${SECRET}"
-            
-            # 检查端口监听状态
-            echo "—————————————————————————————————————"
-            log "正在检查宿主机端口 $PORT 是否在监听..."
-            sudo ss -tuln | grep "$PORT" || log "宿主机端口 $PORT 未监听（请检查日志或外部防火墙）"
-            echo "—————————————————————————————————————"
-
-            # 注意：这里会显示 Ports 映射 0.0.0.0:[PORT]->443/tcp
-            docker ps --filter "name=$MT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-            
-            echo "———————————————— Telegram MTProto 代理链接 ————————————————"
-            echo "tg:// 链接: tg://proxy?server=${PUBLIC_IP}&port=${PORT}&secret=${SECRET}"
-            echo "t.me 分享链接: https://t.me/proxy?server=${PUBLIC_IP}&port=${PORT}&secret=${SECRET}"
-            echo "—————————————————————————————————————————————————————————"
+        warn "Docker 未安装，Docker 方式安装需要先安装 Docker。"
+        read -rp "是否立即安装 Docker (y/N)? " CONFIRM
+        if [[ "$CONFIRM" == [yY] ]]; then
+            log "开始安装 Docker..."
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sh get-docker.sh
+            log "Docker 安装完成。请重新运行脚本。"
+            exit 0
         else
-            error "无法从容器中提取 Secret，请尝试重新运行安装或检查日志。"
+            error "Docker 安装已取消。"
+            exit 1
         fi
-    else
-        warn "MTProxy 容器 ($MT_NAME) 未运行或不存在。"
-        echo "—————————————————————————————————————"
-        docker ps -a --filter "name=$MT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
     fi
 }
 
-generate_secret() {
-    local PURE_SECRET_GEN
-    PURE_SECRET_GEN=$(openssl rand -hex 16)
-    local FULL_64_HEX="${PURE_SECRET_GEN}${FAKE_TLS_DOMAIN_HEX}"
-    echo "ee${FULL_64_HEX}"
+# --- 1. 原生脚本安装方式 ---
+install_script_mode() {
+    log "选择：使用原生脚本安装 MTProxy..."
+    log "建议：如果反复遇到错误，请更换为 Debian 9+ 或使用 Docker 方式。"
+
+    log "清理并创建安装目录: $SCRIPT_DIR"
+    rm -rf "$SCRIPT_DIR" || true
+    mkdir -p "$SCRIPT_DIR" && cd "$SCRIPT_DIR"
+
+    log "下载 MTProxy 安装脚本..."
+    curl -fsSL -o mtproxy.sh https://github.com/ellermister/mtproxy/raw/master/mtproxy.sh
+    chmod +x mtproxy.sh
+
+    log "执行安装脚本进行安装/配置..."
+    bash mtproxy.sh
+
+    log "原生 MTProxy 安装流程启动完毕。请注意屏幕上的提示信息。"
 }
 
-# ---------------- 安装 MTProxy ----------------
-install_mtproxy() {
+# --- 2. Docker 镜像安装方式 ---
+install_docker_mode() {
     check_docker
 
-    # 强制清理残留，但不再重启 Docker (避免中断 443 上的 Nginx)
-    log "强制清理残留容器..."
-    docker rm -f "$MT_NAME" &>/dev/null || true
-    # 移除 Docker 重启，防止中断 Nginx
+    log "选择：使用 Docker 镜像安装 MTProxy (开箱即用)..."
+    log "警告：该方式集成了 Nginx 伪装和白名单功能，与原生脚本二选一，请勿混用。"
 
-    read -rp "请输入端口号 (推荐 26666，否则使用默认 $DEFAULT_PORT): " INPUT_PORT
-    PORT=${INPUT_PORT:-$DEFAULT_PORT}
+    docker rm -f "$DOCKER_NAME" &>/dev/null || true
 
-    SECRET=$(generate_secret) 
-    # 官方镜像需要纯 Secret 和 Fake Domain 独立传递
-    PURE_SECRET=${SECRET:2:32} 
+    # 询问配置
+    read -rp "请输入映射的外部 HTTP 端口 (推荐 8080): " HTTP_PORT
+    read -rp "请输入映射的外部 HTTPS/TLS 端口 (推荐 8443): " HTTPS_PORT
+    read -rp "请输入伪装域名 (默认 cloudflare.com): " DOMAIN
+    DOMAIN=${DOMAIN:-"cloudflare.com"}
 
-    log "生成 EE-Prefix Secret (用于链接): $SECRET"
-    log "提取纯 Secret (用于容器启动): $PURE_SECRET"
+    read -rp "是否关闭 IP 白名单 (默认开启): [OFF/IP/IPSEG] (输入 OFF 禁用): " IP_WHITE_LIST
+    IP_WHITE_LIST=${IP_WHITE_LIST:-"IP"}
 
-    mkdir -p "$DATA_DIR"
+    SECRET=""
+    if [[ "$IP_WHITE_LIST" == "OFF" ]]; then
+        read -rp "请输入自定义 Secret (32位十六进制，留空则自动生成): " CUSTOM_SECRET
+        if [[ -n "$CUSTOM_SECRET" ]]; then
+             SECRET="-e secret=\"$CUSTOM_SECRET\""
+        fi
+    fi
 
-    log "开始启动 MTProxy 容器 (端口映射模式，官方镜像/绕过 443 冲突)..."
+    log "配置信息:"
+    log "  - HTTP 端口: $HTTP_PORT"
+    log "  - HTTPS 端口: $HTTPS_PORT"
+    log "  - 伪装域名: $DOMAIN"
+    log "  - 白名单模式: $IP_WHITE_LIST"
+
+    log "开始拉取并创建 Docker 容器..."
     
-    # ****** 最终修正：使用端口映射绕过 443 冲突 ******
-    docker run -d --name "$MT_NAME" \
-        --restart always \
-        -e SECRET="$PURE_SECRET" \
-        -e "FAKE_TLS_DOMAIN=$FAKE_TLS_DOMAIN" \
-        -v "$DATA_DIR":/data \
-        -p "$PORT":443 \
-        -p "$PORT":443/udp \
-        "$DOCKER_IMAGE"
+    # 构建 Docker run 命令
+    DOCKER_RUN_CMD="docker run -d \
+--name $DOCKER_NAME \
+--restart=always \
+-e domain=\"$DOMAIN\" \
+-e ip_white_list=\"$IP_WHITE_LIST\" \
+$SECRET \
+-p $HTTP_PORT:80 \
+-p $HTTPS_PORT:443 \
+$DOCKER_IMAGE"
+
+    # 执行命令
+    eval "$DOCKER_RUN_CMD"
 
     sleep 3
-    
-    log "MTProxy 安装完成！请检查运行状态。"
-    get_status
-    log "****** 最终提醒：如果仍不通，请检查 VPS 控制面板/安全组是否开放了端口 $PORT 的 TCP/UDP 流量。******"
+    log "MTProxy Docker 容器已启动。请查看日志获取链接参数。"
+    log "--------------------------------------------------------"
+    log "执行 'docker logs -f $DOCKER_NAME' 查看最终链接和 Secret。"
+    log "连接端口为外部映射端口，例如 $HTTPS_PORT。"
+    log "--------------------------------------------------------"
 }
 
-# ---------------- 更改端口/Secret 的通用重启函数 ----------------
-restart_with_new_config() {
-    local NEW_PORT="$1"
-    local NEW_SECRET="$2"
+
+# --- 3. Docker 管理功能 (简化) ---
+docker_management() {
+    local ACTION="$1"
     
-    if ! update_global_config; then
-        error "无法获取当前容器配置，请先运行安装 (选项 1) 或手动确定 Secret。"
+    if ! docker ps -a --filter "name=$DOCKER_NAME" --format "{{.Names}}" | grep -q "$DOCKER_NAME"; then
+        error "Docker 容器 '$DOCKER_NAME' 不存在，请先安装。"
         return 1
     fi
 
-    if [[ -n "$NEW_PORT" ]]; then PORT="$NEW_PORT"; fi
-    if [[ -n "$NEW_SECRET" ]]; then SECRET="$NEW_SECRET"; fi
-    if [[ -z "$SECRET" ]]; then error "无法确定 Secret，无法重启。"; return 1; fi
-    
-    PURE_SECRET=${SECRET:2:32}
-
-    log "停止并删除现有容器..."
-    docker rm -f "$MT_NAME" &>/dev/null || true
-
-    log "使用新配置 (端口映射模式, 端口: $PORT, Secret: $SECRET) 启动容器..."
-    
-    # ****** 最终修正：使用端口映射绕过 443 冲突 ******
-    docker run -d --name "$MT_NAME" \
-        --restart always \
-        -e SECRET="$PURE_SECRET" \
-        -e "FAKE_TLS_DOMAIN=$FAKE_TLS_DOMAIN" \
-        -v "$DATA_DIR":/data \
-        -p "$PORT":443 \
-        -p "$PORT":443/udp \
-        "$DOCKER_IMAGE"
-        
-    log "MTProxy 已使用新配置重启。"
-    get_status
-    log "请务必检查 VPS 控制面板/安全组是否开放了端口 $PORT 的 TCP/UDP 流量。"
+    case "$ACTION" in
+        start)
+            log "启动 Docker 容器..."
+            docker start "$DOCKER_NAME"
+            log "容器已启动。"
+            ;;
+        stop)
+            log "停止 Docker 容器..."
+            docker stop "$DOCKER_NAME"
+            log "容器已停止。"
+            ;;
+        restart)
+            log "重启 Docker 容器..."
+            docker restart "$DOCKER_NAME"
+            log "容器已重启。"
+            ;;
+        logs)
+            log "查看 Docker 容器日志 (按 Ctrl+C 退出)..."
+            docker logs -f "$DOCKER_NAME"
+            ;;
+        uninstall)
+            log "卸载 Docker 容器和镜像..."
+            docker rm -f "$DOCKER_NAME"
+            read -rp "是否删除本地镜像 $DOCKER_IMAGE? [y/N]: " REMOVE_IMAGE
+            if [[ "$REMOVE_IMAGE" == [yY] ]]; then
+                docker rmi "$DOCKER_IMAGE" &>/dev/null || true
+            fi
+            log "Docker 版 MTProxy 已卸载。"
+            ;;
+        *)
+            error "无效操作。"
+            ;;
+    esac
 }
 
 
-# --- (其他管理功能函数保持不变) ---
-# ... (为节省篇幅省略，请使用上一个回复中的完整脚本，但只替换上述修正后的函数部分) ...
+# --- 主菜单逻辑 ---
 
-update_mtproxy() { check_docker; log "开始拉取最新镜像..."; docker pull "$DOCKER_IMAGE"; if docker ps -a --filter "name=$MT_NAME" --format "{{.Names}}" | grep -q "$MT_NAME"; then log "容器存在，将停止、删除并使用新镜像重启..."; restart_with_new_config "" ""; else log "容器不存在，请选择 (1) 安装 MTProxy。"; fi }
-uninstall_mtproxy() { read -rp "警告: 确定要卸载 MTProxy 容器和镜像吗? [y/N]: " CONFIRM; if [[ "$CONFIRM" != [yY] ]]; then log "卸载已取消。"; return; fi; log "停止并删除容器..."; docker rm -f "$MT_NAME" &>/dev/null || true; read -rp "是否删除本地数据目录 $DATA_DIR ? [y/N]: " REMOVE_DATA; if [[ "$REMOVE_DATA" == [yY] ]]; then log "删除数据目录 $DATA_DIR ..."; rm -rf "$DATA_DIR"; fi; log "删除 Docker 镜像..."; docker rmi "$DOCKER_IMAGE" &>/dev/null || true; log "MTProxy 已彻底卸载。"; }
-change_port() { if ! update_global_config; then error "MTProxy 容器未运行，请先运行安装 (选项 1)。"; return 1; fi; read -rp "请输入新端口 (当前: $PORT): " NEW_PORT_INPUT; if [[ -z "$NEW_PORT_INPUT" ]]; then error "端口号不能为空。"; return 1; fi; log "准备修改端口为 $NEW_PORT_INPUT..."; restart_with_new_config "$NEW_PORT_INPUT" ""; }
-change_secret() { if ! update_global_config; then error "MTProxy 容器未运行，请先运行安装 (选项 1)。"; return 1; fi; read -rp "请输入新 secret (留空自动生成): " NEW_SECRET_INPUT; if [[ -z "$NEW_SECRET_INPUT" ]]; then NEW_SECRET_INPUT=$(generate_secret); log "自动生成新的 EE-Prefix Secret: $NEW_SECRET_INPUT"; fi; log "准备修改 Secret..."; restart_with_new_config "" "$NEW_SECRET_INPUT"; }
-show_logs() { log "正在查看 MTProxy 容器日志 (按 Ctrl+C 退出)..."; docker logs -f "$MT_NAME"; }
+# 如果用户只传入一个参数，则可能是管理命令
+if [[ $# -eq 1 ]]; then
+    if [[ "$1" == "docker-start" ]]; then docker_management start; exit 0; fi
+    if [[ "$1" == "docker-stop" ]]; then docker_management stop; exit 0; fi
+    if [[ "$1" == "docker-restart" ]]; then docker_management restart; exit 0; fi
+    if [[ "$1" == "docker-logs" ]]; then docker_management logs; exit 0; fi
+    if [[ "$1" == "docker-uninstall" ]]; then docker_management uninstall; exit 0; fi
+fi
 
 
-# ---------------- 主菜单 ----------------
 while true; do
     echo
-    echo "—————— Telegram MTProxy 管理脚本 (官方镜像/端口映射) ——————"
-    echo "当前容器名: ${MT_NAME} | 默认端口: ${DEFAULT_PORT}"
-    echo "请选择操作："
-    echo " 1) ${C_GREEN}安装/全新部署 (端口映射)${C_RESET}"
-    echo " 2) 更新镜像并重启"
-    echo " 3) 卸载"
-    echo " 4) 查看信息 (状态/IP/链接)"
-    echo " 5) 更改端口"
-    echo " 6) 更改 secret"
-    echo " 7) 查看日志"
+    echo "—————— MTProxy 一键安装管理脚本 ——————"
+    echo "请选择安装模式："
+    echo " 1) ${C_GREEN}原生脚本安装${C_RESET} (需要系统依赖, 运行官方脚本)"
+    echo " 2) ${C_YELLOW}Docker 镜像安装${C_RESET} (开箱即用, 伪装/白名单)"
+    echo "————————————————————————————————————"
+    echo "管理现有 Docker 容器 (如果已安装):"
+    echo " 3) 启动 Docker 容器"
+    echo " 4) 停止 Docker 容器"
+    echo " 5) 重启 Docker 容器"
+    echo " 6) 查看 Docker 日志"
+    echo " 7) 卸载 Docker 版本"
     echo " 8) 退出"
-    echo "—————————————————————————————————————"
+    echo "————————————————————————————————————"
     read -rp "请输入选项 [1-8]: " opt
 
     case $opt in
-        1) install_mtproxy ;;
-        2) update_mtproxy ;;
-        3) uninstall_mtproxy ;;
-        4) get_status ;;
-        5) change_port ;;
-        6) change_secret ;;
-        7) show_logs ;;
-        8) exit 0 ;;
-        *) error "无效选项：请输入 1-8 之间的数字。" ;;
+        1) install_script_mode ;;
+        2) install_docker_mode ;;
+        3) docker_management start ;;
+        4) docker_management stop ;;
+        5) docker_management restart ;;
+        6) docker_management logs ;;
+        7) docker_management uninstall ;;
+        8) log "退出脚本。"; exit 0 ;;
+        *) error "无效选项。" ;;
     esac
 done
