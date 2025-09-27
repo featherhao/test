@@ -5,8 +5,8 @@ set -Eeuo pipefail
 MT_NAME="mtproxy"
 # 推荐使用 443 端口以获得最佳抗封锁效果
 DEFAULT_PORT=443
-# ****** 核心修正：切换到社区维护的、更宽容的镜像 ******
-DOCKER_IMAGE="tehsamma/mtproto-proxy:latest" 
+# 最终工作镜像：x000b/mtproto-proxy (对 EE-Secret 友好)
+DOCKER_IMAGE="x000b/mtproto-proxy:latest"
 DATA_DIR="/opt/mtproxy"
 
 # ****** 关键修正：伪装域名 Hex ******
