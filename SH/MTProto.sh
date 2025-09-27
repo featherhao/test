@@ -32,34 +32,43 @@ check_docker() {
     fi
 }
 
-# ---------------- 获取运行状态 ----------------
-get_status() {
-    log "MTProxy 容器状态："
-    # 尝试获取并更新全局变量 PORT 和 SECRET，以供其他函数使用
+# ---------------- 自动获取运行配置 (兼容旧版 Docker) ----------------
+# 尝试从容器环境中提取当前的 PORT 和 SECRET，并更新全局变量
+update_global_config() {
     if docker inspect -f '{{.State.Running}}' "$MT_NAME" &>/dev/null; then
-        # 从 Docker inspect 中获取映射的端口（需要处理多端口映射，这里假设只有一个）
+        # 1. 提取映射的端口
+        # 使用 Go 模板提取 HostPort (兼容性较好)
         GLOBAL_PORT_RAW=$(docker inspect --format='{{range $p, $conf := .NetworkSettings.Ports}}{{(index $conf 0).HostPort}}{{end}}' "$MT_NAME")
         if [[ -n "$GLOBAL_PORT_RAW" ]]; then
              PORT=$GLOBAL_PORT_RAW
         fi
         
-        # 从 Docker inspect 中获取 Secret
-        GLOBAL_SECRET_RAW=$(docker inspect --format='{{range .Config.Env}}{{if hasPrefix "SECRET=" .}}{{trimPrefix "SECRET=" .}}{{end}}{{end}}' "$MT_NAME")
+        # 2. 提取 Secret (使用 grep/awk 兼容旧版 Docker)
+        GLOBAL_SECRET_RAW=$(docker inspect "$MT_NAME" | grep '"SECRET="' | awk -F'"' '{print $4}')
         if [[ -n "$GLOBAL_SECRET_RAW" ]]; then
             SECRET=$GLOBAL_SECRET_RAW
         fi
+        return 0 # 成功
+    else
+        return 1 # 容器未运行
+    fi
+}
 
-        log "当前配置 - IP: $(curl -s ifconfig.me) | 端口: $PORT | Secret: $SECRET"
+# ---------------- 获取运行状态 ----------------
+get_status() {
+    log "MTProxy 容器状态："
+    
+    if update_global_config; then
+        PUBLIC_IP=$(curl -s ifconfig.me)
+
+        log "当前配置 - IP: ${PUBLIC_IP} | 端口: ${PORT} | Secret: ${SECRET}"
         echo "—————————————————————————————————————"
         docker ps --filter "name=$MT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
         
-        if [[ -n "$SECRET" ]]; then
-            PUBLIC_IP=$(curl -s ifconfig.me)
-            echo "———————————————— Telegram MTProto 代理链接 ————————————————"
-            echo "tg:// 链接: tg://proxy?server=${PUBLIC_IP}&port=${PORT}&secret=${SECRET}"
-            echo "t.me 分享链接: https://t.me/proxy?server=${PUBLIC_IP}&port=${PORT}&secret=${SECRET}"
-            echo "—————————————————————————————————————————————————————————"
-        fi
+        echo "———————————————— Telegram MTProto 代理链接 ————————————————"
+        echo "tg:// 链接: tg://proxy?server=${PUBLIC_IP}&port=${PORT}&secret=${SECRET}"
+        echo "t.me 分享链接: https://t.me/proxy?server=${PUBLIC_IP}&port=${PORT}&secret=${SECRET}"
+        echo "—————————————————————————————————————————————————————————"
     else
         warn "MTProxy 容器 ($MT_NAME) 未运行或不存在。"
         echo "—————————————————————————————————————"
@@ -73,6 +82,7 @@ generate_secret() {
     local NEW_SECRET
     # 16 字节 => 32 hex
     NEW_SECRET=$(openssl rand -hex 16)
+    # 将 APP_NAME 附加到末尾，形成正确的 Secret 格式
     echo "${NEW_SECRET}${APP_NAME}"
 }
 
@@ -107,6 +117,48 @@ install_mtproxy() {
     
     log "MTProxy 安装完成！请检查运行状态。"
     get_status
+    log "注意：如果您无法连接，请检查服务器防火墙和云服务商安全组是否开放了端口 $PORT。"
+}
+
+# ---------------- 更改端口/Secret 的通用重启函数 ----------------
+restart_with_new_config() {
+    local NEW_PORT="$1"
+    local NEW_SECRET="$2"
+    
+    # 尝试获取旧配置
+    if ! update_global_config; then
+        error "无法获取当前容器配置，请先运行安装 (选项 1) 或手动确定 Secret。"
+        return 1
+    fi
+
+    # 如果有新端口，则使用新端口
+    if [[ -n "$NEW_PORT" ]]; then
+        PORT="$NEW_PORT"
+    fi
+    # 如果有新 Secret，则使用新 Secret
+    if [[ -n "$NEW_SECRET" ]]; then
+        SECRET="$NEW_SECRET"
+    fi
+    
+    if [[ -z "$SECRET" ]]; then
+        error "无法确定 Secret，无法重启。"
+        return 1
+    fi
+    
+    log "停止并删除现有容器..."
+    docker rm -f "$MT_NAME" &>/dev/null || true
+
+    log "使用新配置 (端口: $PORT, Secret: $SECRET) 启动容器..."
+    
+    docker run -d --name "$MT_NAME" \
+        --restart always \
+        -p "$PORT:$PORT" \
+        -e SECRET="$SECRET" \
+        -v "$DATA_DIR":/data \
+        "$DOCKER_IMAGE"
+        
+    log "MTProxy 已使用新配置重启。"
+    get_status
 }
 
 # ---------------- 更新镜像 ----------------
@@ -115,26 +167,11 @@ update_mtproxy() {
     log "开始拉取最新镜像..."
     docker pull "$DOCKER_IMAGE"
     
-    # 如果容器存在，则重启
+    # 检查容器是否存在
     if docker ps -a --filter "name=$MT_NAME" --format "{{.Names}}" | grep -q "$MT_NAME"; then
         log "容器存在，将停止、删除并使用新镜像重启..."
-        # 停止并删除旧容器
-        docker rm -f "$MT_NAME" || true
-        # 尝试从容器环境中获取旧配置，如果获取失败则退出
-        if ! get_status &>/dev/null; then
-            error "无法获取当前容器的配置（端口和 Secret），请手动输入或运行安装！"
-            return 1
-        fi
-        
-        # 重新运行容器使用新的镜像和旧的配置
-        log "使用旧配置 (端口: $PORT, Secret: $SECRET) 启动新容器..."
-        docker run -d --name "$MT_NAME" \
-            --restart always \
-            -p "$PORT:$PORT" \
-            -e SECRET="$SECRET" \
-            -v "$DATA_DIR":/data \
-            "$DOCKER_IMAGE"
-        log "MTProxy 已使用新镜像更新并重启。"
+        # 使用通用重启函数，保留当前的 PORT 和 SECRET
+        restart_with_new_config "" ""
     else
         log "容器不存在，请选择 (1) 安装 MTProxy。"
     fi
@@ -163,46 +200,15 @@ uninstall_mtproxy() {
     log "MTProxy 已彻底卸载。"
 }
 
-# ---------------- 更改端口/Secret 的通用重启函数 ----------------
-restart_with_new_config() {
-    local NEW_PORT="$1"
-    local NEW_SECRET="$2"
-    
-    # 尝试获取旧配置
-    get_status &>/dev/null 
-
-    # 如果有新端口，则使用新端口，否则使用旧端口
-    if [[ -n "$NEW_PORT" ]]; then
-        PORT="$NEW_PORT"
-    fi
-    # 如果有新 Secret，则使用新 Secret，否则使用旧 Secret
-    if [[ -n "$NEW_SECRET" ]]; then
-        SECRET="$NEW_SECRET"
-    fi
-    
-    if [[ -z "$SECRET" ]]; then
-        error "无法确定 Secret，无法重启。请先运行安装或手动指定 Secret。"
-        return 1
-    fi
-    
-    log "停止并删除现有容器..."
-    docker rm -f "$MT_NAME" &>/dev/null || true
-
-    log "使用新配置 (端口: $PORT, Secret: $SECRET) 启动容器..."
-    
-    docker run -d --name "$MT_NAME" \
-        --restart always \
-        -p "$PORT:$PORT" \
-        -e SECRET="$SECRET" \
-        -v "$DATA_DIR":/data \
-        "$DOCKER_IMAGE"
-        
-    log "MTProxy 已使用新配置重启。"
-    get_status
-}
 
 # ---------------- 修改端口 ----------------
 change_port() {
+    # 确保能获取到当前配置
+    if ! update_global_config; then
+         error "MTProxy 容器未运行，请先运行安装 (选项 1)。"
+         return 1
+    fi
+    
     read -rp "请输入新端口 (当前: $PORT): " NEW_PORT_INPUT
     if [[ -z "$NEW_PORT_INPUT" ]]; then
         error "端口号不能为空。"
@@ -215,6 +221,12 @@ change_port() {
 
 # ---------------- 修改 secret ----------------
 change_secret() {
+    # 确保能获取到当前配置
+    if ! update_global_config; then
+         error "MTProxy 容器未运行，请先运行安装 (选项 1)。"
+         return 1
+    fi
+    
     read -rp "请输入新 secret (留空自动生成): " NEW_SECRET_INPUT
     
     if [[ -z "$NEW_SECRET_INPUT" ]]; then
@@ -258,6 +270,6 @@ while true; do
         6) change_secret ;;
         7) show_logs ;;
         8) exit 0 ;;
-        *) echo "无效选项" ;;
+        *) error "无效选项：请输入 1-8 之间的数字。" ;;
     esac
 done
