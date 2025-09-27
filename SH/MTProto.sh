@@ -5,8 +5,8 @@ set -Eeuo pipefail
 MT_NAME="mtproxy"
 # 推荐使用 443 端口以获得最佳抗封锁效果
 DEFAULT_PORT=443
-# 最终稳定的工作镜像：seriyps/mtproxy (对 EE-Secret 友好)
-DOCKER_IMAGE="seriyps/mtproxy:latest"
+# ****** 核心修正：换回官方镜像，但修正启动参数 ******
+DOCKER_IMAGE="telegrammessenger/proxy:latest" 
 DATA_DIR="/opt/mtproxy"
 
 # ****** 关键修正：伪装域名 Hex ******
@@ -16,6 +16,11 @@ FAKE_TLS_DOMAIN_HEX="7777772e6d6963726f736f66742e636f6d"
 # 全局变量，用于存储当前运行的端口和 Secret
 PORT=$DEFAULT_PORT
 SECRET=""
+# 用于存储纯 Secret (只在启动容器时使用)
+PURE_SECRET="" 
+
+# 用于启动官方镜像所需的 FAKE_TLS_DOMAIN 变量
+FAKE_TLS_DOMAIN="www.microsoft.com" 
 
 C_RESET="\e[0m"; C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"
 
@@ -39,12 +44,14 @@ check_docker() {
 
 # ---------------- 自动获取运行配置 ----------------
 update_global_config() {
+    # 尝试从容器环境中提取当前的 PORT 和 SECRET，并更新全局变量
     if docker inspect -f '{{.State.Running}}' "$MT_NAME" &>/dev/null; then
         
-        # 提取 Secret
-        GLOBAL_SECRET_RAW=$(docker inspect "$MT_NAME" | grep '"SECRET="' | awk -F'"' '{print $4}')
-        if [[ -n "$GLOBAL_SECRET_RAW" ]]; then
-            SECRET=$GLOBAL_SECRET_RAW
+        # 提取 PURE_SECRET
+        GLOBAL_PURE_SECRET_RAW=$(docker inspect "$MT_NAME" | grep '"SECRET="' | awk -F'"' '{print $4}')
+        if [[ -n "$GLOBAL_PURE_SECRET_RAW" ]]; then
+            # 组合回完整的 EE-Secret 用于链接显示
+            SECRET="ee${GLOBAL_PURE_SECRET_RAW}${FAKE_TLS_DOMAIN_HEX}"
         fi
         
         # 提取端口 (Host 模式下从 ENV 变量获取)
@@ -52,7 +59,6 @@ update_global_config() {
         if [[ -n "$GLOBAL_PORT_RAW" ]]; then
              PORT=$GLOBAL_PORT_RAW
         elif [[ -z "$PORT" ]]; then
-            # 最终回退到默认端口
             PORT=$DEFAULT_PORT
         fi
         
@@ -72,7 +78,7 @@ get_status() {
         if [[ -n "$SECRET" ]]; then
             log "当前配置 - IP: ${PUBLIC_IP} | 端口: ${PORT} | Secret: ${SECRET}"
             echo "—————————————————————————————————————"
-            # Host 模式下 PORTS 字段会显示空白，但服务已在宿主机端口运行
+            # Host 模式下 PORTS 字段会显示空白，这是正常的。
             docker ps --filter "name=$MT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
             
             echo "———————————————— Telegram MTProto 代理链接 ————————————————"
@@ -92,15 +98,14 @@ get_status() {
 
 # ---------------- 自动生成合法的 EE-Prefix Fake TLS Secret ----------------
 generate_secret() {
-    local PURE_SECRET
+    local PURE_SECRET_GEN
     # 1. 生成纯 32 位 Hex Secret
-    PURE_SECRET=$(openssl rand -hex 16)
+    PURE_SECRET_GEN=$(openssl rand -hex 16)
     
     # 2. 拼接为 64 位 Hex (纯Secret + 伪装域名Hex)
-    local FULL_64_HEX="${PURE_SECRET}${FAKE_TLS_DOMAIN_HEX}"
+    local FULL_64_HEX="${PURE_SECRET_GEN}${FAKE_TLS_DOMAIN_HEX}"
     
-    # 3. ****** 核心修正：添加 'ee' 前缀，启用 Fake TLS 模式 ******
-    # 最终长度是 66 位 (ee + 64位 Hex)
+    # 3. 添加 'ee' 前缀，生成用于链接的 Secret
     echo "ee${FULL_64_HEX}"
 }
 
@@ -111,24 +116,30 @@ install_mtproxy() {
     read -rp "请输入端口号 (强烈建议使用 443，留空使用默认 $DEFAULT_PORT): " INPUT_PORT
     PORT=${INPUT_PORT:-$DEFAULT_PORT}
 
-    # SECRET 现在是完整的 ee + 64 位 Hex
-    SECRET=$(generate_secret)
+    # SECRET 是完整的 66位 ee... Secret，用于生成链接
+    SECRET=$(generate_secret) 
+    
+    # ****** 核心修正：提取纯 32 位 Secret 给 Docker 容器使用 ******
+    # PURE_SECRET = 移除前 2 位 (ee) 和 后 32 位 (伪装域名)
+    PURE_SECRET=${SECRET:2:32} 
 
-    log "生成 EE-Prefix Secret (Fake TLS): $SECRET"
+    log "生成 EE-Prefix Secret (用于链接): $SECRET"
+    log "提取纯 Secret (用于容器启动): $PURE_SECRET"
 
     mkdir -p "$DATA_DIR"
 
     # 停止并删除旧容器
     docker rm -f "$MT_NAME" &>/dev/null || true
 
-    log "开始启动 MTProxy 容器 (Host 网络模式, 社区镜像)..."
+    log "开始启动 MTProxy 容器 (Host 网络模式, 官方镜像/EE修正)..."
     
-    # ****** 核心启动：使用 Host 网络模式，并传递 PORT 环境变量 ******
+    # ****** 核心启动：分离 SECRET 和 FAKE_TLS_DOMAIN 参数 ******
     docker run -d --name "$MT_NAME" \
         --restart always \
         --network host \
-        -e SECRET="$SECRET" \
+        -e SECRET="$PURE_SECRET" \
         -e PORT="$PORT" \
+        -e 'FAKE_TLS_DOMAIN=www.microsoft.com' \
         -v "$DATA_DIR":/data \
         "$DOCKER_IMAGE"
 
@@ -162,17 +173,21 @@ restart_with_new_config() {
         return 1
     fi
     
+    # ****** 核心修正：提取纯 32 位 Secret 给 Docker 容器使用 ******
+    PURE_SECRET=${SECRET:2:32}
+
     log "停止并删除现有容器..."
     docker rm -f "$MT_NAME" &>/dev/null || true
 
     log "使用新配置 (Host 模式, 端口: $PORT, Secret: $SECRET) 启动容器..."
     
-    # ****** 核心启动：使用 Host 网络模式，并传递 PORT 环境变量 ******
+    # ****** 核心启动：分离 SECRET 和 FAKE_TLS_DOMAIN 参数 ******
     docker run -d --name "$MT_NAME" \
         --restart always \
         --network host \
-        -e SECRET="$SECRET" \
+        -e SECRET="$PURE_SECRET" \
         -e PORT="$PORT" \
+        -e 'FAKE_TLS_DOMAIN=www.microsoft.com' \
         -v "$DATA_DIR":/data \
         "$DOCKER_IMAGE"
         
@@ -260,7 +275,7 @@ show_logs() {
 # ---------------- 主菜单 ----------------
 while true; do
     echo
-    echo "—————— Telegram MTProxy 管理脚本 (Host 网络模式/EE-Prefix) ——————"
+    echo "—————— Telegram MTProxy 管理脚本 (官方镜像/EE-修正) ——————"
     echo "当前容器名: ${MT_NAME} | 默认端口: ${DEFAULT_PORT}"
     echo "请选择操作："
     echo " 1) ${C_GREEN}安装/全新部署${C_RESET}"
