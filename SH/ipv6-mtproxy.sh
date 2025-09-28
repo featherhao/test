@@ -1,11 +1,15 @@
 #!/bin/bash
 ###
-# MTProto IPv6 + Cloudflare Tunnel 一键安装脚本
+# MTProto IPv6 + Cloudflare Tunnel 一键安装脚本 (最新可直接 curl 执行)
 # Author: ChatGPT
 # Date: 2025-09-28
 ###
 
 set -Eeuo pipefail
+
+# 版本自检
+SCRIPT_VERSION="2025-09-28_v1"
+echo -e "[INFO] Running IPv6 MTProto script version: ${SCRIPT_VERSION}"
 
 # 彩色输出
 red='\033[0;31m'
@@ -30,7 +34,8 @@ install_mtg(){
     bit=$(uname -m)
     [[ "$bit" == "x86_64" ]] && bit="amd64"
     [[ "$bit" == "aarch64" ]] && bit="arm64"
-    last_ver=$(curl -Ls "https://api.github.com/repos/9seconds/mtg/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    last_ver=$(curl -fsSL --header 'Cache-Control: no-cache' \
+        "https://api.github.com/repos/9seconds/mtg/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
     version=${last_ver#v}
     wget -N --no-check-certificate "https://github.com/9seconds/mtg/releases/download/${last_ver}/mtg-${version}-linux-${bit}.tar.gz"
     tar -xzf mtg-${version}-linux-${bit}.tar.gz
