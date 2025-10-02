@@ -11,6 +11,26 @@ info()  { echo -e "${green}[INFO]${plain} $1"; }
 warn()  { echo -e "${yellow}[WARN]${plain} $1"; }
 error() { echo -e "${red}[ERROR]${plain} $1"; }
 
+# ================== 获取公网 IP ==================
+get_public_ip() {
+    for svc in "https://api.ipify.org" "https://ifconfig.co" "https://icanhazip.com" "https://ipinfo.io/ip"; do
+        ip=$(curl -fsS --max-time 3 "$svc" 2>/dev/null || true)
+        if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "$ip"
+            return 0
+        fi
+    done
+    ip=$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' | head -n1)
+    if [[ $ip ]]; then echo "$ip"; return 0; fi
+    for candidate in $(hostname -I 2>/dev/null); do
+        if ! [[ $candidate =~ ^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.) ]]; then
+            echo "$candidate"; return 0
+        fi
+    done
+    echo "$(hostname -I 2>/dev/null | awk '{print $1}')"
+    return 1
+}
+
 # ================== 架构检测 ==================
 detect_arch() {
     arch=$(uname -m)
@@ -44,13 +64,12 @@ check_docker() {
 # ================== docker-compose.yml 生成 ==================
 make_compose() {
     cat > docker-compose.yml <<EOF
-version: "3.8"
 services:
   cov:
     image: $IMAGE
     container_name: cov
     ports:
-      - "50000:50000"
+      - "$PORT:50000"
     command: ["python", "web.py", "--port", "50000"]
     stdin_open: true
     tty: true
@@ -62,27 +81,41 @@ EOF
 install_cov() {
     detect_arch
     check_docker
+    read -p "请输入服务端口 [默认50000]: " port
+    PORT=${port:-50000}
     make_compose
     info "启动服务..."
-    docker-compose up -d
-    sleep 2
+    docker-compose up -d || true
+    sleep 3
     status_cov
 }
 
 status_cov() {
-    if docker ps --filter "name=cov" --filter "status=running" | grep cov &>/dev/null; then
-        ip=$(hostname -I | awk '{print $1}')
-        info "容器运行中"
-        echo -e "📦 镜像: $IMAGE"
-        echo -e "🌍 访问地址: ${green}http://$ip:50000${plain}"
-    else
-        error "容器未运行"
+    if ! docker ps --filter "name=^/cov$" --filter "status=running" --format '{{.Names}}' | grep -xq cov; then
+        error "容器 cov 未运行"
+        echo "可用命令： docker logs cov / docker-compose up -d"
+        return 1
     fi
+
+    bind_info=$(docker port cov 2>/dev/null || true)
+    public_ip=$(get_public_ip)
+    ip_note=""
+    if [[ $public_ip =~ ^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.) ]]; then
+        ip_note="（内网地址，可能无法公网访问）"
+    fi
+
+    echo -e "${green}[INFO]${plain} 容器运行中： cov"
+    echo -e "📦 镜像: $(docker inspect --format='{{.Config.Image}}' cov 2>/dev/null || echo 'unknown')"
+    [[ -n "$bind_info" ]] && echo -e "🔌 端口映射: $bind_info"
+    [[ -n "$public_ip" ]] && echo -e "🌍 建议访问地址: http://$public_ip:50000 $ip_note"
+    echo -n "📡 本机 IP: "
+    hostname -I 2>/dev/null | tr ' ' '\n' | grep -v "^127\." | xargs
+    return 0
 }
 
 uninstall_cov() {
     if [[ -f docker-compose.yml ]]; then
-        docker-compose down
+        docker-compose down || true
         rm -f docker-compose.yml
         info "容器已卸载，配置已删除"
     else
