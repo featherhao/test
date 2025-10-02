@@ -37,13 +37,8 @@ render_menu() {
     echo "=============================="
 }
 
-fetch() {
-    curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@"
-}
-
-run_url() {
-    bash <(fetch "$1")
-}
+fetch() { curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@"; }
+run_url() { bash <(fetch "$1"); }
 
 # ================== 自我初始化 ==================
 SCRIPT_IS_FIRST_RUN=false
@@ -89,8 +84,11 @@ else
 fi
 
 # ================== 子脚本路径 ==================
+WORKDIR_MOONTV="/opt/moontv"
 MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/mootvinstall.sh"
+WORKDIR_RUSTDESK="/opt/rustdesk"
 RUSTDESK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_rustdesk.sh"
+WORKDIR_LIBRETV="/opt/libretv"
 LIBRETV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_libretv.sh"
 ZJSYNC_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/zjsync.sh"
 NGINX_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/nginx"
@@ -99,12 +97,14 @@ SHLINK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main
 ARGOSB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/argosb.sh"
 PANSO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/pansou.sh"
 POSTEIO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/Poste.io.sh"
+WORKDIR_SEARXNG="/opt/searxng"
 SEARXNG_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/searxng.sh"
 MTPROTO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/MTProto.sh"
 SYSTEM_TOOL_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/system_tool.sh"
+CLEAN_VPS_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/clean_vps.sh"
 COSYVOICE_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/cosyvoice.sh"
 
-# ================== 调用子脚本函数 ==================
+# ================== 调用子脚本 ==================
 moon_menu() { bash <(fetch "${MOONTV_SCRIPT}?t=$(date +%s)"); }
 rustdesk_menu() { bash <(fetch "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
 libretv_menu() { bash <(fetch "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
@@ -121,7 +121,7 @@ mtproto_menu() { bash <(fetch "${MTPROTO_SCRIPT}?t=$(date +%s)"); read -rp "按�
 system_tool_menu() { bash <(fetch "${SYSTEM_TOOL_SCRIPT}?t=$(date +%s)"); read -rp "按任意键返回主菜单..."; }
 cosyvoice_menu() { bash <(fetch "${COSYVOICE_SCRIPT}?t=$(date +%s)"); read -rp "按任意键返回主菜单..."; }
 
-# ================== Docker 服务检测 ==================
+# ================== Docker 服务检查 ==================
 check_docker_service() {
     local service_name="$1"
     if ! command -v docker &>/dev/null; then
@@ -143,17 +143,45 @@ check_docker_service() {
     fi
 }
 
-# ================== CosyVoice 状态检测 ==================
-cosyvoice_status() {
-    if docker ps -a --format '{{.Names}}' | grep -q "^cov$"; then
-        if docker ps --format '{{.Names}}' | grep -q "^cov$"; then
-            echo "✅ 运行中"
+# ================== MTProto 状态检测 ==================
+mtproto_status() {
+    if systemctl list-unit-files 2>/dev/null | grep -q "mtg.service"; then
+        if systemctl is-active --quiet mtg; then
+            echo "✅ 运行中 (systemctl)"
         else
-            echo "⚠️ 已停止"
+            echo "⚠️ 已停止 (systemctl)"
         fi
-    else
-        echo "❌ 未安装"
+        return
     fi
+    if command -v docker &>/dev/null; then
+        local cid
+        cid=$(docker ps -a --filter "ancestor=telegrammessenger/proxy" --format '{{.ID}}' | head -n1)
+        if [[ -z "$cid" ]]; then
+            cid=$(docker ps -a --filter "ancestor=mtproto" --format '{{.ID}}' | head -n1)
+        fi
+        if [[ -n "$cid" ]]; then
+            if docker ps --filter "id=$cid" --format '{{.ID}}' | grep -q .; then
+                echo "✅ 运行中 (docker)"
+            else
+                echo "⚠️ 已停止 (docker)"
+            fi
+            return
+        fi
+    fi
+    echo "❌ 未安装"
+}
+
+# ================== ArgoSB 状态检测 ==================
+argosb_status_check() {
+    if [[ -f "/opt/argosb/installed.flag" ]]; then
+        echo "✅ 已安装 (标记文件)"
+        return
+    fi
+    if command -v agsbx &>/dev/null || command -v agsb &>/dev/null; then
+        echo "✅ 已安装 (命令可用)"
+        return
+    fi
+    echo "❌ 未安装"
 }
 
 # ================== 更新菜单脚本 ==================
@@ -168,22 +196,22 @@ update_menu_script() {
 
 # ================== 主菜单 ==================
 while true; do
-    [[ -d /opt/moontv ]] && moon_status="✅ 已安装" || moon_status="❌ 未安装"
-    [[ -d /opt/rustdesk ]] && rustdesk_status="✅ 已安装" || rustdesk_status="❌ 未安装"
-    [[ -d /opt/libretv ]] && libretv_status="✅ 已安装" || libretv_status="❌ 未安装"
+    # 安装状态判断 + 绿色显示
+    [[ -d /opt/moontv ]] && moon_status="${C_GREEN}✅ 已安装${C_RESET}" || moon_status="❌ 未安装"
+    [[ -d /opt/rustdesk ]] && rustdesk_status="${C_GREEN}✅ 已安装${C_RESET}" || rustdesk_status="❌ 未安装"
+    [[ -d /opt/libretv ]] && libretv_status="${C_GREEN}✅ 已安装${C_RESET}" || libretv_status="❌ 未安装"
     if command -v sing-box &>/dev/null || command -v sb &>/dev/null; then
-        singbox_status="✅ 已安装"
+        singbox_status="${C_GREEN}✅ 已安装${C_RESET}"
     else
         singbox_status="❌ 未安装"
     fi
     argosb_status=$(argosb_status_check)
     panso_status=$(check_docker_service "pansou-web")
-    zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "✅ 已配置" || echo "❌ 未配置")
+    zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "${C_GREEN}✅ 已配置${C_RESET}" || echo "❌ 未配置")
     subconverter_status=$(check_docker_service "subconverter")
     shlink_status=$(check_docker_service "shlink")
     posteio_status=$(check_docker_service "posteio")
     searxng_status=$(check_docker_service "searxng")
-    cosyvoice_status_text=$(cosyvoice_status)
     kejilion_status="⚡ 远程调用"
 
     render_menu "🚀 服务管理中心" \
@@ -201,7 +229,7 @@ while true; do
         "12) Shlink 短链接生成            $shlink_status" \
         "13) SearxNG 一键安装/更新/卸载    $searxng_status" \
         "14) Telegram MTProto 代理         $(mtproto_status)" \
-        "15) CosyVoice CPU版 TTS           $cosyvoice_status_text" \
+        "15) CosyVoice 文本转语音          $(check_docker_service "cov")" \
         "16) 系统工具（Swap 管理 + 主机名修改） ⚡" \
         "00) 更新菜单脚本 menu.sh" \
         "0) 退出" \
@@ -209,7 +237,6 @@ while true; do
         "快捷键提示：此脚本已自动设置 q 或 Q 为快捷键，首次安装重启终端其生效"
 
     read -rp "请输入选项: " main_choice
-
     case "${main_choice}" in
         1) moon_menu ;;
         2) rustdesk_menu ;;
