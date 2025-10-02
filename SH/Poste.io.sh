@@ -1,257 +1,283 @@
 #!/bin/bash
 set -e
 
-WORKDIR="/root"
-DATADIR="$WORKDIR/posteio_data"
-COMPOSE_FILE="$WORKDIR/poste.io.docker-compose.yml"
+# ================= 基础配置 =================
+WORKDIR="/opt/poste.io"
+DATADIR="${WORKDIR}/data"
+COMPOSE_FILE="${WORKDIR}/docker-compose.yml"
+ENV_FILE="${WORKDIR}/.env"
 CONTAINER_NAME="poste.io"
-IMAGE="analogic/poste.io"
+POSTE_IMAGE="analogic/poste.io"
+DEFAULT_DOMAIN="mail.example.com"
+DEFAULT_ADMIN="admin@${DEFAULT_DOMAIN}"
 
-# docker compose wrapper (兼容 docker-compose 和 docker compose)
-DOCKER_COMPOSE() {
-  if command -v docker-compose >/dev/null 2>&1; then
-    docker-compose "$@"
-  else
-    docker compose "$@"
-  fi
-}
+# ================= 公共方法 =================
+info()  { echo -e "\e[32m[INFO]\e[0m $*"; }
+warn()  { echo -e "\e[33m[WARN]\e[0m $*"; }
+error() { echo -e "\e[31m[ERROR]\e[0m $*"; exit 1; }
 
-# 简单检查 Docker
 ensure_docker() {
-  if ! command -v docker >/dev/null 2>&1; then
-    echo "❌ 未检测到 docker，请先安装 Docker 后重试。"
-    exit 1
-  fi
+    command -v docker >/dev/null 2>&1 || error "未检测到 Docker，请先安装。"
 }
 
-# 检查是否已安装（容器存在）
 check_installed() {
-  docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
+    docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
 }
 
-# 从 compose 文件读取 DOMAIN / 端口（容错）
-read_compose_info() {
-  DOMAIN=""
-  HTTP_PORT="80"
-  HTTPS_PORT="443"
-  ADMIN_EMAIL=""
-  if [ -f "$COMPOSE_FILE" ]; then
-    # 读取 HOSTNAME / POSTMASTER_ADDRESS
-    DOMAIN=$(grep -m1 -E 'HOSTNAME=' "$COMPOSE_FILE" 2>/dev/null | sed -E 's/.*HOSTNAME=//;s/\s*$//' || true)
-    ADMIN_EMAIL=$(grep -m1 -E 'POSTMASTER_ADDRESS=' "$COMPOSE_FILE" 2>/dev/null | sed -E 's/.*POSTMASTER_ADDRESS=//;s/\s*$//' || true)
-
-    # 尝试读取映射到容器 80/443 的宿主端口（支持双引号格式 - "81:80"）
-    if grep -q ':80"' "$COMPOSE_FILE" 2>/dev/null; then
-      HTTP_PORT=$(grep -Po '^\s*-\s*"\K(\d+)(?=:80")' "$COMPOSE_FILE" 2>/dev/null || echo "80")
-    elif grep -q ':80' "$COMPOSE_FILE" 2>/dev/null; then
-      HTTP_PORT=$(grep -Po '^\s*-\s*\K(\d+)(?=:80)' "$COMPOSE_FILE" 2>/dev/null || echo "80")
-    fi
-
-    if grep -q ':443"' "$COMPOSE_FILE" 2>/dev/null; then
-      HTTPS_PORT=$(grep -Po '^\s*-\s*"\K(\d+)(?=:443")' "$COMPOSE_FILE" 2>/dev/null || echo "443")
-    elif grep -q ':443' "$COMPOSE_FILE" 2>/dev/null; then
-      HTTPS_PORT=$(grep -Po '^\s*-\s*\K(\d+)(?=:443)' "$COMPOSE_FILE" 2>/dev/null || echo "443")
-    fi
-  fi
-}
-
-# 获取首个可用本机 IP（用于展示）
+# ================= 获取本机 IP =================
 get_server_ip() {
-  # 优先使用 hostname -I，如果没有再使用 curl 公网 IP（如果有）
-  local ip
-  ip=$(hostname -I 2>/dev/null | awk '{print $1}')
-  if [ -z "$ip" ]; then
-    if command -v curl >/dev/null 2>&1; then
-      ip=$(curl -s4 https://api.ipify.org || true)
+    ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+    if [ -z "$ip" ]; then
+        ip=$(curl -s4 https://api.ipify.org 2>/dev/null || true)
     fi
-  fi
-  echo "$ip"
+    if [ -z "$ip" ]; then
+        read -rp "无法自动获取服务器 IP，请手动输入: " ip
+    fi
+    echo "$ip"
 }
 
-# 显示信息：域名不带端口，IP 带端口（若为非标准端口）
-show_info() {
-  read_compose_info
-  local server_ip
-  server_ip=$(get_server_ip)
-
-  echo "----- Poste.io 运行信息 -----"
-  echo "容器名称: ${CONTAINER_NAME}"
-  echo "容器状态: $(docker inspect -f '{{.State.Status}}' ${CONTAINER_NAME} 2>/dev/null || echo '未运行')"
-  echo "数据目录: ${DATADIR}"
-  [ -n "$ADMIN_EMAIL" ] && echo "管理员邮箱: ${ADMIN_EMAIL}"
-  echo ""
-  echo "访问地址："
-
-  # 域名：直接显示不带端口（按你的要求）
-  if [ -n "$DOMAIN" ]; then
-    echo "  - 域名 (不带端口)："
-    echo "      http  : http://${DOMAIN}"
-    echo "      https : https://${DOMAIN}"
-    # 如果使用了非标准端口，提示一下（可选）
-    if [ "${HTTP_PORT}" != "80" ] || [ "${HTTPS_PORT}" != "443" ]; then
-      echo "    ⚠️ 注意：宿主端口映射为 HTTP=${HTTP_PORT}, HTTPS=${HTTPS_PORT}，若未通过反向代理或 DNS 端口转发，直接访问域名可能需要额外配置。"
+# ================= 检测端口 =================
+detect_ports() {
+    HTTP_PORT=80
+    HTTPS_PORT=443
+    if ss -ltn | grep -q ':80 '; then
+        warn "80 端口已占用，改用 81"
+        HTTP_PORT=81
     fi
-  else
-    echo "  - 域名：未在 Compose 文件中检测到 HOSTNAME（未设置）"
-  fi
-
-  # IP：带端口（非标准端口才加）
-  if [ -n "$server_ip" ]; then
-    local http_ip_url="http://${server_ip}"
-    local https_ip_url="https://${server_ip}"
-    if [ "${HTTP_PORT}" != "80" ]; then
-      http_ip_url="${http_ip_url}:${HTTP_PORT}"
+    if ss -ltn | grep -q ':443 '; then
+        warn "443 端口已占用，改用 444"
+        HTTPS_PORT=444
     fi
-    if [ "${HTTPS_PORT}" != "443" ]; then
-      https_ip_url="${https_ip_url}:${HTTPS_PORT}"
-    fi
-    echo ""
-    echo "  - IP (带端口)："
-    echo "      ${http_ip_url}"
-    echo "      ${https_ip_url}"
-  else
-    echo "  - 无可用本机 IP 用于显示"
-  fi
-
-  echo "----------------------------"
 }
 
-# 安装
+check_25_port() {
+    if timeout 3 bash -c "echo > /dev/tcp/smtp.qq.com/25" >/dev/null 2>&1; then
+        info "25 端口出站可用"
+    else
+        warn "25 端口不可用，可能无法发送邮件"
+    fi
+}
+
+# ================= 保存环境变量 =================
+save_env() {
+    cat > "$ENV_FILE" <<EOF
+DOMAIN=${DOMAIN}
+ADMIN_EMAIL=${ADMIN_EMAIL}
+HTTP_PORT=${HTTP_PORT}
+HTTPS_PORT=${HTTPS_PORT}
+CONTAINER_NAME=${CONTAINER_NAME}
+EOF
+}
+
+# ================= 读取环境变量 =================
+load_env() {
+    if [ -f "$ENV_FILE" ]; then
+        # shellcheck disable=SC1090
+        source "$ENV_FILE"
+    fi
+    # 防止空值
+    [ -z "$DOMAIN" ] && DOMAIN="$DEFAULT_DOMAIN"
+    [ -z "$ADMIN_EMAIL" ] && ADMIN_EMAIL="$DEFAULT_ADMIN"
+    [ -z "$HTTP_PORT" ] && HTTP_PORT=80
+    [ -z "$HTTPS_PORT" ] && HTTPS_PORT=443
+    [ -z "$CONTAINER_NAME" ] && CONTAINER_NAME="poste.io"
+}
+
+# ================= 安装 =================
 install_poste() {
-  ensure_docker
+    ensure_docker
+    mkdir -p "$DATADIR"
 
-  if check_installed; then
-    echo "ℹ️ 检测到 Poste.io 已存在，显示当前信息："
-    show_info
-    return
-  fi
+    echo "==================== 安装说明 ===================="
+    echo "1. 请提前准备好域名解析服务商的操作权限。"
+    echo "2. 邮件系统将使用以下 DNS 记录，请确保在安装前解析生效。"
+    echo "3. 管理后台和 Webmail 将通过 HTTPS 访问。"
+    echo "================================================="
+    echo ""
 
-  echo "=== 开始安装 Poste.io ==="
-  read -p "请输入您要使用的域名 (例如: mail.example.com): " DOMAIN
-  read -p "请输入管理员邮箱 (例如: admin@$DOMAIN): " ADMIN_EMAIL
-  read -p "请输入管理员密码: " ADMIN_PASS
+    read -rp "请输入邮件域名 (例如: mail.example.com, 默认: ${DEFAULT_DOMAIN}): " DOMAIN
+    DOMAIN=${DOMAIN:-$DEFAULT_DOMAIN}
+    read -rp "请输入管理员邮箱 (默认: ${DEFAULT_ADMIN}): " ADMIN_EMAIL
+    ADMIN_EMAIL=${ADMIN_EMAIL:-$DEFAULT_ADMIN}
 
-  mkdir -p "$DATADIR"
+    BASE_DOMAIN=${DOMAIN#mail.}
 
-  # 检查端口占用，优先 80/443，否则备用 81/444
-  HTTP_PORT=80
-  HTTPS_PORT=443
-  if command -v lsof >/dev/null 2>&1; then
-    if lsof -i :80 >/dev/null 2>&1; then HTTP_PORT=81; fi
-    if lsof -i :443 >/dev/null 2>&1; then HTTPS_PORT=444; fi
-  else
-    # 没有 lsof 时用 ss 作为替代（更常见于精简系统）
-    if ss -ltn "( sport = :80 )" >/dev/null 2>&1; then HTTP_PORT=81; fi
-    if ss -ltn "( sport = :443 )" >/dev/null 2>&1; then HTTPS_PORT=444; fi
-  fi
+    ipv4_address=$(get_server_ip)
 
-  # 生成 compose 文件
-  cat > "$COMPOSE_FILE" <<EOF
-version: '3.3'
+    # 安装前提示 DNS 配置
+    echo ""
+    echo "=============== 请先解析以下 DNS 记录 ==============="
+    echo "A      mail      $ipv4_address"
+    echo "CNAME  imap      mail.${BASE_DOMAIN}"
+    echo "CNAME  pop       mail.${BASE_DOMAIN}"
+    echo "CNAME  smtp      mail.${BASE_DOMAIN}"
+    echo "MX     @         mail.${BASE_DOMAIN}   优先级 10"
+    echo "TXT    @         v=spf1 mx ~all"
+    echo "TXT    _dmarc    v=DMARC1; p=none; rua=mailto:${ADMIN_EMAIL}"
+    echo "（DKIM 请在 Poste.io 后台生成后添加）"
+    echo "===================================================="
+    read -n1 -s -r -p "请确认 DNS 已添加，按任意键继续安装..."
+    echo ""
+
+    detect_ports
+    check_25_port
+
+    save_env
+
+    # 生成 docker-compose.yml
+    cat > "$COMPOSE_FILE" <<EOF
+version: '3.7'
 services:
-  posteio:
-    image: ${IMAGE}
+  poste:
+    image: ${POSTE_IMAGE}:latest
     container_name: ${CONTAINER_NAME}
     restart: always
     ports:
       - "${HTTP_PORT}:80"
       - "${HTTPS_PORT}:443"
       - "25:25"
-      - "465:465"
       - "587:587"
       - "110:110"
-      - "995:995"
       - "143:143"
+      - "465:465"
+      - "995:995"
       - "993:993"
     volumes:
       - ${DATADIR}:/data
     environment:
-      - HTTPS=OFF
       - DISABLE_CLAMAV=TRUE
       - DISABLE_SPAMASSASSIN=TRUE
-      - LETSENCRYPT_EMAIL=${ADMIN_EMAIL}
-      - POSTMASTER_ADDRESS=${ADMIN_EMAIL}
-      - PASSWORD=${ADMIN_PASS}
       - HOSTNAME=${DOMAIN}
+      - POSTMASTER_ADDRESS=${ADMIN_EMAIL}
 EOF
 
-  echo "✅ 已生成 Docker Compose 文件：${COMPOSE_FILE}"
-  echo "正在启动 Poste.io 容器（如无 docker compose，请安装）..."
-  DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
+    info "Docker Compose 文件已生成：${COMPOSE_FILE}"
+    info "正在启动 Poste.io 容器..."
+    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+    info "Poste.io 安装完成！"
 
-  echo "✅ Poste.io 安装并初始化完成！"
-  show_info
+    show_info
 }
 
-# 更新
+# ================= 显示运行信息 =================
+show_info() {
+    load_env
+    ensure_docker
+    if ! check_installed; then
+        warn "未检测到 Poste.io 容器。"
+        return
+    fi
+    ip=$(get_server_ip)
+    BASE_DOMAIN=${DOMAIN#mail.}
+    cat <<EOF
+
+================== Poste.io 信息 ==================
+容器名称:  ${CONTAINER_NAME}
+访问地址:
+  管理后台:   https://${DOMAIN}:${HTTPS_PORT}/admin
+  Webmail:    https://${DOMAIN}:${HTTPS_PORT}/webmail
+服务器 IP:  ${ip}
+=================================================
+
+EOF
+}
+
+# ================= 显示 DNS 配置 =================
+show_dns() {
+    load_env
+    ipv4_address=$(get_server_ip)
+    BASE_DOMAIN=${DOMAIN#mail.}
+    echo ""
+    echo "=============== DNS 配置建议 ==============="
+    echo "A      mail      $ipv4_address"
+    echo "CNAME  imap      mail.${BASE_DOMAIN}"
+    echo "CNAME  pop       mail.${BASE_DOMAIN}"
+    echo "CNAME  smtp      mail.${BASE_DOMAIN}"
+    echo "MX     @         mail.${BASE_DOMAIN}   优先级 10"
+    echo "TXT    @         v=spf1 mx ~all"
+    echo "TXT    _dmarc    v=DMARC1; p=none; rua=mailto:${ADMIN_EMAIL}"
+    echo "（DKIM 请在 Poste.io 后台生成后添加）"
+    echo "==========================================="
+    echo ""
+    read -n1 -s -r -p "按任意键返回..."
+    echo ""
+}
+
+# ================= 更新 =================
 update_poste() {
-  ensure_docker
-  if ! check_installed; then
-    echo "❌ 未检测到 Poste.io 容器，无法更新。请先安装。"
-    return
-  fi
-  echo "=== 开始更新 Poste.io ==="
-  DOCKER_COMPOSE -f "$COMPOSE_FILE" pull
-  DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
-  echo "✅ 更新完成。"
-  show_info
+    ensure_docker
+    load_env
+    if ! check_installed; then
+        warn "未检测到 Poste.io 容器，无法更新，请先安装。"
+        return
+    fi
+    info "开始更新 Poste.io..."
+    docker compose -f "$COMPOSE_FILE" pull
+    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+    info "更新完成！"
+    show_info
 }
 
-# 卸载
+# ================= 卸载 =================
 uninstall_poste() {
-  ensure_docker
-  if ! check_installed; then
-    echo "ℹ️ 未检测到 Poste.io 容器，已退出。"
-    return
-  fi
-  echo "⚠️ 警告：卸载将停止并删除容器，数据目录 ${DATADIR} 也可能被删除。"
-  read -p "是否继续卸载？(y/N): " confirm
-  if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
-    echo "已取消卸载。"
-    return
-  fi
-
-  DOCKER_COMPOSE -f "$COMPOSE_FILE" down || true
-  read -p "是否同时删除数据目录 ${DATADIR} ? (y/N): " deldata
-  if [[ "${deldata}" =~ ^[Yy]$ ]]; then
-    rm -rf "${DATADIR}"
-    echo "已删除数据目录。"
-  fi
-  rm -f "${COMPOSE_FILE}"
-  echo "✅ 卸载完成。"
+    ensure_docker
+    load_env
+    if ! check_installed; then
+        warn "未检测到 Poste.io 容器。"
+        return
+    fi
+    read -p "⚠️ 确认卸载 Poste.io 容器？(y/N): " confirm
+    if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
+        info "已取消卸载。"
+        return
+    fi
+    docker compose -f "$COMPOSE_FILE" down || true
+    read -p "是否删除数据目录 ${DATADIR} ? (y/N): " deldata
+    if [[ "${deldata}" =~ ^[Yy]$ ]]; then
+        rm -rf "${DATADIR}"
+        info "已删除数据目录。"
+    fi
+    rm -f "$COMPOSE_FILE" "$ENV_FILE"
+    info "卸载完成。"
 }
 
-# 主菜单循环
+# ================= 主菜单 =================
+if check_installed; then
+    show_info
+fi
+
 while true; do
-  echo "=============================="
-  echo " Poste.io 管理脚本"
-  echo "=============================="
+    echo "=============================="
+    echo " Poste.io 管理脚本"
+    echo "=============================="
 
-  if check_installed; then
-    echo "检测到 Poste.io 已安装。"
-    echo "1) 显示信息"
-    echo "2) 更新 Poste.io"
-    echo "3) 卸载 Poste.io"
-    echo "0) 退出"
-    read -p "请输入选项: " choice
-    case "$choice" in
-      1) show_info ;;
-      2) update_poste ;;
-      3) uninstall_poste ;;
-      0) exit 0 ;;
-      *) echo "无效选项";;
-    esac
-  else
-    echo "尚未安装 Poste.io。"
-    echo "1) 安装 Poste.io"
-    echo "0) 退出"
-    read -p "请输入选项: " choice
-    case "$choice" in
-      1) install_poste ;;
-      0) exit 0 ;;
-      *) echo "无效选项";;
-    esac
-  fi
-
-  echo ""
+    if check_installed; then
+        echo "1) 显示运行信息"
+        echo "2) 显示 DNS 配置"
+        echo "3) 更新 Poste.io"
+        echo "4) 卸载 Poste.io"
+        echo "0) 退出"
+        read -rp "请输入选项: " choice
+        case "$choice" in
+            1) show_info ;;
+            2) show_dns ;;
+            3) update_poste ;;
+            4) uninstall_poste ;;
+            0) exit 0 ;;
+            *) warn "无效选项" ;;
+        esac
+    else
+        echo "尚未安装 Poste.io。"
+        echo "1) 安装 Poste.io"
+        echo "2) 显示 DNS 配置"
+        echo "0) 退出"
+        read -rp "请输入选项: " choice
+        case "$choice" in
+            1) install_poste ;;
+            2) show_dns ;;
+            0) exit 0 ;;
+            *) warn "无效选项" ;;
+        esac
+    fi
+    echo ""
 done
