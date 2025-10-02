@@ -22,13 +22,7 @@ get_public_ip() {
     done
     ip=$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' | head -n1)
     if [[ $ip ]]; then echo "$ip"; return 0; fi
-    for candidate in $(hostname -I 2>/dev/null); do
-        if ! [[ $candidate =~ ^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.) ]]; then
-            echo "$candidate"; return 0
-        fi
-    done
     echo "$(hostname -I 2>/dev/null | awk '{print $1}')"
-    return 1
 }
 
 # ================== 架构检测 ==================
@@ -93,24 +87,35 @@ install_cov() {
 status_cov() {
     if ! docker ps --filter "name=^/cov$" --filter "status=running" --format '{{.Names}}' | grep -xq cov; then
         error "容器 cov 未运行"
-        echo "可用命令： docker logs cov / docker-compose up -d"
         return 1
     fi
 
-    bind_info=$(docker port cov 2>/dev/null || true)
+    # 容器端口映射
+    bind_info=$(docker port cov 2>/dev/null | grep -E '0.0.0.0|::' | xargs)
+    [[ -n "$bind_info" ]] && echo -e "🔌 端口映射: $bind_info"
+
+    echo -e "${green}[INFO]${plain} 容器运行中： cov"
+    echo -e "📦 镜像: $(docker inspect --format='{{.Config.Image}}' cov 2>/dev/null || echo 'unknown')"
+
+    # 公网 IP
     public_ip=$(get_public_ip)
     ip_note=""
     if [[ $public_ip =~ ^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.) ]]; then
         ip_note="（内网地址，可能无法公网访问）"
     fi
+    [[ -n "$public_ip" ]] && echo -e "🌍 建议访问地址: http://$public_ip:$PORT $ip_note"
 
-    echo -e "${green}[INFO]${plain} 容器运行中： cov"
-    echo -e "📦 镜像: $(docker inspect --format='{{.Config.Image}}' cov 2>/dev/null || echo 'unknown')"
-    [[ -n "$bind_info" ]] && echo -e "🔌 端口映射: $bind_info"
-    [[ -n "$public_ip" ]] && echo -e "🌍 建议访问地址: http://$public_ip:50000 $ip_note"
-    echo -n "📡 本机 IP: "
-    hostname -I 2>/dev/null | tr ' ' '\n' | grep -v "^127\." | xargs
-    return 0
+    # 本机 IPv4（默认出口）
+    ipv4=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
+    echo -e "📡 本机 IPv4: ${ipv4:-未知}"
+
+    # 本机全局 IPv6
+    ipv6=$(ip -6 addr show scope global 2>/dev/null | grep 'inet6' | awk '{print $2}' | cut -d/ -f1 | xargs)
+    echo -e "📡 本机 IPv6: ${ipv6:-无}"
+
+    if [[ $ip_note != "" ]]; then
+        echo -e "\n${yellow}[WARN]${plain} 当前返回的地址为内网地址，请确保端口映射或使用公网 IP 访问。"
+    fi
 }
 
 uninstall_cov() {
