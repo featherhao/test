@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -e
 
 # ================= 基础配置 =================
 WORKDIR="/opt/poste.io"
@@ -21,16 +21,13 @@ ensure_docker() {
 }
 
 check_installed() {
-    docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$" || return 1
+    docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
 }
 
 # ================= 获取本机 IP =================
 get_server_ip() {
-    local ip
     ip=$(hostname -I 2>/dev/null | awk '{print $1}')
-    if [ -z "$ip" ]; then
-        ip=$(curl -s4 https://api.ipify.org 2>/dev/null || true)
-    fi
+    [ -z "$ip" ] && ip=$(curl -s4 https://api.ipify.org 2>/dev/null || true)
     if [ -z "$ip" ]; then
         read -rp "无法自动获取服务器 IP，请手动输入: " ip
     fi
@@ -73,15 +70,14 @@ EOF
 # ================= 读取环境变量 =================
 load_env() {
     if [ -f "$ENV_FILE" ]; then
-        # shellcheck disable=SC1090
         source "$ENV_FILE"
     fi
     # 防止空值
-    [ -z "${DOMAIN-}" ] && DOMAIN="$DEFAULT_DOMAIN"
-    [ -z "${ADMIN_EMAIL-}" ] && ADMIN_EMAIL="$DEFAULT_ADMIN"
-    [ -z "${HTTP_PORT-}" ] && HTTP_PORT=80
-    [ -z "${HTTPS_PORT-}" ] && HTTPS_PORT=443
-    [ -z "${CONTAINER_NAME-}" ] && CONTAINER_NAME="poste.io"
+    [ -z "$DOMAIN" ] && DOMAIN="$DEFAULT_DOMAIN"
+    [ -z "$ADMIN_EMAIL" ] && ADMIN_EMAIL="$DEFAULT_ADMIN"
+    [ -z "$HTTP_PORT" ] && HTTP_PORT=80
+    [ -z "$HTTPS_PORT" ] && HTTPS_PORT=443
+    [ -z "$CONTAINER_NAME" ] && CONTAINER_NAME="poste.io"
 }
 
 # ================= 安装 =================
@@ -102,9 +98,9 @@ install_poste() {
     ADMIN_EMAIL=${ADMIN_EMAIL:-$DEFAULT_ADMIN}
 
     BASE_DOMAIN=${DOMAIN#mail.}
-
     ipv4_address=$(get_server_ip)
 
+    # 安装前提示 DNS 配置
     echo ""
     echo "=============== 请先解析以下 DNS 记录 ==============="
     echo "A      mail      $ipv4_address"
@@ -121,7 +117,6 @@ install_poste() {
 
     detect_ports
     check_25_port
-
     save_env
 
     cat > "$COMPOSE_FILE" <<EOF
@@ -152,12 +147,10 @@ EOF
 
     info "Docker Compose 文件已生成：${COMPOSE_FILE}"
     info "正在启动 Poste.io 容器..."
-    if ! docker compose -f "$COMPOSE_FILE" up -d --remove-orphans; then
-        warn "Docker 容器启动失败，请检查 Docker 日志。"
-    else
-        info "Poste.io 安装完成！"
-        show_info
-    fi
+    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+    info "Poste.io 安装完成！"
+
+    show_info
 }
 
 # ================= 显示运行信息 =================
@@ -169,7 +162,6 @@ show_info() {
         return
     fi
     ip=$(get_server_ip)
-    BASE_DOMAIN=${DOMAIN#mail.}
     cat <<EOF
 
 ================== Poste.io 信息 ==================
@@ -199,7 +191,6 @@ show_dns() {
     echo "TXT    _dmarc    v=DMARC1; p=none; rua=mailto:${ADMIN_EMAIL}"
     echo "（DKIM 请在 Poste.io 后台生成后添加）"
     echo "==========================================="
-    echo ""
     read -n1 -s -r -p "按任意键返回..."
     echo ""
 }
@@ -213,8 +204,8 @@ update_poste() {
         return
     fi
     info "开始更新 Poste.io..."
-    docker compose -f "$COMPOSE_FILE" pull || warn "拉取镜像失败"
-    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans || warn "启动容器失败"
+    docker compose -f "$COMPOSE_FILE" pull
+    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
     info "更新完成！"
     show_info
 }
@@ -232,7 +223,7 @@ uninstall_poste() {
         info "已取消卸载。"
         return
     fi
-    docker compose -f "$COMPOSE_FILE" down || warn "卸载容器失败"
+    docker compose -f "$COMPOSE_FILE" down || true
     read -p "是否删除数据目录 ${DATADIR} ? (y/N): " deldata
     if [[ "${deldata}" =~ ^[Yy]$ ]]; then
         rm -rf "${DATADIR}"
@@ -243,10 +234,6 @@ uninstall_poste() {
 }
 
 # ================= 主菜单 =================
-if check_installed; then
-    show_info
-fi
-
 while true; do
     echo "=============================="
     echo " Poste.io 管理脚本"
