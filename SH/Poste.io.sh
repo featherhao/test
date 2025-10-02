@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # ================= 基础配置 =================
 WORKDIR="/opt/poste.io"
@@ -21,11 +21,12 @@ ensure_docker() {
 }
 
 check_installed() {
-    docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
+    docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$" || return 1
 }
 
 # ================= 获取本机 IP =================
 get_server_ip() {
+    local ip
     ip=$(hostname -I 2>/dev/null | awk '{print $1}')
     if [ -z "$ip" ]; then
         ip=$(curl -s4 https://api.ipify.org 2>/dev/null || true)
@@ -76,11 +77,11 @@ load_env() {
         source "$ENV_FILE"
     fi
     # 防止空值
-    [ -z "$DOMAIN" ] && DOMAIN="$DEFAULT_DOMAIN"
-    [ -z "$ADMIN_EMAIL" ] && ADMIN_EMAIL="$DEFAULT_ADMIN"
-    [ -z "$HTTP_PORT" ] && HTTP_PORT=80
-    [ -z "$HTTPS_PORT" ] && HTTPS_PORT=443
-    [ -z "$CONTAINER_NAME" ] && CONTAINER_NAME="poste.io"
+    [ -z "${DOMAIN-}" ] && DOMAIN="$DEFAULT_DOMAIN"
+    [ -z "${ADMIN_EMAIL-}" ] && ADMIN_EMAIL="$DEFAULT_ADMIN"
+    [ -z "${HTTP_PORT-}" ] && HTTP_PORT=80
+    [ -z "${HTTPS_PORT-}" ] && HTTPS_PORT=443
+    [ -z "${CONTAINER_NAME-}" ] && CONTAINER_NAME="poste.io"
 }
 
 # ================= 安装 =================
@@ -104,7 +105,6 @@ install_poste() {
 
     ipv4_address=$(get_server_ip)
 
-    # 安装前提示 DNS 配置
     echo ""
     echo "=============== 请先解析以下 DNS 记录 ==============="
     echo "A      mail      $ipv4_address"
@@ -124,7 +124,6 @@ install_poste() {
 
     save_env
 
-    # 生成 docker-compose.yml
     cat > "$COMPOSE_FILE" <<EOF
 version: '3.7'
 services:
@@ -153,10 +152,12 @@ EOF
 
     info "Docker Compose 文件已生成：${COMPOSE_FILE}"
     info "正在启动 Poste.io 容器..."
-    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
-    info "Poste.io 安装完成！"
-
-    show_info
+    if ! docker compose -f "$COMPOSE_FILE" up -d --remove-orphans; then
+        warn "Docker 容器启动失败，请检查 Docker 日志。"
+    else
+        info "Poste.io 安装完成！"
+        show_info
+    fi
 }
 
 # ================= 显示运行信息 =================
@@ -212,8 +213,8 @@ update_poste() {
         return
     fi
     info "开始更新 Poste.io..."
-    docker compose -f "$COMPOSE_FILE" pull
-    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+    docker compose -f "$COMPOSE_FILE" pull || warn "拉取镜像失败"
+    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans || warn "启动容器失败"
     info "更新完成！"
     show_info
 }
@@ -231,7 +232,7 @@ uninstall_poste() {
         info "已取消卸载。"
         return
     fi
-    docker compose -f "$COMPOSE_FILE" down || true
+    docker compose -f "$COMPOSE_FILE" down || warn "卸载容器失败"
     read -p "是否删除数据目录 ${DATADIR} ? (y/N): " deldata
     if [[ "${deldata}" =~ ^[Yy]$ ]]; then
         rm -rf "${DATADIR}"
