@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # ================= 基础配置 =================
 WORKDIR="/opt/poste.io"
@@ -21,11 +21,12 @@ ensure_docker() {
 }
 
 check_installed() {
-    docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
+    docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$" || return 1
 }
 
 # ================= 获取本机 IP =================
 get_server_ip() {
+    local ip
     ip=$(hostname -I 2>/dev/null | awk '{print $1}')
     if [ -z "$ip" ]; then
         ip=$(curl -s4 https://api.ipify.org 2>/dev/null || true)
@@ -76,11 +77,11 @@ load_env() {
         source "$ENV_FILE"
     fi
     # 防止空值
-    [ -z "$DOMAIN" ] && DOMAIN="$DEFAULT_DOMAIN"
-    [ -z "$ADMIN_EMAIL" ] && ADMIN_EMAIL="$DEFAULT_ADMIN"
-    [ -z "$HTTP_PORT" ] && HTTP_PORT=80
-    [ -z "$HTTPS_PORT" ] && HTTPS_PORT=443
-    [ -z "$CONTAINER_NAME" ] && CONTAINER_NAME="poste.io"
+    [ -z "${DOMAIN-}" ] && DOMAIN="$DEFAULT_DOMAIN"
+    [ -z "${ADMIN_EMAIL-}" ] && ADMIN_EMAIL="$DEFAULT_ADMIN"
+    [ -z "${HTTP_PORT-}" ] && HTTP_PORT=80
+    [ -z "${HTTPS_PORT-}" ] && HTTPS_PORT=443
+    [ -z "${CONTAINER_NAME-}" ] && CONTAINER_NAME="poste.io"
 }
 
 # ================= 安装 =================
@@ -120,6 +121,7 @@ install_poste() {
 
     detect_ports
     check_25_port
+
     save_env
 
     cat > "$COMPOSE_FILE" <<EOF
@@ -150,10 +152,12 @@ EOF
 
     info "Docker Compose 文件已生成：${COMPOSE_FILE}"
     info "正在启动 Poste.io 容器..."
-    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
-    info "Poste.io 安装完成！"
-
-    show_info
+    if ! docker compose -f "$COMPOSE_FILE" up -d --remove-orphans; then
+        warn "Docker 容器启动失败，请检查 Docker 日志。"
+    else
+        info "Poste.io 安装完成！"
+        show_info
+    fi
 }
 
 # ================= 显示运行信息 =================
@@ -209,8 +213,8 @@ update_poste() {
         return
     fi
     info "开始更新 Poste.io..."
-    docker compose -f "$COMPOSE_FILE" pull
-    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+    docker compose -f "$COMPOSE_FILE" pull || warn "拉取镜像失败"
+    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans || warn "启动容器失败"
     info "更新完成！"
     show_info
 }
@@ -228,7 +232,7 @@ uninstall_poste() {
         info "已取消卸载。"
         return
     fi
-    docker compose -f "$COMPOSE_FILE" down || true
+    docker compose -f "$COMPOSE_FILE" down || warn "卸载容器失败"
     read -p "是否删除数据目录 ${DATADIR} ? (y/N): " deldata
     if [[ "${deldata}" =~ ^[Yy]$ ]]; then
         rm -rf "${DATADIR}"
@@ -239,49 +243,42 @@ uninstall_poste() {
 }
 
 # ================= 主菜单 =================
-main_menu() {
-    if check_installed; then
-        show_info
-    fi
-
-    while true; do
-        echo "=============================="
-        echo " Poste.io 管理脚本"
-        echo "=============================="
-
-        if check_installed; then
-            echo "1) 显示运行信息"
-            echo "2) 显示 DNS 配置"
-            echo "3) 更新 Poste.io"
-            echo "4) 卸载 Poste.io"
-            echo "0) 退出"
-            read -rp "请输入选项: " choice
-            case "$choice" in
-                1) show_info ;;
-                2) show_dns ;;
-                3) update_poste ;;
-                4) uninstall_poste ;;
-                0) exit 0 ;;
-                *) warn "无效选项" ;;
-            esac
-        else
-            echo "尚未安装 Poste.io。"
-            echo "1) 安装 Poste.io"
-            echo "2) 显示 DNS 配置"
-            echo "0) 退出"
-            read -rp "请输入选项: " choice
-            case "$choice" in
-                1) install_poste ;;
-                2) show_dns ;;
-                0) exit 0 ;;
-                *) warn "无效选项" ;;
-            esac
-        fi
-        echo ""
-    done
-}
-
-# 仅在直接执行脚本时调用主菜单，保证 <(curl …) 也能交互
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-    main_menu
+if check_installed; then
+    show_info
 fi
+
+while true; do
+    echo "=============================="
+    echo " Poste.io 管理脚本"
+    echo "=============================="
+
+    if check_installed; then
+        echo "1) 显示运行信息"
+        echo "2) 显示 DNS 配置"
+        echo "3) 更新 Poste.io"
+        echo "4) 卸载 Poste.io"
+        echo "0) 退出"
+        read -rp "请输入选项: " choice
+        case "$choice" in
+            1) show_info ;;
+            2) show_dns ;;
+            3) update_poste ;;
+            4) uninstall_poste ;;
+            0) exit 0 ;;
+            *) warn "无效选项" ;;
+        esac
+    else
+        echo "尚未安装 Poste.io。"
+        echo "1) 安装 Poste.io"
+        echo "2) 显示 DNS 配置"
+        echo "0) 退出"
+        read -rp "请输入选项: " choice
+        case "$choice" in
+            1) install_poste ;;
+            2) show_dns ;;
+            0) exit 0 ;;
+            *) warn "无效选项" ;;
+        esac
+    fi
+    echo ""
+done
