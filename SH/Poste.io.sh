@@ -142,6 +142,8 @@ services:
       - "465:465"
       - "995:995"
       - "993:993"
+      - "4190:4190"
+
     volumes:
       - ${DATADIR}:/data
     environment:
