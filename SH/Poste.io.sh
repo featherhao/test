@@ -1,40 +1,66 @@
 #!/bin/bash
-set -euo pipefail
+set -e
+# set -u 去掉，避免未定义变量直接退出
+set -o pipefail
 
 # ================= 基础配置 =================
 WORKDIR="/opt/poste.io"
 DATADIR="${WORKDIR}/data"
 COMPOSE_FILE="${WORKDIR}/docker-compose.yml"
-ENV_FILE="${WORKDIR}/.env"
 CONTAINER_NAME="poste.io"
 POSTE_IMAGE="analogic/poste.io"
 DEFAULT_DOMAIN="mail.example.com"
 DEFAULT_ADMIN="admin@${DEFAULT_DOMAIN}"
 
-# ================= 公共方法 =================
+# ================= 彩色输出 =================
 info()  { echo -e "\e[32m[INFO]\e[0m $*"; }
 warn()  { echo -e "\e[33m[WARN]\e[0m $*"; }
-error() { echo -e "\e[31m[ERROR]\e[0m $*"; exit 1; }
+error() { echo -e "\e[31m[ERROR]\e[0m $*"; }
 
+# ================= docker 检测 =================
 ensure_docker() {
-    command -v docker >/dev/null 2>&1 || error "未检测到 Docker，请先安装。"
+    if ! command -v docker >/dev/null 2>&1; then
+        warn "未检测到 Docker，部分功能可能无法使用，请先安装 Docker。"
+        return 1
+    fi
+    return 0
 }
 
+# ================= 安装检查 =================
 check_installed() {
-    docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$" || return 1
+    if ! ensure_docker; then return 1; fi
+    docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$" && return 0 || return 1
+}
+
+# ================= 环境变量 =================
+save_env() {
+    cat > "$ENV_FILE" <<EOF
+DOMAIN=${DOMAIN}
+ADMIN_EMAIL=${ADMIN_EMAIL}
+HTTP_PORT=${HTTP_PORT}
+HTTPS_PORT=${HTTPS_PORT}
+CONTAINER_NAME=${CONTAINER_NAME}
+EOF
+}
+
+load_env() {
+    ENV_FILE="${WORKDIR}/.env"
+    if [ -f "$ENV_FILE" ]; then
+        source "$ENV_FILE"
+    fi
+    DOMAIN=${DOMAIN:-$DEFAULT_DOMAIN}
+    ADMIN_EMAIL=${ADMIN_EMAIL:-$DEFAULT_ADMIN}
+    HTTP_PORT=${HTTP_PORT:-80}
+    HTTPS_PORT=${HTTPS_PORT:-443}
+    CONTAINER_NAME=${CONTAINER_NAME:-poste.io}
 }
 
 # ================= 获取本机 IP =================
 get_server_ip() {
     local ip
     ip=$(hostname -I 2>/dev/null | awk '{print $1}')
-    if [ -z "$ip" ]; then
-        ip=$(curl -s4 https://api.ipify.org 2>/dev/null || true)
-    fi
-    if [ -z "$ip" ]; then
-        read -rp "无法自动获取服务器 IP，请手动输入: " ip
-    fi
-    echo "$ip"
+    [ -z "$ip" ] && ip=$(curl -s4 https://api.ipify.org 2>/dev/null || true)
+    echo "${ip:-127.0.0.1}"
 }
 
 # ================= 检测端口 =================
@@ -59,50 +85,17 @@ check_25_port() {
     fi
 }
 
-# ================= 保存环境变量 =================
-save_env() {
-    cat > "$ENV_FILE" <<EOF
-DOMAIN=${DOMAIN}
-ADMIN_EMAIL=${ADMIN_EMAIL}
-HTTP_PORT=${HTTP_PORT}
-HTTPS_PORT=${HTTPS_PORT}
-CONTAINER_NAME=${CONTAINER_NAME}
-EOF
-}
-
-# ================= 读取环境变量 =================
-load_env() {
-    if [ -f "$ENV_FILE" ]; then
-        # shellcheck disable=SC1090
-        source "$ENV_FILE"
-    fi
-    # 防止空值
-    [ -z "${DOMAIN-}" ] && DOMAIN="$DEFAULT_DOMAIN"
-    [ -z "${ADMIN_EMAIL-}" ] && ADMIN_EMAIL="$DEFAULT_ADMIN"
-    [ -z "${HTTP_PORT-}" ] && HTTP_PORT=80
-    [ -z "${HTTPS_PORT-}" ] && HTTPS_PORT=443
-    [ -z "${CONTAINER_NAME-}" ] && CONTAINER_NAME="poste.io"
-}
-
 # ================= 安装 =================
 install_poste() {
-    ensure_docker
+    ensure_docker || return
     mkdir -p "$DATADIR"
 
-    echo "==================== 安装说明 ===================="
-    echo "1. 请提前准备好域名解析服务商的操作权限。"
-    echo "2. 邮件系统将使用以下 DNS 记录，请确保在安装前解析生效。"
-    echo "3. 管理后台和 Webmail 将通过 HTTPS 访问。"
-    echo "================================================="
-    echo ""
-
-    read -rp "请输入邮件域名 (例如: mail.example.com, 默认: ${DEFAULT_DOMAIN}): " DOMAIN
+    read -rp "请输入邮件域名 (默认: ${DEFAULT_DOMAIN}): " DOMAIN
     DOMAIN=${DOMAIN:-$DEFAULT_DOMAIN}
     read -rp "请输入管理员邮箱 (默认: ${DEFAULT_ADMIN}): " ADMIN_EMAIL
     ADMIN_EMAIL=${ADMIN_EMAIL:-$DEFAULT_ADMIN}
 
     BASE_DOMAIN=${DOMAIN#mail.}
-
     ipv4_address=$(get_server_ip)
 
     echo ""
@@ -114,14 +107,12 @@ install_poste() {
     echo "MX     @         mail.${BASE_DOMAIN}   优先级 10"
     echo "TXT    @         v=spf1 mx ~all"
     echo "TXT    _dmarc    v=DMARC1; p=none; rua=mailto:${ADMIN_EMAIL}"
-    echo "（DKIM 请在 Poste.io 后台生成后添加）"
     echo "===================================================="
     read -n1 -s -r -p "请确认 DNS 已添加，按任意键继续安装..."
     echo ""
 
     detect_ports
     check_25_port
-
     save_env
 
     cat > "$COMPOSE_FILE" <<EOF
@@ -151,24 +142,19 @@ services:
 EOF
 
     info "Docker Compose 文件已生成：${COMPOSE_FILE}"
-    info "正在启动 Poste.io 容器..."
-    if ! docker compose -f "$COMPOSE_FILE" up -d --remove-orphans; then
-        warn "Docker 容器启动失败，请检查 Docker 日志。"
+    if ensure_docker; then
+        docker compose -f "$COMPOSE_FILE" up -d --remove-orphans || warn "容器启动失败，请检查 Docker 日志。"
     else
-        info "Poste.io 安装完成！"
-        show_info
+        warn "Docker 未安装，跳过启动容器"
     fi
+    info "Poste.io 安装完成！"
+    show_info
 }
 
-# ================= 显示运行信息 =================
+# ================= 显示信息 =================
 show_info() {
     load_env
-    ensure_docker
-    if ! check_installed; then
-        warn "未检测到 Poste.io 容器。"
-        return
-    fi
-    ip=$(get_server_ip)
+    local ip=$(get_server_ip)
     BASE_DOMAIN=${DOMAIN#mail.}
     cat <<EOF
 
@@ -183,7 +169,7 @@ show_info() {
 EOF
 }
 
-# ================= 显示 DNS 配置 =================
+# ================= 显示 DNS =================
 show_dns() {
     load_env
     ipv4_address=$(get_server_ip)
@@ -197,7 +183,6 @@ show_dns() {
     echo "MX     @         mail.${BASE_DOMAIN}   优先级 10"
     echo "TXT    @         v=spf1 mx ~all"
     echo "TXT    _dmarc    v=DMARC1; p=none; rua=mailto:${ADMIN_EMAIL}"
-    echo "（DKIM 请在 Poste.io 后台生成后添加）"
     echo "==========================================="
     echo ""
     read -n1 -s -r -p "按任意键返回..."
@@ -206,7 +191,7 @@ show_dns() {
 
 # ================= 更新 =================
 update_poste() {
-    ensure_docker
+    ensure_docker || return
     load_env
     if ! check_installed; then
         warn "未检测到 Poste.io 容器，无法更新，请先安装。"
@@ -232,7 +217,9 @@ uninstall_poste() {
         info "已取消卸载。"
         return
     fi
-    docker compose -f "$COMPOSE_FILE" down || warn "卸载容器失败"
+    if ensure_docker; then
+        docker compose -f "$COMPOSE_FILE" down || warn "卸载容器失败"
+    fi
     read -p "是否删除数据目录 ${DATADIR} ? (y/N): " deldata
     if [[ "${deldata}" =~ ^[Yy]$ ]]; then
         rm -rf "${DATADIR}"
