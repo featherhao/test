@@ -1,39 +1,50 @@
 #!/bin/bash
 set -e
-# set -u 去掉，避免未定义变量直接退出
 set -o pipefail
+# 去掉 -u 避免未定义变量退出
 
-# ================= 基础配置 =================
-WORKDIR="/opt/poste.io"
-DATADIR="${WORKDIR}/data"
-COMPOSE_FILE="${WORKDIR}/docker-compose.yml"
+# ===================== 配置 =====================
+# 兼容老路径
+if [ -d "/root/posteio_data" ]; then
+    WORKDIR="/root"
+    DATADIR="$WORKDIR/posteio_data"
+    COMPOSE_FILE="$WORKDIR/poste.io.docker-compose.yml"
+else
+    WORKDIR="/opt/poste.io"
+    DATADIR="$WORKDIR/data"
+    COMPOSE_FILE="$WORKDIR/docker-compose.yml"
+fi
+
 CONTAINER_NAME="poste.io"
 POSTE_IMAGE="analogic/poste.io"
 DEFAULT_DOMAIN="mail.example.com"
 DEFAULT_ADMIN="admin@${DEFAULT_DOMAIN}"
 
-# ================= 彩色输出 =================
+# ===================== 彩色输出 =====================
 info()  { echo -e "\e[32m[INFO]\e[0m $*"; }
 warn()  { echo -e "\e[33m[WARN]\e[0m $*"; }
 error() { echo -e "\e[31m[ERROR]\e[0m $*"; }
 
-# ================= docker 检测 =================
+# ===================== Docker 检测 =====================
 ensure_docker() {
     if ! command -v docker >/dev/null 2>&1; then
-        warn "未检测到 Docker，部分功能可能无法使用，请先安装 Docker。"
+        warn "未检测到 Docker，部分功能无法使用，请先安装 Docker。"
         return 1
     fi
     return 0
 }
 
-# ================= 安装检查 =================
+# ===================== 安装检查 =====================
 check_installed() {
     if ! ensure_docker; then return 1; fi
     docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$" && return 0 || return 1
 }
 
-# ================= 环境变量 =================
+# ===================== 环境变量 =====================
+ENV_FILE="${WORKDIR}/.env"
+
 save_env() {
+    mkdir -p "$WORKDIR"
     cat > "$ENV_FILE" <<EOF
 DOMAIN=${DOMAIN}
 ADMIN_EMAIL=${ADMIN_EMAIL}
@@ -44,7 +55,6 @@ EOF
 }
 
 load_env() {
-    ENV_FILE="${WORKDIR}/.env"
     if [ -f "$ENV_FILE" ]; then
         source "$ENV_FILE"
     fi
@@ -55,7 +65,7 @@ load_env() {
     CONTAINER_NAME=${CONTAINER_NAME:-poste.io}
 }
 
-# ================= 获取本机 IP =================
+# ===================== 获取服务器 IP =====================
 get_server_ip() {
     local ip
     ip=$(hostname -I 2>/dev/null | awk '{print $1}')
@@ -63,7 +73,7 @@ get_server_ip() {
     echo "${ip:-127.0.0.1}"
 }
 
-# ================= 检测端口 =================
+# ===================== 端口检测 =====================
 detect_ports() {
     HTTP_PORT=80
     HTTPS_PORT=443
@@ -85,9 +95,9 @@ check_25_port() {
     fi
 }
 
-# ================= 安装 =================
+# ===================== 安装 =====================
 install_poste() {
-    ensure_docker || return
+    ensure_docker || warn "Docker 未安装，安装后可启动容器"
     mkdir -p "$DATADIR"
 
     read -rp "请输入邮件域名 (默认: ${DEFAULT_DOMAIN}): " DOMAIN
@@ -142,20 +152,21 @@ services:
 EOF
 
     info "Docker Compose 文件已生成：${COMPOSE_FILE}"
+
     if ensure_docker; then
         docker compose -f "$COMPOSE_FILE" up -d --remove-orphans || warn "容器启动失败，请检查 Docker 日志。"
     else
         warn "Docker 未安装，跳过启动容器"
     fi
+
     info "Poste.io 安装完成！"
     show_info
 }
 
-# ================= 显示信息 =================
+# ===================== 显示信息 =====================
 show_info() {
     load_env
     local ip=$(get_server_ip)
-    BASE_DOMAIN=${DOMAIN#mail.}
     cat <<EOF
 
 ================== Poste.io 信息 ==================
@@ -164,12 +175,13 @@ show_info() {
   管理后台:   https://${DOMAIN}:${HTTPS_PORT}/admin
   Webmail:    https://${DOMAIN}:${HTTPS_PORT}/webmail
 服务器 IP:  ${ip}
+数据目录: ${DATADIR}
 =================================================
 
 EOF
 }
 
-# ================= 显示 DNS =================
+# ===================== 显示 DNS =====================
 show_dns() {
     load_env
     ipv4_address=$(get_server_ip)
@@ -184,12 +196,11 @@ show_dns() {
     echo "TXT    @         v=spf1 mx ~all"
     echo "TXT    _dmarc    v=DMARC1; p=none; rua=mailto:${ADMIN_EMAIL}"
     echo "==========================================="
-    echo ""
     read -n1 -s -r -p "按任意键返回..."
     echo ""
 }
 
-# ================= 更新 =================
+# ===================== 更新 =====================
 update_poste() {
     ensure_docker || return
     load_env
@@ -200,11 +211,11 @@ update_poste() {
     info "开始更新 Poste.io..."
     docker compose -f "$COMPOSE_FILE" pull || warn "拉取镜像失败"
     docker compose -f "$COMPOSE_FILE" up -d --remove-orphans || warn "启动容器失败"
-    info "更新完成！"
+    info "更新完成。"
     show_info
 }
 
-# ================= 卸载 =================
+# ===================== 卸载 =====================
 uninstall_poste() {
     ensure_docker
     load_env
@@ -229,7 +240,7 @@ uninstall_poste() {
     info "卸载完成。"
 }
 
-# ================= 主菜单 =================
+# ===================== 主菜单 =====================
 if check_installed; then
     show_info
 fi
