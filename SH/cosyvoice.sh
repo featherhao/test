@@ -71,19 +71,27 @@ services:
 EOF
 }
 
-# ================== 功能函数 ==================
+# ================== 安装/启动 ==================
 install_cov() {
     detect_arch
     check_docker
     read -p "请输入服务端口 [默认50000]: " port
     PORT=${port:-50000}
-    make_compose
-    info "启动服务..."
-    docker-compose up -d || true
+
+    if docker ps -a --format '{{.Names}}' | grep -xq cov; then
+        info "检测到已有容器 cov，正在启动..."
+        docker start cov || true
+    else
+        make_compose
+        info "首次安装容器..."
+        docker-compose up -d || true
+    fi
+
     sleep 3
     status_cov
 }
 
+# ================== 查看状态 ==================
 status_cov() {
     if ! docker ps --filter "name=^/cov$" --filter "status=running" --format '{{.Names}}' | grep -xq cov; then
         error "容器 cov 未运行"
@@ -99,11 +107,14 @@ status_cov() {
 
     # 公网 IP
     public_ip=$(get_public_ip)
+    exposed_port=$(docker port cov 50000/tcp 2>/dev/null | head -n1 | awk -F':' '{print $2}')
+    exposed_port=${exposed_port:-50000}
+
     ip_note=""
     if [[ $public_ip =~ ^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.) ]]; then
         ip_note="（内网地址，可能无法公网访问）"
     fi
-    [[ -n "$public_ip" ]] && echo -e "🌍 建议访问地址: http://$public_ip:$PORT $ip_note"
+    [[ -n "$public_ip" ]] && echo -e "🌍 建议访问地址: http://$public_ip:$exposed_port $ip_note"
 
     # 本机 IPv4（默认出口）
     ipv4=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
@@ -118,6 +129,7 @@ status_cov() {
     fi
 }
 
+# ================== 卸载 ==================
 uninstall_cov() {
     if [[ -f docker-compose.yml ]]; then
         docker-compose down || true
