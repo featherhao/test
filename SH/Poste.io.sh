@@ -242,6 +242,53 @@ uninstall_poste() {
     info "卸载完成。"
 }
 
+# ===================== 新增功能: 端口释放与恢复 =====================
+manage_ports_cert() {
+    echo "==================== 端口管理 ===================="
+
+    # 备份占用 80/443 的 PID
+    pids=$(sudo lsof -i :80 -i :443 -t | sort -u)
+    if [[ -z "$pids" ]]; then
+        info "没有发现占用端口的进程"
+    else
+        echo "占用端口的 PID: $pids"
+        echo "$pids" > /tmp/port_backup.pid
+        echo "正在杀掉占用端口的进程..."
+        sudo kill -9 $pids
+        info "端口已释放，请在 Poste.io 后台手动申请证书"
+    fi
+
+    # 等待用户手工申请证书
+    read -n1 -s -r -p "证书申请完成后，按任意键继续恢复原服务..."
+    echo ""
+
+    # 恢复服务
+    if [[ -f /tmp/port_backup.pid ]]; then
+        echo "尝试恢复原占用端口的服务..."
+        for pid in $(cat /tmp/port_backup.pid); do
+            if ps -p $pid > /dev/null 2>&1; then
+                info "PID $pid 仍在运行"
+            else
+                warn "PID $pid 已结束，需要手动重启对应服务或使用 systemctl 重启"
+            fi
+        done
+        rm -f /tmp/port_backup.pid
+
+        # 对常用服务尝试重启
+        if systemctl list-units --type=service | grep -q "openresty"; then
+            info "尝试重启 openresty"
+            sudo systemctl restart openresty
+        fi
+        if systemctl list-units --type=service | grep -q "xray"; then
+            info "尝试重启 xray"
+            sudo systemctl restart xray
+        fi
+        info "端口恢复完成"
+    else
+        warn "未找到备份文件，无法恢复"
+    fi
+}
+
 # ===================== 主菜单 =====================
 if check_installed; then
     show_info
@@ -257,6 +304,7 @@ while true; do
         echo "2) 显示 DNS 配置"
         echo "3) 更新 Poste.io"
         echo "4) 卸载 Poste.io"
+        echo "5) 端口管理 & 证书申请"   # === 新增菜单选项 ===
         echo "0) 退出"
         read -rp "请输入选项: " choice
         case "$choice" in
@@ -264,6 +312,7 @@ while true; do
             2) show_dns ;;
             3) update_poste ;;
             4) uninstall_poste ;;
+            5) manage_ports_cert ;;
             0) exit 0 ;;
             *) warn "无效选项" ;;
         esac
