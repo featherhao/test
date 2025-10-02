@@ -27,7 +27,9 @@ check_installed() {
 # ================= 获取本机 IP =================
 get_server_ip() {
     ip=$(hostname -I 2>/dev/null | awk '{print $1}')
-    [ -z "$ip" ] && ip=$(curl -s4 https://api.ipify.org 2>/dev/null || true)
+    if [ -z "$ip" ]; then
+        ip=$(curl -s4 https://api.ipify.org 2>/dev/null || true)
+    fi
     if [ -z "$ip" ]; then
         read -rp "无法自动获取服务器 IP，请手动输入: " ip
     fi
@@ -70,6 +72,7 @@ EOF
 # ================= 读取环境变量 =================
 load_env() {
     if [ -f "$ENV_FILE" ]; then
+        # shellcheck disable=SC1090
         source "$ENV_FILE"
     fi
     # 防止空值
@@ -98,9 +101,9 @@ install_poste() {
     ADMIN_EMAIL=${ADMIN_EMAIL:-$DEFAULT_ADMIN}
 
     BASE_DOMAIN=${DOMAIN#mail.}
+
     ipv4_address=$(get_server_ip)
 
-    # 安装前提示 DNS 配置
     echo ""
     echo "=============== 请先解析以下 DNS 记录 ==============="
     echo "A      mail      $ipv4_address"
@@ -162,6 +165,7 @@ show_info() {
         return
     fi
     ip=$(get_server_ip)
+    BASE_DOMAIN=${DOMAIN#mail.}
     cat <<EOF
 
 ================== Poste.io 信息 ==================
@@ -191,6 +195,7 @@ show_dns() {
     echo "TXT    _dmarc    v=DMARC1; p=none; rua=mailto:${ADMIN_EMAIL}"
     echo "（DKIM 请在 Poste.io 后台生成后添加）"
     echo "==========================================="
+    echo ""
     read -n1 -s -r -p "按任意键返回..."
     echo ""
 }
@@ -234,38 +239,49 @@ uninstall_poste() {
 }
 
 # ================= 主菜单 =================
-while true; do
-    echo "=============================="
-    echo " Poste.io 管理脚本"
-    echo "=============================="
-
+main_menu() {
     if check_installed; then
-        echo "1) 显示运行信息"
-        echo "2) 显示 DNS 配置"
-        echo "3) 更新 Poste.io"
-        echo "4) 卸载 Poste.io"
-        echo "0) 退出"
-        read -rp "请输入选项: " choice
-        case "$choice" in
-            1) show_info ;;
-            2) show_dns ;;
-            3) update_poste ;;
-            4) uninstall_poste ;;
-            0) exit 0 ;;
-            *) warn "无效选项" ;;
-        esac
-    else
-        echo "尚未安装 Poste.io。"
-        echo "1) 安装 Poste.io"
-        echo "2) 显示 DNS 配置"
-        echo "0) 退出"
-        read -rp "请输入选项: " choice
-        case "$choice" in
-            1) install_poste ;;
-            2) show_dns ;;
-            0) exit 0 ;;
-            *) warn "无效选项" ;;
-        esac
+        show_info
     fi
-    echo ""
-done
+
+    while true; do
+        echo "=============================="
+        echo " Poste.io 管理脚本"
+        echo "=============================="
+
+        if check_installed; then
+            echo "1) 显示运行信息"
+            echo "2) 显示 DNS 配置"
+            echo "3) 更新 Poste.io"
+            echo "4) 卸载 Poste.io"
+            echo "0) 退出"
+            read -rp "请输入选项: " choice
+            case "$choice" in
+                1) show_info ;;
+                2) show_dns ;;
+                3) update_poste ;;
+                4) uninstall_poste ;;
+                0) exit 0 ;;
+                *) warn "无效选项" ;;
+            esac
+        else
+            echo "尚未安装 Poste.io。"
+            echo "1) 安装 Poste.io"
+            echo "2) 显示 DNS 配置"
+            echo "0) 退出"
+            read -rp "请输入选项: " choice
+            case "$choice" in
+                1) install_poste ;;
+                2) show_dns ;;
+                0) exit 0 ;;
+                *) warn "无效选项" ;;
+            esac
+        fi
+        echo ""
+    done
+}
+
+# 仅在直接执行脚本时调用主菜单，保证 <(curl …) 也能交互
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main_menu
+fi
