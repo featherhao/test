@@ -1,224 +1,159 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-# ================== 彩色与日志 ==================
-if [[ -t 1 ]] && command -v tput &>/dev/null; then
-    C_RESET="\e[0m"; C_BOLD="\e[1m"
-    C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"; C_BLUE="\e[34m"; C_CYAN="\e[36m"
-else
-    C_RESET=""; C_BOLD=""; C_GREEN=""; C_RED=""; C_YELLOW=""; C_BLUE=""; C_CYAN=""
-fi
+# ================== 统一失败处理 ==================
+trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
 
-print_header() {
-    local title="$1"
-    echo -e "${C_BOLD}==============================${C_RESET}"
-    echo -e "  ${C_BOLD}${title}${C_RESET}"
-    echo -e "${C_BOLD}==============================${C_RESET}"
-}
-
-render_menu() {
-    local title="$1"; shift
-    clear
-    print_header "$title"
-    local item
-    for item in "$@"; do
-        echo -e "$item"
-    done
-    echo "=============================="
-}
-
-# ================== 脚本和安装路径 ==================
-SCRIPT_URL="https://raw.githubusercontent.com/yonggekkk/argosbx/refs/heads/main/argosbx.sh"
+# ================== 基础配置 ==================
+SCRIPT_URL="https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh"
 INSTALLED_FLAG="/opt/argosb/installed.flag"
-mkdir -p /opt/argosb
+BIN_DIR="/root/bin"
+AGS_CMD="$BIN_DIR/agsb"
+AGSX_CMD="$BIN_DIR/agsbx"
 
-# ================== 兼容命令 ==================
-if command -v agsbx &>/dev/null; then
-    ARGO_CMD="agsbx"
-elif command -v agsb &>/dev/null; then
-    ARGO_CMD="agsb"
-else
-    ARGO_CMD="bash <(curl -Ls ${SCRIPT_URL})"
-fi
+# ================== 彩色输出 ==================
+green='\033[0;32m'
+yellow='\033[1;33m'
+red='\033[0;31m'
+plain='\033[0m'
+info()    { echo -e "${green}[INFO]${plain} $*"; }
+warn()    { echo -e "${yellow}[WARN]${plain} $*"; }
+error()   { echo -e "${red}[ERROR]${plain} $*"; }
 
-# ================== 安装状态检测 ==================
+# ================== 检查状态 ==================
 argosb_status_check() {
-    if [[ -f "$INSTALLED_FLAG" ]]; then
-        echo "✅ 已安装"
-        return
-    fi
-    if command -v agsbx &>/dev/null || command -v agsb &>/dev/null; then
-        echo "✅ 已安装"
-        return
-    fi
-    for f in /usr/local/bin/agsbx /usr/local/bin/agsb \
-             /usr/bin/agsbx /usr/bin/agsb \
-             "$HOME/agsbx" "$HOME/agsb" \
-             "$HOME/agsbx.sh" "$HOME/agsb.sh"; do
-        [[ -f "$f" ]] && { echo "✅ 已安装"; return; }
-    done
-    echo "❌ 未安装"
-}
-
-# ================== 设置变量收集 ==================
-NEW_VARS=""
-set_new_var() {
-    local key="$1" val="$2"
-    # 如果 NEW_VARS 为空，直接赋值
-    if [[ -z "${NEW_VARS}" ]]; then
-        NEW_VARS="${key}=\"${val}\""
-        return
-    fi
-
-    # 若已有 key，则替换；否则追加
-    if echo "${NEW_VARS}" | grep -q -E "(^|[[:space:]])${key}=\"[^\"]*\""; then
-        NEW_VARS=$(echo "${NEW_VARS}" | sed -E "s/(^|[[:space:]])${key}=\"[^\"]*\"/\1${key}=\"${val}\"/")
-        echo "⚠️ 注意: 已存在 ${key} 参数，已被新值覆盖（${val}）"
+    if [[ -x "$AGS_CMD" || -x "$AGSX_CMD" || -f "$INSTALLED_FLAG" ]]; then
+        return 0
     else
-        NEW_VARS="${NEW_VARS} ${key}=\"${val}\""
+        return 1
     fi
 }
 
-# ================== 主菜单 ==================
+# ================== 安装快捷方式 ==================
+install_shortcut() {
+    mkdir -p "$BIN_DIR"
+    cat > "$AGS_CMD" <<EOF
+#!/bin/bash
+exec bash <(curl -Ls $SCRIPT_URL) "\$@"
+EOF
+    chmod +x "$AGS_CMD"
+    ln -sf "$AGS_CMD" "$AGSX_CMD"
+    mkdir -p "$(dirname "$INSTALLED_FLAG")"
+    touch "$INSTALLED_FLAG"
+}
+
+# ================== 菜单 ==================
+show_menu() {
+    clear
+    if argosb_status_check; then
+        status="✅ 已安装"
+    else
+        status="❌ 未安装"
+    fi
+
+    cat <<EOF
+==============================
+  🚀 勇哥ArgoSB协议管理 $status
+==============================
+1) 添加或更新协议节点
+2) 查看节点信息 (agsb list)
+3) 更新脚本 (建议卸载重装)
+4) 重启脚本 (agsb res)
+5) 卸载脚本 (agsb del)
+6) 临时切换 IPv4 / IPv6 节点显示
+7) 更改协议端口
+0) 返回主菜单
+==============================
+EOF
+}
+
+# ================== 操作函数 ==================
+add_or_update_protocols() {
+    cat <<EOF
+请选择要添加或更新的协议（可多选，用空格分隔，例如 1 3 5）:
+⚠️ 注意：该操作会覆盖现有配置，请确保输入所有需要保留的协议。
+1) Vless-Reality-Vision (vlpt)
+2) Vless-Xhttp-Reality (xhpt)
+3) Vless-Xhttp (vxpt)
+4) Shadowsocks-2022 (sspt)
+5) AnyTLS (anpt)
+6) Any-Reality (arpt)
+7) Vmess-ws (vmpt)
+8) Hysteria2 (hypt)
+9) Tuic (tupt)
+10) Argo临时隧道CDN优选节点
+11) Argo固定隧道CDN优选节点
+EOF
+
+    read -rp "输入序号: " selections
+
+    declare -a NEW_VARS=()
+    for sel in $selections; do
+        case $sel in
+            1)  read -rp "为 vlpt 输入端口号 (留空则随机): " p; NEW_VARS+=("vlpt=$p") ;;
+            2)  read -rp "为 xhpt 输入端口号 (留空则随机): " p; NEW_VARS+=("xhpt=$p") ;;
+            3)  read -rp "为 vxpt 输入端口号 (留空则随机): " p; NEW_VARS+=("vxpt=$p") ;;
+            4)  read -rp "为 sspt 输入端口号 (留空则随机): " p; NEW_VARS+=("sspt=$p") ;;
+            5)  read -rp "为 anpt 输入端口号 (留空则随机): " p; NEW_VARS+=("anpt=$p") ;;
+            6)  read -rp "为 arpt 输入端口号 (留空则随机): " p; NEW_VARS+=("arpt=$p") ;;
+            7)  read -rp "为 vmpt 输入端口号 (留空则随机): " p; NEW_VARS+=("vmpt=$p") ;;
+            8)  read -rp "为 hypt 输入端口号 (留空则随机): " p; NEW_VARS+=("hypt=$p") ;;
+            9)  read -rp "为 tupt 输入端口号 (留空则随机): " p; NEW_VARS+=("tupt=$p") ;;
+            10) read -rp "为 Argo临时隧道 输入端口号 (留空则随机): " p; NEW_VARS+=("argo=$p") ;;
+            11) read -rp "为 Argo固定隧道 输入端口号 (留空则随机): " p; NEW_VARS+=("argof=$p") ;;
+        esac
+    done
+
+    echo "🔹 正在更新节点（一次性应用所有选择）..."
+    eval "${NEW_VARS[*]} bash <(curl -Ls $SCRIPT_URL)"
+}
+
+view_nodes() {
+    $AGS_CMD list || true
+}
+
+update_script() {
+    warn "更新脚本时建议卸载后重装！"
+    rm -f "$INSTALLED_FLAG"
+    install_shortcut
+    info "已更新快捷方式，下次运行将使用最新脚本。"
+}
+
+restart_script() {
+    $AGS_CMD res || true
+}
+
+uninstall_script() {
+    $AGS_CMD del || true
+    rm -f "$INSTALLED_FLAG" "$AGS_CMD" "$AGSX_CMD"
+    info "脚本已卸载。"
+}
+
+toggle_ipv4_ipv6() {
+    $AGS_CMD ip || true
+}
+
+change_port() {
+    read -rp "请输入协议标识 (例如 xhpt): " proto
+    read -rp "请输入新的端口号: " port
+    eval "$proto=$port bash <(curl -Ls $SCRIPT_URL)"
+}
+
+# ================== 主循环 ==================
 while true; do
-    argosb_status=$(argosb_status_check)
-
-    render_menu "🚀 勇哥ArgoSB协议管理 $argosb_status" \
-        "1) 添加或更新协议节点" \
-        "2) 查看节点信息 ($ARGO_CMD list)" \
-        "3) 更新脚本 (建议卸载重装)" \
-        "4) 重启脚本 ($ARGO_CMD res)" \
-        "5) 卸载脚本 ($ARGO_CMD del)" \
-        "6) 临时切换 IPv4 / IPv6 节点显示" \
-        "7) 更改协议端口" \
-        "0) 返回主菜单"
-
-    read -rp "请输入选项: " main_choice
-
-    case "$main_choice" in
-        1)
-            echo "请选择要添加或更新的协议（可多选，用空格分隔，例如 1 3 5）:"
-            echo "⚠️ 注意：该操作会覆盖现有配置，请确保输入所有需要保留的协议。"
-            echo "1) Vless-Reality-Vision (vlpt)"
-            echo "2) Vless-Xhttp-Reality (xhpt)"
-            echo "3) Vless-Xhttp (vxpt)"
-            echo "4) Shadowsocks-2022 (sspt)"
-            echo "5) AnyTLS (anpt)"
-            echo "6) Any-Reality (arpt)"
-            echo "7) Vmess-ws (vmpt)"
-            echo "8) Hysteria2 (hypt)"
-            echo "9) Tuic (tupt)"
-            echo "10) Argo临时隧道CDN优选节点"
-            echo "11) Argo固定隧道CDN优选节点"
-            read -rp "输入序号: " choices
-
-            # 清空 NEW_VARS，逐项收集（不在循环里做 eval）
-            NEW_VARS=""
-
-            for c in $choices; do
-                protocol_name=""
-                case $c in
-                    1) protocol_name="vlpt" ;;
-                    2) protocol_name="xhpt" ;;
-                    3) protocol_name="vxpt" ;;
-                    4) protocol_name="sspt" ;;
-                    5) protocol_name="anpt" ;;
-                    6) protocol_name="arpt" ;;
-                    7) protocol_name="vmpt" ;;
-                    8) protocol_name="hypt" ;;
-                    9) protocol_name="tupt" ;;
-                    10)
-                        # Argo 临时隧道：把 vmpt + argo=y 放入 NEW_VARS（不立即 eval）
-                        read -rp "为 vmpt 输入端口号 (留空则随机): " custom_port
-                        set_new_var "vmpt" "${custom_port:-}"
-                        set_new_var "argo" "y"
-                        # 不立即执行，继续收集其余选项
-                        continue
-                        ;;
-                    11)
-                        # Argo 固定隧道：把 vmpt + argo + agn/agk 放入 NEW_VARS
-                        read -rp "为 vmpt 输入端口号: " custom_port
-                        read -rp "请输入 Argo 固定隧道域名 (agn): " agn
-                        read -rp "请输入 Argo 固定隧道 token (agk): " agk
-                        set_new_var "vmpt" "${custom_port:-}"
-                        set_new_var "argo" "y"
-                        [[ -n "${agn}" ]] && set_new_var "agn" "${agn}"
-                        [[ -n "${agk}" ]] && set_new_var "agk" "${agk}"
-                        continue
-                        ;;
-                    *)
-                        echo "⚠️ 无效选项: $c"
-                        continue
-                        ;;
-                esac
-
-                # 普通协议：收集端口到 NEW_VARS
-                if [[ -n "$protocol_name" ]]; then
-                    read -rp "为 $protocol_name 输入端口号 (留空则随机): " custom_port
-                    set_new_var "$protocol_name" "${custom_port:-}"
-                fi
-            done
-
-            # 循环结束后统一执行 rep（只执行一次，避免覆盖）
-            if [[ -n "$NEW_VARS" ]]; then
-                echo "🔹 正在更新节点（一次性应用所有选择）..."
-                # 注意：NEW_VARS 里是形如 key="val" key2="val2" 的字符串
-                eval "${NEW_VARS} ${ARGO_CMD} rep"
-                touch "$INSTALLED_FLAG"
-            else
-                echo "⚠️ 未选择有效协议或操作已完成"
-            fi
-            read -rp "按回车返回菜单..." dummy
-            ;;
-        2)
-            echo "🔹 正在显示节点信息..."
-            eval "${ARGO_CMD} list"
-            read -rp "按回车返回菜单..." dummy
-            ;;
-        3)
-            echo "🔹 正在更新脚本，此操作会重新加载最新配置..."
-            eval "${ARGO_CMD} rep"
-            read -rp "按回车返回菜单..." dummy
-            ;;
-        4)
-            eval "${ARGO_CMD} res"
-            read -rp "按回车返回菜单..." dummy
-            ;;
-        5)
-            eval "${ARGO_CMD} del"
-            rm -f "$INSTALLED_FLAG"
-            read -rp "按回车返回菜单..." dummy
-            ;;
-        6)
-            echo "1) 显示 IPv4 节点配置"
-            echo "2) 显示 IPv6 节点配置"
-            read -rp "请输入选项: " ip_choice
-            if [[ "$ip_choice" == "1" ]]; then
-                eval "ippz=4 ${ARGO_CMD} list"
-            elif [[ "$ip_choice" == "2" ]]; then
-                eval "ippz=6 ${ARGO_CMD} list"
-            else
-                echo "⚠️ 无效选项"
-            fi
-            read -rp "按回车返回菜单..." dummy
-            ;;
-        7)
-            echo "👉 请输入要更改端口的协议名和新端口号，格式为：[协议名]=[端口号]"
-            echo "⚠️ 注意：该操作会覆盖现有配置，请确保输入所有需要保留的协议。"
-            read -rp "输入: " port_change_input
-            if [[ -n "$port_change_input" ]]; then
-                eval "$port_change_input ${ARGO_CMD} rep"
-                echo "🔹 端口修改已提交，正在重新加载服务..."
-                eval "${ARGO_CMD} res"
-            else
-                echo "⚠️ 输入为空，操作取消。"
-            fi
-            read -rp "按回车返回菜单..." dummy
-            ;;
-        0) break ;;
-        *)
-            echo "❌ 无效输入"
-            sleep 1
-            ;;
+    show_menu
+    read -rp "请输入选项: " opt
+    case $opt in
+        1) add_or_update_protocols ;;
+        2) view_nodes ;;
+        3) update_script ;;
+        4) restart_script ;;
+        5) uninstall_script ;;
+        6) toggle_ipv4_ipv6 ;;
+        7) change_port ;;
+        0) exit 0 ;;
+        *) echo "无效选项" ;;
     esac
+    echo
+    read -rp "按回车键继续..." _
 done
