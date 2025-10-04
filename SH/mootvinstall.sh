@@ -9,7 +9,7 @@ ENV_FILE="$WORKDIR/.env"
 # 安装 Docker & Docker Compose
 # =========================
 install_docker() {
-  echo "📦 安装 Docker 和 Docker Compose..."
+  echo "📦 安装 Docker �?Docker Compose..."
   if ! command -v docker &>/dev/null; then
     curl -fsSL https://get.docker.com | bash
   fi
@@ -31,8 +31,8 @@ install_docker() {
 # 输入配置
 # =========================
 input_config() {
-  echo "⚙️ 配置 MoonTV 参数："
-  read -rp "用户名 (默认 admin): " USERNAME
+  echo "⚙️ 配置 MoonTV 参数�?
+  read -rp "用户�?(默认 admin): " USERNAME
   USERNAME=${USERNAME:-admin}
   read -rp "密码 (留空自动生成): " PASSWORD
   PASSWORD=${PASSWORD:-$(openssl rand -hex 6)}
@@ -41,13 +41,13 @@ input_config() {
 
   echo
   echo "================= 配置信息确认 ================="
-  echo "用户名: $USERNAME"
+  echo "用户�? $USERNAME"
   echo "密码: $PASSWORD"
   echo "AUTH_TOKEN: $AUTH_TOKEN"
   echo "==============================================="
-  read -rp "是否确认保存？(Y/n): " CONFIRM
+  read -rp "是否确认保存�?Y/n): " CONFIRM
   CONFIRM=${CONFIRM:-Y} # 默认 Y
-  [[ ! "$CONFIRM" =~ ^[Yy]$ ]] && { echo "已取消"; return 1; }
+  [[ ! "$CONFIRM" =~ ^[Yy]$ ]] && { echo "已取�?; return 1; }
 
   mkdir -p "$WORKDIR"
   [ -f "$ENV_FILE" ] && cp "$ENV_FILE" "$ENV_FILE.bak.$(date +%s)"
@@ -57,19 +57,19 @@ PASSWORD=$PASSWORD
 AUTH_TOKEN=$AUTH_TOKEN
 EOF
   chmod 600 "$ENV_FILE"
-  echo "✅ 配置已保存"
+  echo "�?配置已保�?
 }
 
 # =========================
 # 镜像选择
 # =========================
 choose_image() {
-  echo "📦 请选择安装镜像："
+  echo "📦 请选择安装镜像�?
   echo "1) 小黄人大佬镜像（带弹幕）(默认) ghcr.io/szemeng76/lunatv:latest"
   echo "2) 官方镜像 ghcr.io/moontechlab/lunatv:latest"
   echo "3) Docker Hub 镜像 (官方备用镜像) featherhao/lunatv:latest"
-  echo "4) Docker Hub 镜像 （100版本号防作者删库用） featherhao/moontv:100"
-  read -rp "请输入数字 [1-4] (默认 1): " img_choice
+  echo "4) Docker Hub 镜像 �?00版本号防作者删库用�?featherhao/moontv:100"
+  read -rp "请输入数�?[1-4] (默认 1): " img_choice
   img_choice=${img_choice:-1}
   case "$img_choice" in
     1) IMAGE="ghcr.io/szemeng76/lunatv:latest" ;;
@@ -82,7 +82,7 @@ choose_image() {
 }
 
 # =========================
-# 选择端口并生成 docker-compose.yml
+# 选择端口并生�?docker-compose.yml
 # =========================
 choose_port_and_write_compose() {
   POSSIBLE_PORTS=(8181 9090 10080 18080 28080)
@@ -93,7 +93,7 @@ choose_port_and_write_compose() {
       break
     fi
   done
-  [[ -z "$HOST_PORT" ]] && { echo "❌ 没有可用端口"; return 1; }
+  [[ -z "$HOST_PORT" ]] && { echo "�?没有可用端口"; return 1; }
   echo "使用端口 $HOST_PORT"
 
   cat > "$COMPOSE_FILE" <<EOF
@@ -136,16 +136,16 @@ EOF
 # 更新
 # =========================
 update() {
-  echo "🔄 请选择更新镜像："
+  echo "🔄 请选择更新镜像�?
   choose_image
   if [ -f "$COMPOSE_FILE" ]; then
     cd "$WORKDIR"
     echo "📦 拉取镜像 $IMAGE..."
     docker pull "$IMAGE"
     $DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
-    echo "✅ 更新完成"
+    echo "�?更新完成"
   else
-    echo "❌ 未找到 $COMPOSE_FILE，请先安装"
+    echo "�?未找�?$COMPOSE_FILE，请先安�?
   fi
 }
 
@@ -154,9 +154,9 @@ update() {
 # =========================
 uninstall() {
   echo "⚠️ 即将卸载 MoonTV"
-  read -rp "确认？(Y/n): " CONFIRM
+  read -rp "确认�?Y/n): " CONFIRM
   CONFIRM=${CONFIRM:-Y} # 默认 Y
-  [[ ! "$CONFIRM" =~ ^[Yy]$ ]] && { echo "已取消"; return; }
+  [[ ! "$CONFIRM" =~ ^[Yy]$ ]] && { echo "已取�?; return; }
   if [ -f "$COMPOSE_FILE" ]; then
     read -rp "是否删除容器数据卷？(Y/n): " DEL_VOL
     DEL_VOL=${DEL_VOL:-Y} # 默认 Y
@@ -166,10 +166,10 @@ uninstall() {
       $DOCKER_COMPOSE -f "$COMPOSE_FILE" down
     fi
   fi
-  read -rp "是否删除 $WORKDIR 目录？(Y/n): " DEL_DIR
+  read -rp "是否删除 $WORKDIR 目录�?Y/n): " DEL_DIR
   DEL_DIR=${DEL_DIR:-Y} # 默认 Y
   [[ "$DEL_DIR" =~ ^[Yy]$ ]] && rm -rf "$WORKDIR"
-  echo "✅ 卸载完成"
+  echo "�?卸载完成"
 }
 
 # =========================
@@ -307,10 +307,10 @@ if [ ! -d "$WORKDIR" ] || [ ! -f "$COMPOSE_FILE" ]; then
   HOST_PORT=$(grep -Po "(?<=- )\d+(?=:3000)" "$COMPOSE_FILE" | tr -d "'")
   HOST_PORT=${HOST_PORT:-8181}
 
-  echo "✅ MoonTV 已启动"
+  echo "�?MoonTV 已启�?
   echo "👉 IPv4 访问地址: http://$IPV4:$HOST_PORT"
   [[ -n "$IPV6" ]] && echo "👉 IPv6 访问地址: http://[$IPV6]:$HOST_PORT"
-  echo "👉 用户名: $(grep USERNAME "$ENV_FILE" | cut -d '=' -f2)"
+  echo "👉 用户�? $(grep USERNAME "$ENV_FILE" | cut -d '=' -f2)"
   echo "👉 密码: $(grep PASSWORD "$ENV_FILE" | cut -d '=' -f2)"
 fi
 
