@@ -1,13 +1,6 @@
 #!/bin/bash
-###
-# @Author: man snow
-# @Date: 2025-10-04
-# @Description: ZtoApi 自动安装/启动脚本（OpenAI兼容API代理 for Z.ai GLM-4.6）
-###
-
 set -Eeuo pipefail
 
-# ================== 彩色定义 ==================
 C_RESET="\e[0m"
 C_GREEN="\e[32m"
 C_YELLOW="\e[33m"
@@ -19,12 +12,54 @@ info()  { echo -e "${C_GREEN}[INFO]${C_RESET} $*"; }
 warn()  { echo -e "${C_YELLOW}[WARN]${C_RESET} $*"; }
 error() { echo -e "${C_RED}[ERROR]${C_RESET} $*"; }
 
-# ================== 配置 ==================
 INSTALL_DIR="/opt/zto-api"
-REPO_URL="https://github.com/forked-or-official/ZtoApi.git"
 DEFAULT_PORT=9090
+DOCKER_CONTAINER_NAME="zto-api"
 
-# ================== 安装依赖 ==================
+# ---------------- 检测安装 ----------------
+is_installed() {
+    [[ -d "$INSTALL_DIR" ]]
+}
+
+# ---------------- 显示访问地址 ----------------
+show_urls() {
+    local ip
+    ip=$(hostname -I | awk '{print $1}')
+    [[ -z "$ip" ]] && ip="localhost"
+
+    echo -e "\n${C_BOLD}已检测到 ZtoApi 已安装，访问地址如下：${C_RESET}"
+    echo -e "${C_BOLD}API Base URL:${C_RESET} http://${ip}:${DEFAULT_PORT}/v1"
+    echo -e "${C_BOLD}API 文档:${C_RESET} http://${ip}:${DEFAULT_PORT}/docs"
+    echo -e "${C_BOLD}Dashboard:${C_RESET} http://${ip}:${DEFAULT_PORT}/dashboard"
+    echo ""
+}
+
+# ---------------- 一键安装 ----------------
+install_all() {
+    if is_installed; then
+        warn "检测到 ZtoApi 已经安装！"
+        show_urls
+        return
+    fi
+
+    info "开始一键安装 ZtoApi..."
+
+    # 安装依赖
+    install_dependencies
+
+    # 克隆仓库
+    clone_or_update_repo
+
+    # 配置环境
+    setup_env
+
+    # 启动服务
+    start_service
+
+    info "一键安装完成！"
+    show_urls
+}
+
 install_dependencies() {
     info "安装必要依赖..."
     if command -v apt &>/dev/null; then
@@ -35,7 +70,6 @@ install_dependencies() {
     fi
 }
 
-# ================== 克隆或更新仓库 ==================
 clone_or_update_repo() {
     if [[ -d "$INSTALL_DIR" ]]; then
         info "仓库已存在，尝试更新..."
@@ -43,11 +77,10 @@ clone_or_update_repo() {
         git pull
     else
         info "克隆仓库到 $INSTALL_DIR ..."
-        sudo git clone "$REPO_URL" "$INSTALL_DIR"
+        sudo git clone "https://github.com/forked-or-official/ZtoApi.git" "$INSTALL_DIR"
     fi
 }
 
-# ================== 配置文件 ==================
 setup_env() {
     cd "$INSTALL_DIR"
     if [[ ! -f ".env.local" ]]; then
@@ -57,7 +90,6 @@ setup_env() {
     fi
 }
 
-# ================== 启动服务 ==================
 start_service() {
     cd "$INSTALL_DIR"
     if [[ -f "./start.sh" ]]; then
@@ -69,54 +101,62 @@ start_service() {
         go run main.go &
     fi
     sleep 2
-    detect_urls
 }
 
-# ================== Docker 启动 ==================
-docker_run() {
-    info "构建 Docker 镜像..."
-    docker build -t zto-api .
-    info "运行 Docker 容器..."
-    docker run -d -p ${DEFAULT_PORT}:${DEFAULT_PORT} \
-      -e ZAI_TOKEN=${ZAI_TOKEN:-""} \
-      -e DEFAULT_KEY=${DEFAULT_KEY:-"sk-your-key"} \
-      zto-api
-    detect_urls
+# ---------------- 一键卸载 ----------------
+uninstall_all() {
+    if ! is_installed; then
+        warn "未检测到安装，跳过卸载"
+        return
+    fi
+
+    warn "即将一键卸载 ZtoApi..."
+    read -p "确认删除安装目录、停止服务并删除 Docker 容器和镜像吗？ [y/N]: " confirm
+    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        info "取消卸载"
+        return
+    fi
+
+    # 停止 Go 服务
+    pkill -f "go run main.go" || true
+
+    # 停止 Docker 容器
+    docker stop "$DOCKER_CONTAINER_NAME" 2>/dev/null || true
+    docker rm "$DOCKER_CONTAINER_NAME" 2>/dev/null || true
+
+    # 删除 Docker 镜像
+    docker rmi zto-api 2>/dev/null || true
+
+    # 删除安装目录
+    sudo rm -rf "$INSTALL_DIR"
+
+    info "ZtoApi 已全部卸载完成！"
 }
 
-# ================== 显示访问地址 ==================
-detect_urls() {
-    local ip
-    ip=$(hostname -I | awk '{print $1}')
-    info "服务已启动！访问地址如下："
-    echo -e "${C_BOLD}API Base URL:${C_RESET} http://${ip}:${DEFAULT_PORT}/v1"
-    echo -e "${C_BOLD}API 文档:${C_RESET} http://${ip}:${DEFAULT_PORT}/docs"
-    echo -e "${C_BOLD}Dashboard:${C_RESET} http://${ip}:${DEFAULT_PORT}/dashboard"
-}
-
-# ================== 菜单 ==================
+# ---------------- 菜单 ----------------
 show_menu() {
-    echo -e "\n${C_BLUE}===== ZtoApi 安装与管理脚本 =====${C_RESET}"
-    echo "1) 安装依赖"
-    echo "2) 克隆/更新仓库"
-    echo "3) 配置环境文件"
-    echo "4) 启动服务"
-    echo "5) Docker 启动"
+    clear
+    echo -e "${C_BLUE}===== ZtoApi 管理脚本 =====${C_RESET}"
+
+    # 如果已安装，显示访问地址
+    is_installed && show_urls
+
+    echo "1) 一键安装 ZtoApi"
+    echo "2) 一键卸载 ZtoApi"
     echo "0) 退出"
-    echo -n "请选择操作 [0-5]: "
+    echo -n "请选择操作 [0-2]: "
     read -r choice
     case $choice in
-        1) install_dependencies ;;
-        2) clone_or_update_repo ;;
-        3) setup_env ;;
-        4) start_service ;;
-        5) docker_run ;;
+        1) install_all ;;
+        2) uninstall_all ;;
         0) exit 0 ;;
         *) warn "无效选项" ;;
     esac
 }
 
-# ================== 主循环 ==================
+# ---------------- 主循环 ----------------
 while true; do
     show_menu
+    echo -e "\n按回车继续..."
+    read -r
 done
