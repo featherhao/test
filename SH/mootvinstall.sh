@@ -175,114 +175,117 @@ uninstall() {
 # =========================
 # 管理菜单
 # =========================
+# =========================
+# 管理菜单
+# =========================
 moontv_menu() {
-  while true; do
-    clear
+  while true; do
+    clear
 
-    if [ -d "$WORKDIR" ] && [ -f "$COMPOSE_FILE" ]; then
-      STATUS="已安装 ✅"
-      CONFIG_DISPLAY="配置："
+    if [ -d "$WORKDIR" ] && [ -f "$COMPOSE_FILE" ]; then
+      STATUS="已安装 ✅"
+      CONFIG_DISPLAY="配置："
 
-      if [ -f "$ENV_FILE" ]; then
-        CONFIG_DISPLAY+=$'\n'"$(grep -E "USERNAME|PASSWORD|AUTH_TOKEN" "$ENV_FILE")"
-      else
-        CONFIG_DISPLAY+=" ❌ 配置文件不存在"
-      fi
+      if [ -f "$ENV_FILE" ]; then
+        CONFIG_DISPLAY+=$'\n'"$(grep -E "USERNAME|PASSWORD|AUTH_TOKEN" "$ENV_FILE")"
+      else
+        CONFIG_DISPLAY+=" ❌ 配置文件不存在"
+      fi
 
-      HOST_PORT=$(grep -Po "(?<=- )\d+(?=:3000)" "$COMPOSE_FILE" | tr -d "'")
-      HOST_PORT=${HOST_PORT:-8181}
+      HOST_PORT=$(grep -Po "(?<=- )\d+(?=:3000)" "$COMPOSE_FILE" | tr -d "'")
+      HOST_PORT=${HOST_PORT:-8181}
 
-      IPV4=$(curl -4 -s ifconfig.me || hostname -I | awk '{print $1}')
-      IPV6=$(curl -6 -s ifconfig.me || ip -6 addr show scope global | awk '{print $2}' | cut -d/ -f1 | head -n1)
+      IPV4=$(curl -4 -s ifconfig.me || hostname -I | awk '{print $1}')
+      IPV6=$(curl -6 -s ifconfig.me || ip -6 addr show scope global | awk '{print $2}' | cut -d/ -f1 | head -n1)
 
-      CONFIG_DISPLAY+=$'\n'"访问地址："
-      CONFIG_DISPLAY+=$'\n'"IPv4: http://$IPV4:$HOST_PORT"
-      [[ -n "$IPV6" ]] && CONFIG_DISPLAY+=$'\n'"IPv6: http://[$IPV6]:$HOST_PORT"
+      CONFIG_DISPLAY+=$'\n'"访问地址："
+      CONFIG_DISPLAY+=$'\n'"IPv4: http://$IPV4:$HOST_PORT"
+      [[ -n "$IPV6" ]] && CONFIG_DISPLAY+=$'\n'"IPv6: http://[$IPV6]:$HOST_PORT"
 
-    else
-      STATUS="未安装 ❌"
-      CONFIG_DISPLAY=""
-    fi
+    else
+      STATUS="未安装 ❌"
+      CONFIG_DISPLAY=""
+    fi
 
-    if [ "$STATUS" = "已安装 ✅" ]; then
-      echo -e "状态: \e[32m$STATUS\e[0m"
-    else
-      echo -e "状态: \e[31m$STATUS\e[0m"
-    fi
+    if [ "$STATUS" = "已安装 ✅" ]; then
+      echo -e "状态: \e[32m$STATUS\e[0m"
+    else
+      echo -e "状态: \e[31m$STATUS\e[0m"
+    fi
 
-    [ -n "$CONFIG_DISPLAY" ] && echo -e "$CONFIG_DISPLAY"
+    [ -n "$CONFIG_DISPLAY" ] && echo -e "$CONFIG_DISPLAY"
 
-    echo "------------------------------"
-    echo "1) 安装 / 初始化 MoonTV"
-    echo "2) 修改 MoonTV 配置"
-    echo "3) 卸载 MoonTV"
-    echo "4) 启动 MoonTV"
-    echo "5) 停止 MoonTV"
-    echo "6) 查看运行日志"
-    echo "7) 更新 MoonTV"
-    echo "b) 返回上一级"
-    echo "0) 退出"
-    echo "=============================="
-    read -rp "请输入选项: " choice
+    echo "------------------------------"
+    echo "1) 安装 / 初始化 MoonTV"
+    echo "2) 修改 MoonTV 配置"
+    echo "3) 卸载 MoonTV"
+    echo "4) 启动 MoonTV"
+    echo "5) 停止 MoonTV"
+    echo "6) 查看运行日志"
+    echo "00) 更新 MoonTV"
+    echo "b) 返回上一级"
+    echo "0) 退出"
+    echo "=============================="
+    read -rp "请输入选项: " choice
 
-    case "$choice" in
-      1)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          echo "❌ MoonTV 已安装，如需重新安装请先卸载"
-        else
-          input_config
-          choose_image
-          choose_port_and_write_compose
-          $DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
-          echo "✅ MoonTV 已启动"
-        fi
-        ;;
-      2) input_config ;;
-      3) uninstall ;;
-      4)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          cd "$WORKDIR"
-          $DOCKER_COMPOSE start
-        else
-          echo "❌ MoonTV 未安装"
-        fi
-        ;;
-      5)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          cd "$WORKDIR"
-          $DOCKER_COMPOSE stop
-        else
-          echo "❌ MoonTV 未安装"
-        fi
-        ;;
-      6)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          cd "$WORKDIR"
-          read -rp "是否持续跟踪日志？(Y/n): " LOG_FOLLOW
-          LOG_FOLLOW=${LOG_FOLLOW:-Y} # 默认 Y
-          if [[ "$LOG_FOLLOW" =~ ^[Yy]$ ]]; then
-            $DOCKER_COMPOSE logs -f
-          else
-            $DOCKER_COMPOSE logs --tail 50
-          fi
-        else
-          echo "❌ MoonTV 未安装"
-        fi
-        ;;
-      7)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          update
-        else
-          echo "❌ MoonTV 未安装，无法更新"
-        fi
-        ;;
-      b|B) break ;;
-      0) exit 0 ;;
-      *) echo "❌ 无效输入，请重新选择" ;;
-    esac
+    case "$choice" in
+      1)
+        if [ "$STATUS" = "已安装 ✅" ]; then
+          echo "❌ MoonTV 已安装，如需重新安装请先卸载"
+        else
+          input_config
+          choose_image
+          choose_port_and_write_compose
+          $DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
+          echo "✅ MoonTV 已启动"
+        fi
+        ;;
+      2) input_config ;;
+      3) uninstall ;;
+      4)
+        if [ "$STATUS" = "已安装 ✅" ]; then
+          cd "$WORKDIR"
+          $DOCKER_COMPOSE start
+        else
+          echo "❌ MoonTV 未安装"
+        fi
+        ;;
+      5)
+        if [ "$STATUS" = "已安装 ✅" ]; then
+          cd "$WORKDIR"
+          $DOCKER_COMPOSE stop
+        else
+          echo "❌ MoonTV 未安装"
+        fi
+        ;;
+      6)
+        if [ "$STATUS" = "已安装 ✅" ]; then
+          cd "$WORKDIR"
+          read -rp "是否持续跟踪日志？(Y/n): " LOG_FOLLOW
+          LOG_FOLLOW=${LOG_FOLLOW:-Y} # 默认 Y
+          if [[ "$LOG_FOLLOW" =~ ^[Yy]$ ]]; then
+            $DOCKER_COMPOSE logs -f
+          else
+            $DOCKER_COMPOSE logs --tail 50
+          fi
+        else
+          echo "❌ MoonTV 未安装"
+        fi
+        ;;
+      00) # 更新选项从 7 更改为 00
+        if [ "$STATUS" = "已安装 ✅" ]; then
+          update
+        else
+          echo "❌ MoonTV 未安装，无法更新"
+        fi
+        ;;
+      b|B) break ;;
+      0) exit 0 ;;
+      *) echo "❌ 无效输入，请重新选择" ;;
+    esac
 
-    read -rp "按回车继续..."
-  done
+    read -rp "按回车继续..."
+  done
 }
 
 # =========================
