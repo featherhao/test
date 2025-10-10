@@ -115,6 +115,18 @@ disk_usage_analysis() {
     read -p "按回车键返回主菜单..."
 }
 
+#=================哪吒监控安装==============
+install_nezha() {
+    echo "================ 安装哪吒监控 Agent ================"
+    curl -L https://raw.githubusercontent.com/nezhahq/scripts/refs/heads/main/install.sh -o /tmp/nezha.sh
+    chmod +x /tmp/nezha.sh
+    sudo /tmp/nezha.sh
+    echo "================ 安装完成 ==========================="
+}
+
+
+
+
 # ===== 菜单 =====
 menu() {
     while true; do
@@ -126,6 +138,7 @@ menu() {
         echo "2) 修改系统主机名"
         echo "3) VPS 容器/残留服务清理"
         echo "4) 磁盘占用分析"
+        echo "5) 安装哪吒监控 Agent"
         echo "0) 退出"
         read -p "请输入选项 [0-4]: " choice
 
@@ -152,6 +165,7 @@ menu() {
             2) change_hostname ;;
             3) clean_vps ;;
             4) disk_usage_analysis ;;
+            5) install_nezha ;;
             0) echo "退出"; exit 0 ;;
             *) echo "[WARN] 无效选项";;
         esac
