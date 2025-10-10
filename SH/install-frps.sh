@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==========================================================
 # Frp Server One-click Install / Uninstall / Update / Info
-# Author: Clang + MvsCode  (整合增强 by ChatGPT)
+# Author: Clang + MvsCode  (增强版整合 by ChatGPT)
 # Supports: CentOS / Debian / Ubuntu / Fedora
 # ==========================================================
 
@@ -12,7 +12,6 @@ FRPS_BIN="/usr/local/frps/frps"
 FRPS_CFG="/usr/local/frps/frps.ini"
 FRPS_SERVICE="/etc/systemd/system/frps.service"
 REPO_URL_GITHUB="https://api.github.com/repos/fatedier/frp/releases/latest"
-REPO_URL_GITEE="https://gitee.com/mvscode/frps-onekey/raw/master/install-frps.sh"
 ARCH=$(uname -m)
 
 # ========== 彩色输出 ==========
@@ -45,7 +44,9 @@ install_frps() {
 
   local version
   version=$(get_latest_version)
-  echo -e "${C_GREEN}开始安装 Frps $version${C_RESET}"
+  echo -e "${C_GREEN}检测到最新版本：$version${C_RESET}"
+  echo -e "${C_GREEN}开始安装 Frps，请稍候...${C_RESET}"
+  sleep 1
 
   mkdir -p "$FRPS_DIR"
   cd "$FRPS_DIR"
@@ -53,10 +54,16 @@ install_frps() {
   local file_name="frp_${version#v}_linux_amd64.tar.gz"
   [[ $ARCH == "aarch64" ]] && file_name="frp_${version#v}_linux_arm64.tar.gz"
 
-  wget -q "https://github.com/fatedier/frp/releases/download/${version}/${file_name}"
+  echo -e "${C_BLUE}正在下载：$file_name${C_RESET}"
+  wget -q "https://github.com/fatedier/frp/releases/download/${version}/${file_name}" || {
+    echo -e "${C_RED}下载失败，请检查网络或 GitHub 连接${C_RESET}"
+    exit 1
+  }
+
   tar -xzf "$file_name" --strip-components=1
   rm -f "$file_name"
 
+  # 写配置文件
   cat > "$FRPS_CFG" <<EOF
 [common]
 bind_port = 7000
@@ -65,6 +72,7 @@ dashboard_user = admin
 dashboard_pwd = admin
 EOF
 
+  # 写 systemd 服务
   cat > "$FRPS_SERVICE" <<EOF
 [Unit]
 Description=Frp Server Service
@@ -84,8 +92,9 @@ EOF
   systemctl start frps
 
   echo -e "${C_GREEN}✅ Frps 安装完成！${C_RESET}"
-  echo -e "Dashboard: http://<你的IP>:7500"
+  echo -e "Dashboard: http://$(hostname -I | awk '{print $1}'):7500"
   echo -e "配置文件: $FRPS_CFG"
+  echo -e "服务控制: systemctl {start|stop|restart|status} frps"
 }
 
 # ========== 卸载 ==========
@@ -114,7 +123,12 @@ update_frps() {
   local file_name="frp_${version#v}_linux_amd64.tar.gz"
   [[ $ARCH == "aarch64" ]] && file_name="frp_${version#v}_linux_arm64.tar.gz"
 
-  wget -q "https://github.com/fatedier/frp/releases/download/${version}/${file_name}"
+  echo -e "${C_BLUE}正在下载更新包：$file_name${C_RESET}"
+  wget -q "https://github.com/fatedier/frp/releases/download/${version}/${file_name}" || {
+    echo -e "${C_RED}下载失败，请检查网络或 GitHub 连接${C_RESET}"
+    exit 1
+  }
+
   tar -xzf "$file_name" frps --overwrite
   rm -f "$file_name"
   systemctl restart frps
@@ -128,7 +142,7 @@ info_frps() {
     echo -e "${C_RED}未检测到安装${C_RESET}"
     return
   fi
-  systemctl status frps --no-pager | grep Active
+  systemctl status frps --no-pager | grep Active || true
   echo "版本：$($FRPS_BIN --version)"
   echo "配置文件路径：$FRPS_CFG"
   echo "运行目录：$FRPS_DIR"
