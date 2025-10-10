@@ -4,7 +4,6 @@ set -Eeuo pipefail
 # ================== 彩色输出 ==================
 C_RESET="\e[0m"; C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"
 
-# ================== 环境准备 ==================
 INSTALL_DIR="/usr/local/frps"
 SERVICE_FILE="/etc/systemd/system/frps.service"
 
@@ -45,7 +44,7 @@ install_frps() {
     echo -e "${C_YELLOW}正在下载：${FILE}${C_RESET}"
     if ! curl -L -o "$FILE" "$URL"; then
         echo -e "${C_RED}下载失败，请检查网络或 GitHub 连接${C_RESET}"
-        exit 1
+        return
     fi
 
     tar -zxvf "$FILE" -C /tmp >/dev/null 2>&1
@@ -53,7 +52,7 @@ install_frps() {
     cp -f frp_*/frps.ini "$INSTALL_DIR/" 2>/dev/null || true
     rm -rf frp_*
 
-    # 创建配置文件
+    # 创建默认配置
     cat > "$INSTALL_DIR/frps.ini" <<EOF
 [common]
 bind_port = 7000
@@ -106,16 +105,20 @@ update_frps() {
 
 # ================== 查看信息 ==================
 show_info() {
+    echo -e "${C_YELLOW}========= Frps 状态信息 =========${C_RESET}"
     if systemctl is-active --quiet frps; then
-        echo -e "${C_GREEN}Frps 运行中${C_RESET}"
+        echo -e "${C_GREEN}✅ Frps 正在运行${C_RESET}"
     else
-        echo -e "${C_RED}Frps 未运行${C_RESET}"
+        echo -e "${C_RED}❌ Frps 未运行${C_RESET}"
     fi
-    systemctl status frps --no-pager
+    systemctl status frps --no-pager || true
+    echo -e "${C_YELLOW}配置文件：${INSTALL_DIR}/frps.ini${C_RESET}"
+    echo -e "${C_YELLOW}日志查看：journalctl -u frps -f${C_RESET}"
 }
 
 # ================== 菜单 ==================
-menu() {
+while true; do
+    echo ""
     echo "================ Frps 管理菜单 ================"
     echo "1) 安装 Frps"
     echo "2) 卸载 Frps"
@@ -129,9 +132,7 @@ menu() {
         2) uninstall_frps ;;
         3) update_frps ;;
         4) show_info ;;
-        0) exit 0 ;;
-        *) echo "无效选择";;
+        0) echo "已退出"; exit 0 ;;
+        *) echo "无效选择，请重试。" ;;
     esac
-}
-
-menu
+done
