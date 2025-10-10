@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 # ================== 彩色输出 ==================
-C_RESET="\e[0m"; C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"
+C_RESET="\e[0m"; C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"; C_BLUE="\e[36m"
 
 INSTALL_DIR="/usr/local/frps"
 SERVICE_FILE="/etc/systemd/system/frps.service"
@@ -10,7 +10,8 @@ SERVICE_FILE="/etc/systemd/system/frps.service"
 # ================== 获取最新版本 ==================
 get_latest_version() {
     echo -e "${C_YELLOW}正在获取 Frp 最新版本...${C_RESET}"
-    LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/fatedier/frp/releases/latest | grep '"tag_name"' | cut -d '"' -f4 | tr -d '[:space:]')
+    LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/fatedier/frp/releases/latest \
+        | grep '"tag_name"' | cut -d '"' -f4 | tr -d '[:space:]')
     if [[ -z "$LATEST_VERSION" ]]; then
         echo -e "${C_RED}❌ 获取最新版本失败，请检查网络！${C_RESET}"
         exit 1
@@ -47,18 +48,25 @@ install_frps() {
         return
     fi
 
+    echo -e "${C_BLUE}正在解压文件...${C_RESET}"
     tar -zxvf "$FILE" -C /tmp >/dev/null 2>&1
     cp -f frp_*/frps "$INSTALL_DIR/"
-    cp -f frp_*/frps.ini "$INSTALL_DIR/" 2>/dev/null || true
     rm -rf frp_*
 
-    # 创建默认配置
+    # 生成随机 token
+    TOKEN=$(openssl rand -hex 8)
+    SERVER_IP=$(curl -s ipv4.icanhazip.com || hostname -I | awk '{print $1}')
+
+    # 创建配置文件
     cat > "$INSTALL_DIR/frps.ini" <<EOF
 [common]
 bind_port = 7000
 dashboard_port = 7500
 dashboard_user = admin
 dashboard_pwd = admin
+token = ${TOKEN}
+vhost_http_port = 8080
+vhost_https_port = 8443
 EOF
 
     # 创建 systemd 服务
@@ -80,9 +88,20 @@ EOF
     systemctl enable frps
     systemctl restart frps
 
+    echo ""
     echo -e "${C_GREEN}✅ Frps 安装完成！${C_RESET}"
-    echo -e "运行状态：${C_YELLOW}systemctl status frps${C_RESET}"
-    echo -e "配置文件：${C_YELLOW}${INSTALL_DIR}/frps.ini${C_RESET}"
+    echo -e "--------------------------------------------------"
+    echo -e "${C_YELLOW}Frps 服务已启动${C_RESET}"
+    echo -e "${C_BLUE}服务端地址：${C_RESET}${SERVER_IP}"
+    echo -e "${C_BLUE}绑定端口：${C_RESET}7000"
+    echo -e "${C_BLUE}Token：${C_RESET}${TOKEN}"
+    echo -e "${C_BLUE}Dashboard 地址：${C_RESET}http://${SERVER_IP}:7500"
+    echo -e "${C_BLUE}Dashboard 用户名：${C_RESET}admin"
+    echo -e "${C_BLUE}Dashboard 密码：${C_RESET}admin"
+    echo -e "${C_BLUE}配置文件：${C_RESET}${INSTALL_DIR}/frps.ini"
+    echo -e "--------------------------------------------------"
+    echo -e "可执行命令：${C_YELLOW}systemctl status frps${C_RESET}"
+    echo -e ""
 }
 
 # ================== 卸载 ==================
@@ -112,11 +131,12 @@ show_info() {
         echo -e "${C_RED}❌ Frps 未运行${C_RESET}"
     fi
     systemctl status frps --no-pager || true
+    echo ""
     echo -e "${C_YELLOW}配置文件：${INSTALL_DIR}/frps.ini${C_RESET}"
-    echo -e "${C_YELLOW}日志查看：journalctl -u frps -f${C_RESET}"
+    echo -e "${C_YELLOW}查看日志：journalctl -u frps -f${C_RESET}"
 }
 
-# ================== 菜单 ==================
+# ================== 菜单循环 ==================
 while true; do
     echo ""
     echo "================ Frps 管理菜单 ================"
