@@ -31,16 +31,20 @@ get_arch() {
     esac
 }
 
-# ================== 安装 ==================
-install_frps() {
-    get_latest_version
+# ================== 通用安装函数 ==================
+install_frps_common() {
+    local VERSION=$1
+    local IS_FIXED=${2:-0}
     get_arch
-    echo -e "${C_GREEN}开始安装 Frps，请稍候...${C_RESET}"
     mkdir -p "$INSTALL_DIR"
     cd /tmp
 
-    FILE="frp_${LATEST_VERSION#v}_linux_${ARCH}.tar.gz"
-    URL="https://github.com/fatedier/frp/releases/download/${LATEST_VERSION}/${FILE}"
+    FILE="frp_${VERSION}_linux_${ARCH}.tar.gz"
+    if [[ "$IS_FIXED" -eq 1 ]]; then
+        URL="https://github.com/fatedier/frp/releases/download/v${VERSION}/${FILE}"
+    else
+        URL="https://github.com/fatedier/frp/releases/download/${VERSION}/${FILE}"
+    fi
 
     echo -e "${C_YELLOW}正在下载：${FILE}${C_RESET}"
     if ! curl -L -o "$FILE" "$URL"; then
@@ -89,7 +93,7 @@ EOF
     systemctl restart frps
 
     echo ""
-    echo -e "${C_GREEN}✅ Frps 安装完成！${C_RESET}"
+    echo -e "${C_GREEN}✅ Frps ${VERSION} 安装完成！${C_RESET}"
     echo -e "--------------------------------------------------"
     echo -e "${C_YELLOW}Frps 服务已启动${C_RESET}"
     echo -e "${C_BLUE}服务端地址：${C_RESET}${SERVER_IP}"
@@ -102,6 +106,18 @@ EOF
     echo -e "--------------------------------------------------"
     echo -e "可执行命令：${C_YELLOW}systemctl status frps${C_RESET}"
     echo -e ""
+}
+
+# ================== 安装最新版本 ==================
+install_frps_latest() {
+    get_latest_version
+    install_frps_common "${LATEST_VERSION#v}"
+}
+
+# ================== 安装固定 0.20.0 版本 ==================
+install_frps_v020() {
+    echo -e "${C_YELLOW}开始安装 Frps 0.20.0 版本...${C_RESET}"
+    install_frps_common "0.20.0" 1
 }
 
 # ================== 卸载 ==================
@@ -119,7 +135,7 @@ uninstall_frps() {
 update_frps() {
     echo -e "${C_YELLOW}正在更新 Frps...${C_RESET}"
     uninstall_frps
-    install_frps
+    install_frps_latest
 }
 
 # ================== 查看信息 ==================
@@ -140,18 +156,20 @@ show_info() {
 while true; do
     echo ""
     echo "================ Frps 管理菜单 ================"
-    echo "1) 安装 Frps"
+    echo "1) 安装 Frps 最新版"
     echo "2) 卸载 Frps"
     echo "3) 更新 Frps"
     echo "4) 查看运行信息"
+    echo "5) 安装 Frps 0.20.0 版本"
     echo "0) 退出"
     echo "=============================================="
-    read -rp "请选择操作 [0-4]: " choice
+    read -rp "请选择操作 [0-5]: " choice
     case "$choice" in
-        1) install_frps ;;
+        1) install_frps_latest ;;
         2) uninstall_frps ;;
         3) update_frps ;;
         4) show_info ;;
+        5) install_frps_v020 ;;
         0) echo "已退出"; exit 0 ;;
         *) echo "无效选择，请重试。" ;;
     esac
