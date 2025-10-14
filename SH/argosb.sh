@@ -21,11 +21,7 @@ error()   { echo -e "${red}[ERROR]${plain} $*"; }
 
 # ================== 检查状态 ==================
 argosb_status_check() {
-    if [[ -x "$AGSX_CMD" || -f "$INSTALLED_FLAG" ]]; then
-        return 0
-    else
-        return 1
-    fi
+    [[ -x "$AGSX_CMD" && -f "$INSTALLED_FLAG" ]] && return 0 || return 1
 }
 
 # ================== 安装快捷方式 ==================
@@ -38,7 +34,7 @@ EOF
     chmod +x "$AGSX_CMD"
     mkdir -p "$(dirname "$INSTALLED_FLAG")"
     touch "$INSTALLED_FLAG"
-    info "快捷方式已安装：$AGSX_CMD"
+    info "✅ 快捷方式已创建：$AGSX_CMD"
 }
 
 # ================== 菜单 ==================
@@ -89,7 +85,6 @@ EOF
     [[ -z "$selections" ]] && return
 
     VAR_STR=""
-
     for sel in $selections; do
         case $sel in
             1) read -rp "为 vlpt 输入端口号 (留空随机): " p; VAR_STR+="vlpt=\"$p\" " ;;
@@ -112,40 +107,19 @@ EOF
         esac
     done
 
+    # 安装快捷方式（如果还没安装）
+    [[ ! -x "$AGSX_CMD" || ! -f "$INSTALLED_FLAG" ]] && install_shortcut
+
     info "🔹 正在更新节点..."
     bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
 }
 
-view_nodes() {
-    $AGSX_CMD list || true
-}
-
-update_script() {
-    warn "更新脚本时建议卸载后重装！"
-    rm -f "$INSTALLED_FLAG"
-    install_shortcut
-    info "已更新快捷方式，下次运行将使用最新脚本。"
-}
-
-restart_script() {
-    $AGSX_CMD res || true
-}
-
-uninstall_script() {
-    $AGSX_CMD del || true
-    rm -f "$INSTALLED_FLAG" "$AGSX_CMD"
-    info "脚本已卸载。"
-}
-
-toggle_ipv4_ipv6() {
-    $AGSX_CMD ip || true
-}
-
-change_port() {
-    read -rp "请输入协议标识 (例如 xhpt): " proto
-    read -rp "请输入新的端口号: " port
-    bash <(curl -Ls "$SCRIPT_URL") "$proto=$port"
-}
+view_nodes() { $AGSX_CMD list || true; }
+update_script() { rm -f "$INSTALLED_FLAG"; install_shortcut; info "脚本已更新"; }
+restart_script() { $AGSX_CMD res || true; }
+uninstall_script() { $AGSX_CMD del || true; rm -f "$INSTALLED_FLAG" "$AGSX_CMD"; info "脚本已卸载"; }
+toggle_ipv4_ipv6() { $AGSX_CMD ip || true; }
+change_port() { read -rp "请输入协议标识 (例如 xhpt): " proto; read -rp "请输入新的端口号: " port; bash <(curl -Ls "$SCRIPT_URL") "$proto=$port"; }
 
 # ================== 主循环 ==================
 while true; do
