@@ -6,7 +6,7 @@ trap 'status=$?; line=${BASH_LINENO[0]}; echo -e "\033[0;31m❌ 发生错误 (ex
 
 # ================== 基础配置 ==================
 SCRIPT_URL="https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh"
-INSTALLED_FLAG="/opt/argosb/installed.flag"
+INSTALL_DIR="/opt/argosb"
 BIN_DIR="/root/bin"
 AGSX_CMD="$BIN_DIR/agsbx"
 
@@ -16,12 +16,12 @@ info() { echo -e "${green}[INFO]${plain} $*"; }
 warn() { echo -e "${yellow}[WARN]${plain} $*"; }
 error() { echo -e "${red}[ERROR]${plain} $*"; }
 
-# ================== 检查状态 ==================
+# ================== 检查 ArgoSB 是否安装 ==================
 argosb_status_check() {
-    [[ -x "$AGSX_CMD" && -f "$INSTALLED_FLAG" ]] && return 0 || return 1
+    [[ -d "$INSTALL_DIR" && -f "$INSTALL_DIR/config.json" ]] && return 0 || return 1
 }
 
-# ================== 安装快捷方式 ==================
+# ================== 创建快捷方式 ==================
 install_shortcut() {
     mkdir -p "$BIN_DIR"
     cat > "$AGSX_CMD" <<EOF
@@ -29,19 +29,13 @@ install_shortcut() {
 exec bash <(curl -Ls $SCRIPT_URL) "\$@"
 EOF
     chmod +x "$AGSX_CMD"
-    mkdir -p "$(dirname "$INSTALLED_FLAG")"
-    touch "$INSTALLED_FLAG"
     info "✅ 快捷方式已创建：$AGSX_CMD"
 }
 
-# ================== 菜单 ==================
+# ================== 显示菜单 ==================
 show_menu() {
     clear
-    if argosb_status_check; then
-        status="✅ 已安装"
-    else
-        status="❌ 未安装"
-    fi
+    status=$(argosb_status_check && echo "✅ 已安装" || echo "❌ 未安装")
     cat <<EOF
 ==============================
   🚀 勇哥ArgoSB协议管理 $status
@@ -58,7 +52,7 @@ show_menu() {
 EOF
 }
 
-# ================== 添加/更新协议 ==================
+# ================== 添加或更新协议 ==================
 add_or_update_protocols() {
     cat <<EOF
 请选择要添加或更新的协议（可多选，用空格分隔，例如 1 3 5；回车取消）:
@@ -83,19 +77,20 @@ EOF
     VAR_STR=""
     for sel in $selections; do
         case $sel in
-            1) read -rp "为 vlpt 输入端口号 (留空随机): " p; VAR_STR+="vlpt=\"$p\" " ;;
-            2) read -rp "为 xhpt 输入端口号 (留空随机): " p; VAR_STR+="xhpt=\"$p\" " ;;
-            3) read -rp "为 vxpt 输入端口号 (留空随机): " p; VAR_STR+="vxpt=\"$p\" " ;;
-            4) read -rp "为 sspt 输入端口号 (留空随机): " p; VAR_STR+="sspt=\"$p\" " ;;
-            5) read -rp "为 anpt 输入端口号 (留空随机): " p; VAR_STR+="anpt=\"$p\" " ;;
-            6) read -rp "为 arpt 输入端口号 (留空随机): " p; VAR_STR+="arpt=\"$p\" " ;;
-            7) read -rp "为 vmpt 输入端口号 (留空随机): " p; VAR_STR+="vmpt=\"$p\" " ;;
-            8) read -rp "为 sopt 输入端口号 (留空随机): " p; VAR_STR+="sopt=\"$p\" " ;;
-            9) read -rp "为 hypt 输入端口号 (留空随机): " p; VAR_STR+="hypt=\"$p\" " ;;
-            10) read -rp "为 tupt 输入端口号 (留空随机): " p; VAR_STR+="tupt=\"$p\" " ;;
-            11) read -rp "为 Argo 临时隧道 输入端口号 (留空随机): " p; VAR_STR+="argo=\"$p\" " ;;
-            12) 
+            1) read -rp "为 vlpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="vlpt=\"$p\" " ;;
+            2) read -rp "为 xhpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="xhpt=\"$p\" " ;;
+            3) read -rp "为 vxpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="vxpt=\"$p\" " ;;
+            4) read -rp "为 sspt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="sspt=\"$p\" " ;;
+            5) read -rp "为 anpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="anpt=\"$p\" " ;;
+            6) read -rp "为 arpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="arpt=\"$p\" " ;;
+            7) read -rp "为 vmpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="vmpt=\"$p\" " ;;
+            8) read -rp "为 sopt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="sopt=\"$p\" " ;;
+            9) read -rp "为 hypt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="hypt=\"$p\" " ;;
+            10) read -rp "为 tupt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="tupt=\"$p\" " ;;
+            11) read -rp "为 Argo 临时隧道 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="argo=\"$p\" " ;;
+            12)
                 read -rp "为 Argo 固定隧道输入 vmpt 端口号: " p
+                [[ -z "$p" ]] && p=$((RANDOM%40000+10000))
                 read -rp "输入 Argo 固定隧道域名 agn (CF 解析域名): " agn
                 read -rp "输入 Argo 固定隧道 token agk (CF token): " agk
                 VAR_STR+="vmpt=\"$p\" argo=\"y\" agn=\"$agn\" agk=\"$agk\" "
@@ -103,9 +98,9 @@ EOF
         esac
     done
 
-    # ✅ 第一次安装直接带协议变量调用远程脚本
+    # 第一次安装 ArgoSB
     if ! argosb_status_check; then
-        info "⚠️ ArgoSB 未安装，正在安装并添加协议..."
+        info "⚠️ ArgoSB 未安装，正在完整安装并添加协议..."
         bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
         install_shortcut
         info "✅ ArgoSB 已成功安装并更新节点"
@@ -117,9 +112,9 @@ EOF
 
 # ================== 其他操作 ==================
 view_nodes() { $AGSX_CMD list || true; }
-update_script() { rm -f "$INSTALLED_FLAG"; bash <(curl -Ls "$SCRIPT_URL"); install_shortcut; info "脚本已更新"; }
+update_script() { bash <(curl -Ls "$SCRIPT_URL"); install_shortcut; info "脚本已更新"; }
 restart_script() { $AGSX_CMD res || true; }
-uninstall_script() { $AGSX_CMD del || true; rm -f "$INSTALLED_FLAG" "$AGSX_CMD"; info "脚本已卸载"; }
+uninstall_script() { $AGSX_CMD del || true; rm -rf "$INSTALL_DIR" "$AGSX_CMD"; info "脚本已卸载"; }
 toggle_ipv4_ipv6() { $AGSX_CMD ip || true; }
 change_port() { read -rp "请输入协议标识 (例如 xhpt): " proto; read -rp "请输入新的端口号: " port; bash <(curl -Ls "$SCRIPT_URL") "$proto=$port"; }
 
