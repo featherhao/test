@@ -54,19 +54,23 @@ EOF
 
 # ================== 添加或更新协议 ==================
 add_or_update_protocols() {
-    # 首次安装时自动生成默认协议，避免 exit=23
+
+    # 第一次安装，自动生成全套默认协议，避免 exit=23
     if ! argosb_status_check; then
         info "⚠️ ArgoSB 未安装，正在首次安装并生成默认协议..."
-        # 随机端口
-        DEFAULT_VLPT=$((RANDOM%40000+10000))
-        DEFAULT_XHPT=$((RANDOM%40000+10000))
-        bash <(curl -Ls "$SCRIPT_URL") vlpt="$DEFAULT_VLPT" xhpt="$DEFAULT_XHPT"
+        VAR_STR=""
+        for proto in vlpt xhpt vxpt sspt anpt arpt vmpt sopt hypt tupt; do
+            port=$((RANDOM%40000+10000))
+            VAR_STR+="$proto=\"$port\" "
+        done
+        bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
         install_shortcut
-        info "✅ ArgoSB 首次安装完成"
+        info "✅ ArgoSB 首次安装完成，并生成全套协议端口"
         info "请再次选择【添加或更新协议】来修改或添加更多协议"
         return
     fi
 
+    # 已安装，则手动选择协议
     cat <<EOF
 请选择要添加或更新的协议（可多选，用空格分隔，例如 1 3 5；回车取消）:
 ⚠️ 注意：该操作会覆盖现有配置，请确保输入所有需要保留的协议。
@@ -111,11 +115,9 @@ EOF
         esac
     done
 
-    if [[ -n "$VAR_STR" ]]; then
-        info "🔹 正在更新节点..."
-        bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
-        info "✅ 协议已更新"
-    fi
+    info "🔹 正在更新节点..."
+    bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
+    info "✅ 协议已更新"
 }
 
 # ================== 其他操作 ==================
