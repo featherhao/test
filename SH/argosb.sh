@@ -52,25 +52,11 @@ show_menu() {
 EOF
 }
 
+# ================== 生成默认端口函数 ==================
+gen_port() { echo $((RANDOM%40000+10000)); }
+
 # ================== 添加或更新协议 ==================
 add_or_update_protocols() {
-
-    # 第一次安装，自动生成全套默认协议，避免 exit=23
-    if ! argosb_status_check; then
-        info "⚠️ ArgoSB 未安装，正在首次安装并生成默认协议..."
-        VAR_STR=""
-        for proto in vlpt xhpt vxpt sspt anpt arpt vmpt sopt hypt tupt; do
-            port=$((RANDOM%40000+10000))
-            VAR_STR+="$proto=\"$port\" "
-        done
-        bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
-        install_shortcut
-        info "✅ ArgoSB 首次安装完成，并生成全套协议端口"
-        info "请再次选择【添加或更新协议】来修改或添加更多协议"
-        return
-    fi
-
-    # 已安装，则手动选择协议
     cat <<EOF
 请选择要添加或更新的协议（可多选，用空格分隔，例如 1 3 5；回车取消）:
 ⚠️ 注意：该操作会覆盖现有配置，请确保输入所有需要保留的协议。
@@ -94,20 +80,20 @@ EOF
     VAR_STR=""
     for sel in $selections; do
         case $sel in
-            1) read -rp "为 vlpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="vlpt=\"$p\" " ;;
-            2) read -rp "为 xhpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="xhpt=\"$p\" " ;;
-            3) read -rp "为 vxpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="vxpt=\"$p\" " ;;
-            4) read -rp "为 sspt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="sspt=\"$p\" " ;;
-            5) read -rp "为 anpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="anpt=\"$p\" " ;;
-            6) read -rp "为 arpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="arpt=\"$p\" " ;;
-            7) read -rp "为 vmpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="vmpt=\"$p\" " ;;
-            8) read -rp "为 sopt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="sopt=\"$p\" " ;;
-            9) read -rp "为 hypt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="hypt=\"$p\" " ;;
-            10) read -rp "为 tupt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="tupt=\"$p\" " ;;
-            11) read -rp "为 Argo 临时隧道 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$((RANDOM%40000+10000)); VAR_STR+="argo=\"$p\" " ;;
+            1) read -rp "为 vlpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$(gen_port); VAR_STR+="vlpt=\"$p\" " ;;
+            2) read -rp "为 xhpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$(gen_port); VAR_STR+="xhpt=\"$p\" " ;;
+            3) read -rp "为 vxpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$(gen_port); VAR_STR+="vxpt=\"$p\" " ;;
+            4) read -rp "为 sspt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$(gen_port); VAR_STR+="sspt=\"$p\" " ;;
+            5) read -rp "为 anpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$(gen_port); VAR_STR+="anpt=\"$p\" " ;;
+            6) read -rp "为 arpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$(gen_port); VAR_STR+="arpt=\"$p\" " ;;
+            7) read -rp "为 vmpt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$(gen_port); VAR_STR+="vmpt=\"$p\" " ;;
+            8) read -rp "为 sopt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$(gen_port); VAR_STR+="sopt=\"$p\" " ;;
+            9) read -rp "为 hypt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$(gen_port); VAR_STR+="hypt=\"$p\" " ;;
+            10) read -rp "为 tupt 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$(gen_port); VAR_STR+="tupt=\"$p\" " ;;
+            11) read -rp "为 Argo 临时隧道 输入端口号 (留空随机): " p; [[ -z "$p" ]] && p=$(gen_port); VAR_STR+="argo=\"$p\" " ;;
             12)
                 read -rp "为 Argo 固定隧道输入 vmpt 端口号: " p
-                [[ -z "$p" ]] && p=$((RANDOM%40000+10000))
+                [[ -z "$p" ]] && p=$(gen_port)
                 read -rp "输入 Argo 固定隧道域名 agn (CF 解析域名): " agn
                 read -rp "输入 Argo 固定隧道 token agk (CF token): " agk
                 VAR_STR+="vmpt=\"$p\" argo=\"y\" agn=\"$agn\" agk=\"$agk\" "
@@ -115,9 +101,19 @@ EOF
         esac
     done
 
-    info "🔹 正在更新节点..."
-    bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
-    info "✅ 协议已更新"
+    # 安装快捷方式（如果还没安装）
+    [[ ! -x "$AGSX_CMD" ]] && install_shortcut
+
+    # 第一次安装或更新
+    if ! argosb_status_check; then
+        info "⚠️ ArgoSB 未安装，正在首次安装并生成默认协议..."
+        bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
+        info "✅ ArgoSB 首次安装完成"
+    else
+        info "🔹 正在更新节点..."
+        bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
+        info "✅ 协议已更新"
+    fi
 }
 
 # ================== 其他操作 ==================
