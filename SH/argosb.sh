@@ -37,6 +37,16 @@ EOF
     info "✅ 快捷方式已创建：$AGSX_CMD"
 }
 
+# ================== 安装 ArgoSB ==================
+install_argosb() {
+    if ! argosb_status_check; then
+        info "⚠️ ArgoSB 未安装，正在安装..."
+        bash <(curl -Ls "$SCRIPT_URL")
+        install_shortcut
+        info "✅ ArgoSB 已成功安装"
+    fi
+}
+
 # ================== 菜单 ==================
 show_menu() {
     clear
@@ -107,15 +117,15 @@ EOF
         esac
     done
 
-    # 安装快捷方式（如果还没安装）
-    [[ ! -x "$AGSX_CMD" || ! -f "$INSTALLED_FLAG" ]] && install_shortcut
+    # 安装 ArgoSB 脚本（如果未安装）
+    install_argosb
 
     info "🔹 正在更新节点..."
     bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
 }
 
 view_nodes() { $AGSX_CMD list || true; }
-update_script() { rm -f "$INSTALLED_FLAG"; install_shortcut; info "脚本已更新"; }
+update_script() { rm -f "$INSTALLED_FLAG"; install_argosb; info "脚本已更新"; }
 restart_script() { $AGSX_CMD res || true; }
 uninstall_script() { $AGSX_CMD del || true; rm -f "$INSTALLED_FLAG" "$AGSX_CMD"; info "脚本已卸载"; }
 toggle_ipv4_ipv6() { $AGSX_CMD ip || true; }
