@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -Eeuo pipefail
 
 # ================== 基础配置 ==================
 MAIN_SCRIPT="https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh"
@@ -20,9 +20,9 @@ argosb_status_check() {
 # ================== 安装快捷方式 ==================
 install_shortcut() {
     mkdir -p "$BIN_DIR"
-    cat > "$AGSX_CMD" <<EOF
+    cat > "$AGSX_CMD" <<'EOF'
 #!/bin/bash
-exec bash <(curl -Ls $MAIN_SCRIPT) "\$@"
+exec bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh) "$@"
 EOF
     chmod +x "$AGSX_CMD"
     info "✅ 快捷方式已创建：$AGSX_CMD"
@@ -89,22 +89,13 @@ add_or_update_protocols() {
             8) read -rp "请输入 sopt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export sopt="$val";;
             9) read -rp "请输入 hypt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export hypt="$val";;
             10) read -rp "请输入 tupt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export tupt="$val";;
-            11)
-                if [ -z "${vmpt:-}" ]; then
-                    read -rp "请输入 Argo临时隧道端口 vmpt（留空随机）: " val; [[ -z "$val" ]] && val=""
-                    export vmpt="$val"
-                fi
-                export argo="y"
-                ;;
+            11) export argo="y";;
             12)
                 if [ $vmess_enabled -eq 0 ]; then
                     echo "⚠️ Argo固定隧道必须启用 vmpt，请先选择 7) Vmess-ws"
                     continue 2
                 fi
-                if [ -z "${vmpt:-}" ]; then
-                    read -rp "请输入 Argo固定隧道端口 vmpt: " val
-                    export vmpt="$val"
-                fi
+                read -rp "请输入 Argo固定隧道端口 vmpt: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export vmpt="$val"
                 read -rp "请输入 Argo固定隧道域名 agn: " val; export agn="$val"
                 read -rp "请输入 Argo固定隧道Token agk: " val; export agk="$val"
                 export argo="y"
@@ -113,12 +104,11 @@ add_or_update_protocols() {
         esac
     done
 
-    # 决定是否带 rep
+    rep_flag=""
     if argosb_status_check; then
         rep_flag="rep"
         info "🔹 已安装，修改协议将带 rep"
     else
-        rep_flag=""
         info "⚠️ 未安装，首次安装"
     fi
 
@@ -134,7 +124,7 @@ update_script() { bash <(curl -Ls "$MAIN_SCRIPT"); install_shortcut; info "脚�
 restart_script() { $AGSX_CMD res || true; }
 uninstall_script() { $AGSX_CMD del || true; rm -f "$AGSX_CMD"; info "脚本已卸载"; }
 toggle_ipv4_ipv6() { read -rp "显示 IPv4 节点请输入4，IPv6请输入6: " ipver; export ippz="$ipver"; $AGSX_CMD list || true; }
-change_port() { read -rp "请输入协议标识 (例如 xhpt): " proto; read -rp "请输入新的端口号: " port; export "$proto"="$port"; bash <(curl -Ls "$MAIN_SCRIPT") rep; }
+change_port() { read -rp "请输入协议标识 (例如 xhpt): " proto; read -rp "请输入新的端口号: " port; export "$proto"="$port"; bash <(curl -Ls "$MAIN_SCRIPT"); }
 
 # ================== 主循环 ==================
 install_shortcut
