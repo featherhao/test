@@ -1,5 +1,5 @@
 #!/bin/bash
-set -Eeuo pipefail
+set -euo pipefail
 
 # ================== 基础配置 ==================
 MAIN_SCRIPT="https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh"
@@ -20,9 +20,9 @@ argosb_status_check() {
 # ================== 安装快捷方式 ==================
 install_shortcut() {
     mkdir -p "$BIN_DIR"
-    cat > "$AGSX_CMD" <<'EOF'
+    cat > "$AGSX_CMD" <<EOF
 #!/bin/bash
-exec bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh) "$@"
+exec bash <(curl -Ls $MAIN_SCRIPT) "\$@"
 EOF
     chmod +x "$AGSX_CMD"
     info "✅ 快捷方式已创建：$AGSX_CMD"
@@ -95,7 +95,10 @@ add_or_update_protocols() {
                     echo "⚠️ Argo固定隧道必须启用 vmpt，请先选择 7) Vmess-ws"
                     continue 2
                 fi
-                read -rp "请输入 Argo固定隧道端口 vmpt: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export vmpt="$val"
+                if [ -z "${vmpt:-}" ]; then
+                    read -rp "请输入 Argo固定隧道端口 vmpt: " val
+                    export vmpt="$val"
+                fi
                 read -rp "请输入 Argo固定隧道域名 agn: " val; export agn="$val"
                 read -rp "请输入 Argo固定隧道Token agk: " val; export agk="$val"
                 export argo="y"
@@ -104,11 +107,11 @@ add_or_update_protocols() {
         esac
     done
 
-    rep_flag=""
     if argosb_status_check; then
         rep_flag="rep"
         info "🔹 已安装，修改协议将带 rep"
     else
+        rep_flag=""
         info "⚠️ 未安装，首次安装"
     fi
 
