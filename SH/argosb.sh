@@ -89,19 +89,21 @@ add_or_update_protocols() {
             8) read -rp "请输入 sopt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export sopt="$val";;
             9) read -rp "请输入 hypt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export hypt="$val";;
             10) read -rp "请输入 tupt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export tupt="$val";;
-            11) export argo="y";;
-            12)
-                if [ $vmess_enabled -eq 0 ]; then
-                    echo "⚠️ Argo固定隧道必须启用 vmpt，请先选择 7) Vmess-ws"
-                    continue 2
-                fi
+            11) 
+                export argo="y"
                 if [ -z "${vmpt:-}" ]; then
-                    read -rp "请输入 Argo固定隧道端口 vmpt: " val
-                    export vmpt="$val"
+                    echo "⚠️ 提示：未选择 vmpt，临时隧道可能无法生效"
                 fi
+                ;;
+            12)
+                export argo="y"
+                if [ -z "${vmpt:-}" ]; then
+                    echo "⚠️ 提示：未选择 vmpt，固定隧道可能无法生效"
+                fi
+                read -rp "请输入 Argo固定隧道端口 vmpt（留空保持原值）: " val
+                [[ -n "$val" ]] && export vmpt="$val"
                 read -rp "请输入 Argo固定隧道域名 agn: " val; export agn="$val"
                 read -rp "请输入 Argo固定隧道Token agk: " val; export agk="$val"
-                export argo="y"
                 ;;
             *) echo "⚠️ 无效选项 $sel";;
         esac
