@@ -150,4 +150,8 @@ while true; do
         6) toggle_ipv4_ipv6 ;;
         7) change_port ;;
         0) exit 0 ;;
-        *) echo "
+        *) echo "⚠️ 无效选项" ;;
+    esac
+    echo
+    read -rp "按回车键继续..." _
+done
