@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 # ================== 统一失败处理 ==================
-trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
+trap 'status=$?; line=${BASH_LINENO[0]}; echo -e "\033[0;31m❌ 发生错误 (exit=$status) at line $line\033[0m" >&2; exit $status' ERR
 
 # ================== 基础配置 ==================
 SCRIPT_URL="https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh"
@@ -11,13 +11,10 @@ BIN_DIR="/root/bin"
 AGSX_CMD="$BIN_DIR/agsbx"
 
 # ================== 彩色输出 ==================
-green='\033[0;32m'
-yellow='\033[1;33m'
-red='\033[0;31m'
-plain='\033[0m'
-info()    { echo -e "${green}[INFO]${plain} $*"; }
-warn()    { echo -e "${yellow}[WARN]${plain} $*"; }
-error()   { echo -e "${red}[ERROR]${plain} $*"; }
+green='\033[0;32m'; yellow='\033[1;33m'; red='\033[0;31m'; plain='\033[0m'
+info() { echo -e "${green}[INFO]${plain} $*"; }
+warn() { echo -e "${yellow}[WARN]${plain} $*"; }
+error() { echo -e "${red}[ERROR]${plain} $*"; }
 
 # ================== 检查状态 ==================
 argosb_status_check() {
@@ -37,16 +34,6 @@ EOF
     info "✅ 快捷方式已创建：$AGSX_CMD"
 }
 
-# ================== 安装 ArgoSB ==================
-install_argosb() {
-    if ! argosb_status_check; then
-        info "⚠️ ArgoSB 未安装，正在安装..."
-        bash <(curl -Ls "$SCRIPT_URL")
-        install_shortcut
-        info "✅ ArgoSB 已成功安装"
-    fi
-}
-
 # ================== 菜单 ==================
 show_menu() {
     clear
@@ -55,7 +42,6 @@ show_menu() {
     else
         status="❌ 未安装"
     fi
-
     cat <<EOF
 ==============================
   🚀 勇哥ArgoSB协议管理 $status
@@ -72,7 +58,7 @@ show_menu() {
 EOF
 }
 
-# ================== 操作函数 ==================
+# ================== 添加/更新协议 ==================
 add_or_update_protocols() {
     cat <<EOF
 请选择要添加或更新的协议（可多选，用空格分隔，例如 1 3 5；回车取消）:
@@ -117,15 +103,21 @@ EOF
         esac
     done
 
-    # 安装 ArgoSB 脚本（如果未安装）
-    install_argosb
-
-    info "🔹 正在更新节点..."
-    bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
+    # ✅ 第一次安装直接带协议变量调用远程脚本
+    if ! argosb_status_check; then
+        info "⚠️ ArgoSB 未安装，正在安装并添加协议..."
+        bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
+        install_shortcut
+        info "✅ ArgoSB 已成功安装并更新节点"
+    else
+        info "🔹 正在更新节点..."
+        bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
+    fi
 }
 
+# ================== 其他操作 ==================
 view_nodes() { $AGSX_CMD list || true; }
-update_script() { rm -f "$INSTALLED_FLAG"; install_argosb; info "脚本已更新"; }
+update_script() { rm -f "$INSTALLED_FLAG"; bash <(curl -Ls "$SCRIPT_URL"); install_shortcut; info "脚本已更新"; }
 restart_script() { $AGSX_CMD res || true; }
 uninstall_script() { $AGSX_CMD del || true; rm -f "$INSTALLED_FLAG" "$AGSX_CMD"; info "脚本已卸载"; }
 toggle_ipv4_ipv6() { $AGSX_CMD ip || true; }
