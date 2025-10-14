@@ -98,15 +98,19 @@ EOF
         esac
     done
 
-    # 第一次安装 ArgoSB
+    # 首次安装
     if ! argosb_status_check; then
-        info "⚠️ ArgoSB 未安装，正在完整安装并添加协议..."
-        bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
+        info "⚠️ ArgoSB 未安装，正在完整安装..."
+        bash <(curl -Ls "$SCRIPT_URL")  # ⚠️ 首次安装不带协议变量
         install_shortcut
-        info "✅ ArgoSB 已成功安装并更新节点"
-    else
+        info "✅ ArgoSB 安装完成"
+    fi
+
+    # 安装完成后再更新节点
+    if [[ -n "$VAR_STR" ]]; then
         info "🔹 正在更新节点..."
         bash <(curl -Ls "$SCRIPT_URL") $VAR_STR
+        info "✅ 协议已更新"
     fi
 }
 
