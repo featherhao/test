@@ -1,11 +1,10 @@
 #!/bin/bash
-set -Eeuo pipefail
+set -euo pipefail
 
 # ================== 基础配置 ==================
 MAIN_SCRIPT="https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh"
 BIN_DIR="/root/bin"
 AGSX_CMD="$BIN_DIR/agsbx"
-INSTALL_FLAG="/opt/argosb/config.json"  # 判断是否已安装
 
 # ================== 彩色输出 ==================
 green='\033[0;32m'; yellow='\033[1;33m'; red='\033[0;31m'; plain='\033[0m'
@@ -14,11 +13,11 @@ warn() { echo -e "${yellow}[WARN]${plain} $*"; }
 error() { echo -e "${red}[ERROR]${plain} $*"; }
 
 # ================== 检查 ArgoSB 是否安装 ==================
-argosb_installed() {
-    [[ -f "$INSTALL_FLAG" ]] && return 0 || return 1
+argosb_status_check() {
+    $AGSX_CMD list &>/dev/null
 }
 
-# ================== 创建快捷方式 ==================
+# ================== 安装快捷方式 ==================
 install_shortcut() {
     mkdir -p "$BIN_DIR"
     cat > "$AGSX_CMD" <<EOF
@@ -32,12 +31,18 @@ EOF
 # ================== 菜单 ==================
 show_menu() {
     clear
-    status=$(argosb_installed && echo "✅ 已安装" || echo "❌ 未安装")
+    if argosb_status_check; then
+        menu1_text="修改/添加协议（自动带 rep）"
+        status="✅ 已安装"
+    else
+        menu1_text="安装 ArgoSB 并添加协议"
+        status="❌ 未安装"
+    fi
     cat <<EOF
 ==============================
 🚀 勇哥ArgoSB协议管理 $status
 ==============================
-1) $(argosb_installed && echo "修改协议节点 (带 rep)" || echo "安装协议节点")
+1) $menu1_text
 2) 查看节点信息 (agsbx list)
 3) 更新脚本 (建议卸载重装)
 4) 重启脚本 (agsbx res)
@@ -86,8 +91,7 @@ add_or_update_protocols() {
             10) read -rp "请输入 tupt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export tupt="$val";;
             11)
                 if [ -z "${vmpt:-}" ]; then
-                    read -rp "请输入 Argo临时隧道端口 vmpt（留空随机）: " val
-                    [[ -z "$val" ]] && val=""
+                    read -rp "请输入 Argo临时隧道端口 vmpt（留空随机）: " val; [[ -z "$val" ]] && val=""
                     export vmpt="$val"
                 fi
                 export argo="y"
@@ -109,14 +113,17 @@ add_or_update_protocols() {
         esac
     done
 
-    # 第一次安装不带 rep，后续修改带 rep
-    if ! argosb_installed; then
-        info "⚠️ ArgoSB 未安装，正在首次安装..."
-        bash <(curl -Ls "$MAIN_SCRIPT")
+    # 决定是否带 rep
+    if argosb_status_check; then
+        rep_flag="rep"
+        info "🔹 已安装，修改协议将带 rep"
     else
-        info "🔹 修改协议，自动带 rep 参数..."
-        bash <(curl -Ls "$MAIN_SCRIPT") rep
+        rep_flag=""
+        info "⚠️ 未安装，首次安装"
     fi
+
+    info "🚀 正在执行 ArgoSB 脚本..."
+    bash <(curl -Ls "$MAIN_SCRIPT") $rep_flag
     install_shortcut
     info "✅ 协议操作完成"
 }
@@ -143,8 +150,4 @@ while true; do
         6) toggle_ipv4_ipv6 ;;
         7) change_port ;;
         0) exit 0 ;;
-        *) echo "⚠️ 无效选项" ;;
-    esac
-    echo
-    read -rp "按回车键继续..." _
-done
+        *) echo "
