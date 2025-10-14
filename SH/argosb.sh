@@ -8,8 +8,7 @@ trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) a
 SCRIPT_URL="https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh"
 INSTALLED_FLAG="/opt/argosb/installed.flag"
 BIN_DIR="/root/bin"
-AGS_CMD="$BIN_DIR/agsb"
-AGSX_CMD="$BIN_DIR/agsbx"
+AGS_CMD="$BIN_DIR/agsbx"
 
 # ================== 彩色输出 ==================
 green='\033[0;32m'
@@ -20,9 +19,12 @@ info()    { echo -e "${green}[INFO]${plain} $*"; }
 warn()    { echo -e "${yellow}[WARN]${plain} $*"; }
 error()   { echo -e "${red}[ERROR]${plain} $*"; }
 
+# ================== 环境检测 ==================
+command -v curl >/dev/null 2>&1 || { echo "❌ 未检测到 curl，请先安装后再运行"; exit 1; }
+
 # ================== 检查状态 ==================
 argosb_status_check() {
-    if [[ -x "$AGS_CMD" || -x "$AGSX_CMD" || -f "$INSTALLED_FLAG" ]]; then
+    if [[ -x "$AGS_CMD" || -f "$INSTALLED_FLAG" ]]; then
         return 0
     else
         return 1
@@ -32,14 +34,14 @@ argosb_status_check() {
 # ================== 安装快捷方式 ==================
 install_shortcut() {
     mkdir -p "$BIN_DIR"
-    cat > "$AGS_CMD" <<EOF
+    cat <<'EOF' > "$BIN_DIR/agsbx"
 #!/bin/bash
-exec bash <(curl -Ls $SCRIPT_URL) "\$@"
+exec bash <(curl -Ls https://raw.githubusercontent.com/yonggekkk/argosbx/main/argosbx.sh) "$@"
 EOF
-    chmod +x "$AGS_CMD"
-    ln -sf "$AGS_CMD" "$AGSX_CMD"
+    chmod +x "$BIN_DIR/agsbx"
     mkdir -p "$(dirname "$INSTALLED_FLAG")"
     touch "$INSTALLED_FLAG"
+    info "快捷方式已创建，可使用 agsbx 命令直接管理。"
 }
 
 # ================== 菜单 ==================
@@ -53,21 +55,21 @@ show_menu() {
 
     cat <<EOF
 ==============================
-  🚀 勇哥ArgoSB协议管理 $status
+  🚀 勇哥ArgoSBX协议管理 $status
 ==============================
 1) 添加或更新协议节点
-2) 查看节点信息 (agsb list)
+2) 查看节点信息 (agsbx list)
 3) 更新脚本 (建议卸载重装)
-4) 重启脚本 (agsb res)
-5) 卸载脚本 (agsb del)
+4) 重启脚本 (agsbx res)
+5) 卸载脚本 (agsbx del)
 6) 临时切换 IPv4 / IPv6 节点显示
 7) 更改协议端口
-0) 返回主菜单
+0) 返回主菜单 / 退出
 ==============================
 EOF
 }
 
-# ================== 操作函数 ==================
+# ================== 功能函数 ==================
 add_or_update_protocols() {
     cat <<EOF
 请选择要添加或更新的协议（可多选，用空格分隔，例如 1 3 5）:
@@ -109,7 +111,7 @@ EOF
 }
 
 view_nodes() {
-    $AGS_CMD list || true
+    "$AGS_CMD" list || true
 }
 
 update_script() {
@@ -120,17 +122,19 @@ update_script() {
 }
 
 restart_script() {
-    $AGS_CMD res || true
+    "$AGS_CMD" res || true
 }
 
 uninstall_script() {
-    $AGS_CMD del || true
-    rm -f "$INSTALLED_FLAG" "$AGS_CMD" "$AGSX_CMD"
+    if [[ -x "$AGS_CMD" ]]; then
+        "$AGS_CMD" del || true
+    fi
+    rm -f "$INSTALLED_FLAG" "$AGS_CMD"
     info "脚本已卸载。"
 }
 
 toggle_ipv4_ipv6() {
-    $AGS_CMD ip || true
+    "$AGS_CMD" ip || true
 }
 
 change_port() {
@@ -152,8 +156,8 @@ while true; do
         6) toggle_ipv4_ipv6 ;;
         7) change_port ;;
         0) exit 0 ;;
-        *) echo "无效选项" ;;
+        *) echo "无效选项，请重新输入。" ;;
     esac
     echo
-    read -rp "按回车键继续..." _
+    read -rp "按回车键返回菜单..." _
 done
