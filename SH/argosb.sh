@@ -54,12 +54,16 @@ EOF
 
 # ================== 添加或更新协议 ==================
 add_or_update_protocols() {
+    # 首次安装时自动生成默认协议，避免 exit=23
     if ! argosb_status_check; then
-        info "⚠️ ArgoSB 未安装，正在完整安装..."
-        bash <(curl -Ls "$SCRIPT_URL")   # ⚠️ 首次安装不带协议变量
+        info "⚠️ ArgoSB 未安装，正在首次安装并生成默认协议..."
+        # 随机端口
+        DEFAULT_VLPT=$((RANDOM%40000+10000))
+        DEFAULT_XHPT=$((RANDOM%40000+10000))
+        bash <(curl -Ls "$SCRIPT_URL") vlpt="$DEFAULT_VLPT" xhpt="$DEFAULT_XHPT"
         install_shortcut
-        info "✅ ArgoSB 安装完成"
-        info "请再次选择【添加或更新协议】来设置端口和节点"
+        info "✅ ArgoSB 首次安装完成"
+        info "请再次选择【添加或更新协议】来修改或添加更多协议"
         return
     fi
 
