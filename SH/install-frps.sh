@@ -12,6 +12,17 @@ generate_token() {
     openssl rand -hex 8
 }
 
+# ================== 获取最新 FRPS 版本 ==================
+get_latest_version() {
+    LATEST=$(curl -fsSL https://api.github.com/repos/fatedier/frp/releases/latest \
+        | grep '"tag_name"' | cut -d '"' -f4 | tr -d '[:space:]')
+    if [[ -z "$LATEST" ]]; then
+        echo -e "${C_RED}❌ 获取最新版本失败，请检查网络${C_RESET}"
+        exit 1
+    fi
+    echo -e "${C_GREEN}检测到最新版本: $LATEST${C_RESET}"
+}
+
 # ================== 生成配置文件 ==================
 generate_config() {
     local TOKEN=$1
@@ -33,7 +44,6 @@ EOF
 # ================== 启动 FRPS Docker ==================
 start_frps() {
     local IMAGE=$1
-    local TOKEN=$2
 
     # 停止并删除旧容器
     docker stop $CONTAINER_NAME >/dev/null 2>&1 || true
@@ -45,7 +55,7 @@ start_frps() {
       -v $CONFIG_FILE:/frps.ini \
       $IMAGE /usr/bin/frps -c /frps.ini
 
-    # 等待 3 秒再检查 Dashboard
+    # 等待 3 秒检查 Dashboard
     sleep 3
     if docker logs $CONTAINER_NAME --tail 20 | grep -q "dashboard listen"; then
         echo -e "${C_GREEN}✅ FRPS Docker 已启动，Dashboard 可用${C_RESET}"
@@ -74,11 +84,11 @@ update_frps() {
 
 # ================== 安装最新版本 ==================
 install_latest() {
-    echo -e "${C_YELLOW}正在安装最新 FRPS Docker...${C_RESET}"
-    IMAGE="ghcr.io/fatedier/frps:latest"
+    get_latest_version
+    IMAGE="ghcr.io/fatedier/frps:${LATEST}"
     TOKEN=$(generate_token)
     generate_config $TOKEN
-    start_frps $IMAGE $TOKEN
+    start_frps $IMAGE
 }
 
 # ================== 安装 0.20.0 ==================
@@ -87,7 +97,7 @@ install_v020() {
     IMAGE="ghcr.io/fatedier/frps:v0.20.0"
     TOKEN=$(generate_token)
     generate_config $TOKEN
-    start_frps $IMAGE $TOKEN
+    start_frps $IMAGE
 }
 
 # ================== 修改配置 ==================
