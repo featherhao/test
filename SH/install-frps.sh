@@ -53,13 +53,13 @@ start_frps() {
     docker run -d --name $CONTAINER_NAME \
       -p 7000:7000 -p 7500:7500 -p 8080:8080 -p 8443:8443 \
       -v $CONFIG_FILE:/frps.ini \
-      $IMAGE /usr/bin/frps -c /frps.ini
+      $IMAGE -c /frps.ini
 
-    # 等待 3 秒检查 Dashboard
     sleep 3
     if docker logs $CONTAINER_NAME --tail 20 | grep -q "dashboard listen"; then
         echo -e "${C_GREEN}✅ FRPS Docker 已启动，Dashboard 可用${C_RESET}"
         echo -e "Dashboard 地址: http://$(curl -s ipv4.icanhazip.com):7500 (admin/admin)"
+        echo -e "FRPS Token: ${C_YELLOW}$(grep token $CONFIG_FILE | cut -d '=' -f2)${C_RESET}"
     else
         echo -e "${C_RED}❌ Dashboard 启动失败，请检查日志${C_RESET}"
         docker logs $CONTAINER_NAME --tail 50
