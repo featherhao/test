@@ -68,9 +68,30 @@ vhost_http_port = 8080
 vhost_https_port = 8443
 EOF
         echo -e "${C_GREEN}✅ 配置文件已生成：${CONFIG_FILE}${C_RESET}"
-        echo -e "Token: ${C_YELLOW}${TOKEN}${C_RESET}"
-        echo -e "Dashboard: http://${SERVER_IP}:7500 (admin/admin)"
     fi
+}
+
+# ================== 显示关键信息 ==================
+print_info() {
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        echo -e "${C_RED}❌ 配置文件不存在${C_RESET}"
+        return
+    fi
+    TOKEN=$(grep '^token' "$CONFIG_FILE" | awk -F= '{print $2}' | tr -d ' ')
+    DASH_PORT=$(grep '^dashboard_port' "$CONFIG_FILE" | awk -F= '{print $2}' | tr -d ' ')
+    DASH_USER=$(grep '^dashboard_user' "$CONFIG_FILE" | awk -F= '{print $2}' | tr -d ' ')
+    DASH_PWD=$(grep '^dashboard_pwd' "$CONFIG_FILE" | awk -F= '{print $2}' | tr -d ' ')
+    SERVER_IP=$(curl -s ipv4.icanhazip.com || hostname -I | awk '{print $1}')
+
+    echo -e "--------------------------------------------------"
+    echo -e "${C_BLUE}FRPS 关键信息：${C_RESET}"
+    echo -e "服务端地址: ${SERVER_IP}"
+    echo -e "绑定端口: 7000"
+    echo -e "Token: ${C_YELLOW}${TOKEN}${C_RESET}"
+    echo -e "Dashboard: http://${SERVER_IP}:${DASH_PORT} (${DASH_USER}/${DASH_PWD})"
+    echo -e "配置文件: ${CONFIG_FILE}"
+    echo -e "容器名: ${FRPS_CONTAINER}"
+    echo -e "--------------------------------------------------"
 }
 
 # ================== 安装 FRPS ==================
@@ -98,6 +119,7 @@ install_frps() {
         "$IMAGE"
 
     echo -e "${C_GREEN}✅ FRPS ${version} 已启动${C_RESET}"
+    print_info
 }
 
 # ================== 卸载 FRPS ==================
@@ -114,12 +136,9 @@ uninstall_frps() {
 update_frps() {
     echo -e "${C_YELLOW}开始更新 FRPS 到最新版本...${C_RESET}"
     get_latest_version
-    echo -e "${C_YELLOW}拉取最新镜像...${C_RESET}"
     get_frps_image "$LATEST_VERSION"
     docker pull "$IMAGE"
-    echo -e "${C_YELLOW}停止并删除旧容器...${C_RESET}"
     docker rm -f "$FRPS_CONTAINER" >/dev/null 2>&1 || true
-    echo -e "${C_YELLOW}启动新容器...${C_RESET}"
     docker run -d \
         --name "$FRPS_CONTAINER" \
         -p 7000:7000 \
@@ -129,6 +148,27 @@ update_frps() {
         -v "$CONFIG_FILE":/frps.ini \
         "$IMAGE"
     echo -e "${C_GREEN}✅ FRPS 已更新到最新版本 ${LATEST_VERSION}${C_RESET}"
+    print_info
+}
+
+# ================== 修改配置 ==================
+edit_config() {
+    echo -e "${C_YELLOW}正在编辑配置文件：${CONFIG_FILE}${C_RESET}"
+    nano "$CONFIG_FILE"
+    echo -e "${C_YELLOW}重启 FRPS 容器以应用配置...${C_RESET}"
+    docker rm -f "$FRPS_CONTAINER" >/dev/null 2>&1 || true
+    # 使用原镜像启动
+    get_frps_image "$LATEST_VERSION"
+    docker run -d \
+        --name "$FRPS_CONTAINER" \
+        -p 7000:7000 \
+        -p 7500:7500 \
+        -p 8080:8080 \
+        -p 8443:8443 \
+        -v "$CONFIG_FILE":/frps.ini \
+        "$IMAGE"
+    echo -e "${C_GREEN}✅ FRPS 已重启并应用新配置${C_RESET}"
+    print_info
 }
 
 # ================== 显示状态 ==================
@@ -139,7 +179,7 @@ show_info() {
     else
         echo -e "${C_RED}❌ FRPS 容器未启动${C_RESET}"
     fi
-    echo -e "配置文件: $CONFIG_FILE"
+    print_info
 }
 
 # ================== 脚本入口 ==================
@@ -155,18 +195,20 @@ while true; do
     echo "1) 安装最新 FRPS"
     echo "2) 安装 FRPS 0.20.0"
     echo "3) 卸载 FRPS"
-    echo "4) 更新 FRPS 到最新版本"
+    echo "4) 更新 FRPS 到最新"
     echo "5) 查看运行信息"
+    echo "6) 修改配置文件"
     echo "0) 退出"
     echo "============================================="
-    read -rp "请选择 [0-5]: " choice
+    read -rp "请选择 [0-6]: " choice
     case "$choice" in
         1) install_frps ;;
         2) install_frps "0.20.0" ;;
         3) uninstall_frps ;;
         4) update_frps ;;
         5) show_info ;;
-        0) exit 0 ;;
+        6) edit_config ;;
+        0) echo "已退出"; exit 0 ;;
         *) echo "无效选择，请重试。" ;;
     esac
 done
