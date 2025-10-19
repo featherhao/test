@@ -2,7 +2,6 @@
 set -Eeuo pipefail
 
 # ================== 统一失败处理 ==================
-# 捕获错误，并报告行号和退出状态
 trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
 
 # ================== 基础配置 ==================
@@ -34,7 +33,7 @@ render_menu() {
     print_header "$title"
     for item in "$@"; do
         echo -e "$item"
-    done
+    end
     echo "=============================="
 }
 
@@ -84,7 +83,7 @@ else
     COMPOSE="docker compose"
 fi
 
-# ================== 子脚本路径 ==================
+# ================== 子脚本路径 (此处省略未修改的路径变量) ==================
 WORKDIR_MOONTV="/opt/moontv"
 MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/mootvinstall.sh"
 WORKDIR_RUSTDESK="/opt/rustdesk"
@@ -104,9 +103,11 @@ MTPROTO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/mai
 SYSTEM_TOOL_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/system_tool.sh"
 CLEAN_VPS_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/clean_vps.sh"
 COSYVOICE_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/cosyvoice.sh"
+CASAOS_INSTALL_URL="https://get.casaos.io" # CasaOS 安装地址变量
 
 # ================== 子脚本调用函数 ==================
-# 每个函数执行后，控制权将返回到调用它的地方（即主菜单循环）。
+# ... (其他函数保持不变)
+
 moon_menu() { bash <(fetch "${MOONTV_SCRIPT}?t=$(date +%s)"); }
 rustdesk_menu() { bash <(fetch "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
 libretv_menu() { bash <(fetch "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
@@ -123,7 +124,24 @@ mtproto_menu() { bash <(fetch "${MTPROTO_SCRIPT}?t=$(date +%s)"); }
 system_tool_menu() { bash <(fetch "${SYSTEM_TOOL_SCRIPT}?t=$(date +%s)"); }
 cosyvoice_menu() { bash <(fetch "${COSYVOICE_SCRIPT}?t=$(date +%s)"); }
 
+# 新增 CasaOS 安装函数
+casaos_menu() {
+    info "🚀 正在运行 CasaOS 安装脚本..."
+    info "这可能需要您输入sudo密码并花费一些时间。"
+    
+    # 执行安装命令
+    # 注意: fetch "$CASAOS_INSTALL_URL" 相当于 curl -fsSL https://get.casaos.io
+    if ! fetch "$CASAOS_INSTALL_URL" | sudo bash; then
+        error "CasaOS 安装失败！请检查错误信息。"
+        return 1
+    fi
+    info "✅ CasaOS 安装脚本已执行完毕。"
+    return 0
+}
+
 # ================== 状态检测函数 ==================
+# ... (所有状态检测函数保持不变)
+
 check_docker_service() {
     local service_name="$1"
     if ! command -v docker &>/dev/null; then
@@ -141,6 +159,19 @@ check_docker_service() {
     else
         echo "❌ 未安装"
     fi
+}
+
+# 新增 CasaOS 状态检测函数
+casaos_status() {
+    if systemctl is-active --quiet casaos; then
+        echo "${C_GREEN}✅ 运行中 (systemctl)${C_RESET}"
+        return
+    fi
+    if command -v casaos &>/dev/null; then
+        echo "${C_YELLOW}⚠️ 已安装 (但状态未知)${C_RESET}"
+        return
+    fi
+    echo "❌ 未安装"
 }
 
 mtproto_status() {
@@ -174,7 +205,7 @@ update_menu_script() {
     info "👉 以后可直接执行：bash ~/menu.sh"
 }
 
-# ================== 主菜单循环 ==================
+# ================== 主菜单循环 (已修改为循环模式，执行后返回菜单) ==================
 while true; do
     # 刷新状态
     moon_status=$([[ -d /opt/moontv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
@@ -193,8 +224,11 @@ while true; do
     shlink_status=$(check_docker_service "shlink")
     posteio_status=$(check_docker_service "posteio")
     searxng_status=$(check_docker_service "searxng")
+    
+    # 获取 CasaOS 状态
+    casaos_current_status=$(casaos_status)
 
-    # 渲染菜单
+    # 渲染菜单 (新增选项 17)
     render_menu "🚀 服务管理中心" \
         "1) MoonTV 安装                 $moon_status" \
         "2) RustDesk 安装               $rustdesk_status" \
@@ -212,6 +246,7 @@ while true; do
         "14) Telegram MTProto 代理         $(mtproto_status)" \
         "15) CosyVoice 文本转语音          $(check_docker_service "cov")" \
         "16) 系统工具（Swap 管理 + 主机名修改） ⚡" \
+        "17) CasaOS 一键安装              $casaos_current_status" \
         "00) 更新菜单脚本 menu.sh" \
         "0) 退出" \
         "" \
@@ -219,8 +254,9 @@ while true; do
 
     read -rp "请输入选项: " main_choice
 
+    # 选项处理 (新增选项 17)
     case "${main_choice}" in
-        1) moon_menu ;; # 执行完后返回循环，重新显示菜单
+        1) moon_menu ;;
         2) rustdesk_menu ;;
         3) libretv_menu ;;
         4) singbox_menu ;;
@@ -236,9 +272,10 @@ while true; do
         14) mtproto_menu ;;
         15) cosyvoice_menu ;;
         16) system_tool_menu ;;
-        00) update_menu_script ;; # 执行完后返回循环，重新显示菜单
-        0) exit 0 ;; # 退出循环和脚本
-        *) error "❌ 无效输入"; sleep 2 ;; # 错误提示后等待2秒，然后重新显示菜单
+        17) casaos_menu ;; # 调用新的 CasaOS 安装函数
+        00) update_menu_script ;;
+        0) exit 0 ;;
+        *) error "❌ 无效输入"; sleep 2 ;;
     esac
 
     # 在执行完一个菜单项后，等待用户按回车键，以防远程脚本执行过快导致菜单闪烁。
