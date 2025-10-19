@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 # ================== 统一失败处理 ==================
+# 捕获错误，并报告行号和退出状态
 trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
 
 # ================== 基础配置 ==================
@@ -105,6 +106,7 @@ CLEAN_VPS_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/m
 COSYVOICE_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/cosyvoice.sh"
 
 # ================== 子脚本调用函数 ==================
+# 每个函数执行后，控制权将返回到调用它的地方（即主菜单循环）。
 moon_menu() { bash <(fetch "${MOONTV_SCRIPT}?t=$(date +%s)"); }
 rustdesk_menu() { bash <(fetch "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
 libretv_menu() { bash <(fetch "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
@@ -172,67 +174,77 @@ update_menu_script() {
     info "👉 以后可直接执行：bash ~/menu.sh"
 }
 
-# ================== 主菜单 ==================
-# 🚀 执行一次后退出，不再回主菜单
-clear
-moon_status=$([[ -d /opt/moontv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
-rustdesk_status=$([[ -d /opt/rustdesk ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
-libretv_status=$([[ -d /opt/libretv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
-if command -v sing-box &>/dev/null || command -v sb &>/dev/null; then
-    singbox_status="${C_GREEN}✅ 已安装${C_RESET}"
-else
-    singbox_status="❌ 未安装"
-fi
+# ================== 主菜单循环 ==================
+while true; do
+    # 刷新状态
+    moon_status=$([[ -d /opt/moontv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
+    rustdesk_status=$([[ -d /opt/rustdesk ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
+    libretv_status=$([[ -d /opt/libretv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
+    if command -v sing-box &>/dev/null || command -v sb &>/dev/null; then
+        singbox_status="${C_GREEN}✅ 已安装${C_RESET}"
+    else
+        singbox_status="❌ 未安装"
+    fi
 
-argosb_status=$(argosb_status_check)
-panso_status=$(check_docker_service "pansou-web")
-zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "${C_GREEN}✅ 已配置${C_RESET}" || echo "❌ 未配置")
-subconverter_status=$(check_docker_service "subconverter")
-shlink_status=$(check_docker_service "shlink")
-posteio_status=$(check_docker_service "posteio")
-searxng_status=$(check_docker_service "searxng")
+    argosb_status=$(argosb_status_check)
+    panso_status=$(check_docker_service "pansou-web")
+    zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "${C_GREEN}✅ 已配置${C_RESET}" || echo "❌ 未配置")
+    subconverter_status=$(check_docker_service "subconverter")
+    shlink_status=$(check_docker_service "shlink")
+    posteio_status=$(check_docker_service "posteio")
+    searxng_status=$(check_docker_service "searxng")
 
-render_menu "🚀 服务管理中心" \
-    "1) MoonTV 安装                 $moon_status" \
-    "2) RustDesk 安装               $rustdesk_status" \
-    "3) LibreTV 安装                $libretv_status" \
-    "4) 甬哥Sing-box-yg安装           $singbox_status" \
-    "5) 勇哥ArgoSB脚本                $argosb_status" \
-    "6) Kejilion.sh 一键脚本工具箱     ⚡ 远程调用" \
-    "7) zjsync（GitHub 文件自动同步）   $zjsync_status" \
-    "8) Pansou 网盘搜索               $panso_status" \
-    "9) 域名绑定管理                  ⚡ 远程调用" \
-    "10) Subconverter API后端         $subconverter_status" \
-    "11) Poste.io 邮件服务器          $posteio_status" \
-    "12) Shlink 短链接生成            $shlink_status" \
-    "13) SearxNG 一键安装/卸载        $searxng_status" \
-    "14) Telegram MTProto 代理         $(mtproto_status)" \
-    "15) CosyVoice 文本转语音          $(check_docker_service "cov")" \
-    "16) 系统工具（Swap 管理 + 主机名修改） ⚡" \
-    "00) 更新菜单脚本 menu.sh" \
-    "0) 退出" \
-    "" \
-    "提示：此脚本已自动设置 q 或 Q 快捷键，下次直接输入即可运行"
+    # 渲染菜单
+    render_menu "🚀 服务管理中心" \
+        "1) MoonTV 安装                 $moon_status" \
+        "2) RustDesk 安装               $rustdesk_status" \
+        "3) LibreTV 安装                $libretv_status" \
+        "4) 甬哥Sing-box-yg安装           $singbox_status" \
+        "5) 勇哥ArgoSB脚本                $argosb_status" \
+        "6) Kejilion.sh 一键脚本工具箱     ⚡ 远程调用" \
+        "7) zjsync（GitHub 文件自动同步）   $zjsync_status" \
+        "8) Pansou 网盘搜索               $panso_status" \
+        "9) 域名绑定管理                  ⚡ 远程调用" \
+        "10) Subconverter API后端         $subconverter_status" \
+        "11) Poste.io 邮件服务器          $posteio_status" \
+        "12) Shlink 短链接生成            $shlink_status" \
+        "13) SearxNG 一键安装/卸载        $searxng_status" \
+        "14) Telegram MTProto 代理         $(mtproto_status)" \
+        "15) CosyVoice 文本转语音          $(check_docker_service "cov")" \
+        "16) 系统工具（Swap 管理 + 主机名修改） ⚡" \
+        "00) 更新菜单脚本 menu.sh" \
+        "0) 退出" \
+        "" \
+        "提示：此脚本已自动设置 q 或 Q 快捷键，下次直接输入即可运行"
 
-read -rp "请输入选项: " main_choice
-case "${main_choice}" in
-    1) moon_menu; exit 0 ;;
-    2) rustdesk_menu; exit 0 ;;
-    3) libretv_menu; exit 0 ;;
-    4) singbox_menu; exit 0 ;;
-    5) argosb_menu; exit 0 ;;
-    6) bash <(fetch "https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh"); exit 0 ;;
-    7) zjsync_menu; exit 0 ;;
-    8) panso_menu; exit 0 ;;
-    9) nginx_menu; exit 0 ;;
-    10) subconverter_menu; exit 0 ;;
-    11) posteio_menu; exit 0 ;;
-    12) shlink_menu; exit 0 ;;
-    13) searxng_menu; exit 0 ;;
-    14) mtproto_menu; exit 0 ;;
-    15) cosyvoice_menu; exit 0 ;;
-    16) system_tool_menu; exit 0 ;;
-    00) update_menu_script; exit 0 ;;
-    0) exit 0 ;;
-    *) error "❌ 无效输入"; exit 1 ;;
-esac
+    read -rp "请输入选项: " main_choice
+
+    case "${main_choice}" in
+        1) moon_menu ;; # 执行完后返回循环，重新显示菜单
+        2) rustdesk_menu ;;
+        3) libretv_menu ;;
+        4) singbox_menu ;;
+        5) argosb_menu ;;
+        6) bash <(fetch "https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh") ;;
+        7) zjsync_menu ;;
+        8) panso_menu ;;
+        9) nginx_menu ;;
+        10) subconverter_menu ;;
+        11) posteio_menu ;;
+        12) shlink_menu ;;
+        13) searxng_menu ;;
+        14) mtproto_menu ;;
+        15) cosyvoice_menu ;;
+        16) system_tool_menu ;;
+        00) update_menu_script ;; # 执行完后返回循环，重新显示菜单
+        0) exit 0 ;; # 退出循环和脚本
+        *) error "❌ 无效输入"; sleep 2 ;; # 错误提示后等待2秒，然后重新显示菜单
+    esac
+
+    # 在执行完一个菜单项后，等待用户按回车键，以防远程脚本执行过快导致菜单闪烁。
+    if [[ "$main_choice" != "0" ]]; then
+        echo ""
+        read -rp "按 [Enter] 键返回主菜单..."
+    fi
+
+done
