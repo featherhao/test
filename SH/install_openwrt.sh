@@ -10,14 +10,12 @@ OPENWRT_IMAGE=""
 
 case "$ARCH" in
     aarch64)
-        # 适用于 64 位 ARM 架构 (如树莓派 4B, 某些 ARM 服务器)
-        # 使用更通用的 armv8 标签，通常对应 aarch64
+        # 适用于 64 位 ARM 架构
         OPENWRT_IMAGE="sulinggg/openwrt:armv8"
         echo "ℹ️ 检测到架构: $ARCH，使用镜像: $OPENWRT_IMAGE"
         ;;
     x86_64|amd64)
         # 适用于 64 位 x86 架构
-        # 使用更通用的 x86_64 标签
         OPENWRT_IMAGE="sulinggg/openwrt:x86_64"
         echo "ℹ️ 检测到架构: $ARCH，使用镜像: $OPENWRT_IMAGE"
         ;;
@@ -68,7 +66,7 @@ install_openwrt() {
 
     # 启动容器
     echo "[*] 启动 OpenWrt 容器..."
-    # 关键修改：在末尾添加 /sbin/init 来指定启动命令，解决 "no command specified" 错误
+    # 关键修改：显式指定启动命令 /sbin/init
     if ! docker run -d \
       --name $CONTAINER_NAME \
       --restart always \
@@ -76,10 +74,9 @@ install_openwrt() {
       --privileged \
       $OPENWRT_IMAGE \
       /sbin/init; then
-      echo "❌ 容器启动失败！请检查 Docker 日志或尝试使用其他启动命令 (如 /usr/sbin/init)。"
+      echo "❌ 容器启动失败！请检查 Docker 日志或尝试手动启动。"
       exit 1
     fi
-
 
     # 等待容器启动 (给点时间让 /sbin/init 和 /bin/sh 准备好)
     echo "[*] 等待容器初始化..."
@@ -115,7 +112,8 @@ info_openwrt() {
     echo "=============================="
     echo "OpenWrt 容器信息"
     echo "=============================="
-    if docker ps -a --format '{{.Names}}' | grep -qw "$CONTAINER_NAME'; then
+    # 修复了这里的 ' 符号错误
+    if docker ps -a --format '{{.Names}}' | grep -qw "$CONTAINER_NAME"; then
         echo "状态:"
         docker ps -a | grep $CONTAINER_NAME
         echo "------------------------------"
@@ -137,7 +135,10 @@ while true; do
     echo "2) 卸载 OpenWrt"
     echo "3) 查看信息"
     echo "4) 退出"
-    read -rp "请输入选择 [1-4]: " choice
+    
+    # 兼容性改进：使用 echo 和 read 而非 read -rp
+    echo -n "请输入选择 [1-4]: "
+    read choice
 
     case "$choice" in
         1) install_openwrt ;;
