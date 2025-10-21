@@ -66,19 +66,42 @@ install_openwrt() {
 
     # 启动容器
     echo "[*] 启动 OpenWrt 容器..."
-    # 关键修改：显式指定启动命令 /sbin/init
-    if ! docker run -d \
-      --name $CONTAINER_NAME \
-      --restart always \
-      --network host \
-      --privileged \
-      $OPENWRT_IMAGE \
-      /sbin/init; then
-      echo "❌ 容器启动失败！请检查 Docker 日志或尝试手动启动。"
-      exit 1
+    
+    # 尝试使用通用的初始化命令 /sbin/init
+    echo "[*] 尝试启动命令: /sbin/init"
+    if docker run -d \
+        --name $CONTAINER_NAME \
+        --restart always \
+        --network host \
+        --privileged \
+        $OPENWRT_IMAGE \
+        /sbin/init; then
+        echo "[*] 容器已成功启动 (使用 /sbin/init)."
+    elif docker run -d \
+        --name $CONTAINER_NAME \
+        --restart always \
+        --network host \
+        --privileged \
+        $OPENWRT_IMAGE \
+        /usr/sbin/init; then
+        echo "[*] 容器已成功启动 (使用 /usr/sbin/init)."
+    else
+        # 最终 fallback：使用 shell 保持容器运行
+        echo "[*] 尝试最终启动命令: /bin/bash -c 'sleep infinity'"
+        if ! docker run -d \
+            --name $CONTAINER_NAME \
+            --restart always \
+            --network host \
+            --privileged \
+            $OPENWRT_IMAGE \
+            /bin/bash -c "sleep infinity"; then
+            
+            echo "❌ 容器启动失败！请检查 Docker 日志或尝试手动启动，该镜像可能不适用于 Docker 容器。"
+            exit 1
+        fi
     fi
 
-    # 等待容器启动 (给点时间让 /sbin/init 和 /bin/sh 准备好)
+    # 等待容器启动 (给点时间让初始化进程准备好)
     echo "[*] 等待容器初始化..."
     sleep 5 
 
