@@ -11,19 +11,18 @@ OPENWRT_IMAGE=""
 case "$ARCH" in
     aarch64)
         # 适用于 64 位 ARM 架构 (如树莓派 4B, 某些 ARM 服务器)
-        # 替换为更通用的 armv8 标签，通常对应 aarch64
+        # 使用更通用的 armv8 标签，通常对应 aarch64
         OPENWRT_IMAGE="sulinggg/openwrt:armv8"
         echo "ℹ️ 检测到架构: $ARCH，使用镜像: $OPENWRT_IMAGE"
         ;;
     x86_64|amd64)
         # 适用于 64 位 x86 架构
-        # 替换为更通用的 x86_64 标签
+        # 使用更通用的 x86_64 标签
         OPENWRT_IMAGE="sulinggg/openwrt:x86_64"
         echo "ℹ️ 检测到架构: $ARCH，使用镜像: $OPENWRT_IMAGE"
         ;;
     armv7l|armhf|i386|i686)
-        # 32 位架构（armv7l/i386/i686）可能需要特定的 32 位镜像标签，
-        # 为了兼容性，暂时标记为不支持，避免拉取错误的 arm64/x86_64 镜像。
+        # 32 位架构通常需要特定的镜像，避免兼容性问题，暂时标记为不支持
         echo "⚠️ 不支持的 32 位架构 ($ARCH)。请手动确认 sulinggg/openwrt 仓库中是否存在兼容的 32 位标签。"
         exit 1
         ;;
@@ -69,29 +68,35 @@ install_openwrt() {
 
     # 启动容器
     echo "[*] 启动 OpenWrt 容器..."
-    # 注意：使用 --network host 时，OpenWrt 容器的 LAN IP (192.168.1.1) 会与宿主机 IP 冲突，
-    # 且默认会接管宿主机的网络。这在某些环境中可能导致问题。
-    # 建议在使用前确认其影响。
-    docker run -d \
+    # 关键修改：在末尾添加 /sbin/init 来指定启动命令，解决 "no command specified" 错误
+    if ! docker run -d \
       --name $CONTAINER_NAME \
       --restart always \
       --network host \
       --privileged \
-      $OPENWRT_IMAGE
+      $OPENWRT_IMAGE \
+      /sbin/init; then
+      echo "❌ 容器启动失败！请检查 Docker 日志或尝试使用其他启动命令 (如 /usr/sbin/init)。"
+      exit 1
+    fi
 
-    # 等待容器启动 (给点时间让 /bin/sh 准备好)
-    sleep 3 
+
+    # 等待容器启动 (给点时间让 /sbin/init 和 /bin/sh 准备好)
+    echo "[*] 等待容器初始化..."
+    sleep 5 
 
     # 设置 root 密码
     echo "[*] 设置 root 密码: $DEFAULT_PASSWORD"
-    # 使用 bash 而不是 sh 以确保 chpasswd 命令可用
+    # 尝试使用 bash/sh 执行 chpasswd 命令
     if ! docker exec $CONTAINER_NAME /bin/bash -c "echo root:$DEFAULT_PASSWORD | chpasswd" 2>/dev/null; then
         # 尝试使用 sh
-        docker exec $CONTAINER_NAME /bin/sh -c "echo root:$DEFAULT_PASSWORD | chpasswd"
+        if ! docker exec $CONTAINER_NAME /bin/sh -c "echo root:$DEFAULT_PASSWORD | chpasswd"; then
+            echo "⚠️ 警告：无法设置 root 密码。容器可能未完全启动或不支持 chpasswd。"
+        fi
     fi
 
     echo "✅ 安装完成！Web 管理: http://192.168.1.1"
-    echo "   (注意: 如果宿主机 IP 地址不是 192.168.1.x，您需要等待 OpenWrt 接管网络后才能访问)"
+    echo "   (注意: 使用 --network host 模式可能会导致网络配置复杂化，请注意网络地址冲突)"
 }
 
 uninstall_openwrt() {
@@ -110,7 +115,7 @@ info_openwrt() {
     echo "=============================="
     echo "OpenWrt 容器信息"
     echo "=============================="
-    if docker ps -a --format '{{.Names}}' | grep -qw "$CONTAINER_NAME"; then
+    if docker ps -a --format '{{.Names}}' | grep -qw "$CONTAINER_NAME'; then
         echo "状态:"
         docker ps -a | grep $CONTAINER_NAME
         echo "------------------------------"
