@@ -1,68 +1,33 @@
 #!/bin/bash
-set -Eeuo pipefail
+set -e
+
+CONFIG_FILE=/usr/local/frps/frps.ini
+CONTAINER_NAME=frps
 
 # ================== 彩色输出 ==================
 C_RESET="\e[0m"; C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"; C_BLUE="\e[36m"
 
-INSTALL_DIR="/usr/local/frps"
-SERVICE_FILE="/etc/systemd/system/frps.service"
+# ================== 生成随机 token ==================
+generate_token() {
+    openssl rand -hex 8
+}
 
-# ================== 获取最新版本 ==================
+# ================== 获取最新 FRPS 版本 ==================
 get_latest_version() {
-    echo -e "${C_YELLOW}正在获取 Frp 最新版本...${C_RESET}"
-    LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/fatedier/frp/releases/latest \
+    LATEST=$(curl -fsSL https://api.github.com/repos/fatedier/frp/releases/latest \
         | grep '"tag_name"' | cut -d '"' -f4 | tr -d '[:space:]')
-    if [[ -z "$LATEST_VERSION" ]]; then
-        echo -e "${C_RED}❌ 获取最新版本失败，请检查网络！${C_RESET}"
+    if [[ -z "$LATEST" ]]; then
+        echo -e "${C_RED}❌ 获取最新版本失败，请检查网络${C_RESET}"
         exit 1
     fi
-    echo -e "${C_GREEN}检测到最新版本：${LATEST_VERSION}${C_RESET}"
+    echo -e "${C_GREEN}检测到最新版本: $LATEST${C_RESET}"
 }
 
-# ================== 检测架构 ==================
-get_arch() {
-    ARCH=$(uname -m)
-    case "$ARCH" in
-        x86_64) ARCH="amd64" ;;
-        aarch64 | arm64) ARCH="arm64" ;;
-        armv7l) ARCH="arm" ;;
-        i386 | i686) ARCH="386" ;;
-        *) echo -e "${C_RED}不支持的架构：${ARCH}${C_RESET}"; exit 1 ;;
-    esac
-}
-
-# ================== 通用安装函数 ==================
-install_frps_common() {
-    local VERSION=$1
-    local IS_FIXED=${2:-0}
-    get_arch
-    mkdir -p "$INSTALL_DIR"
-    cd /tmp
-
-    FILE="frp_${VERSION}_linux_${ARCH}.tar.gz"
-    if [[ "$IS_FIXED" -eq 1 ]]; then
-        URL="https://github.com/fatedier/frp/releases/download/v${VERSION}/${FILE}"
-    else
-        URL="https://github.com/fatedier/frp/releases/download/${VERSION}/${FILE}"
-    fi
-
-    echo -e "${C_YELLOW}正在下载：${FILE}${C_RESET}"
-    if ! curl -L -o "$FILE" "$URL"; then
-        echo -e "${C_RED}下载失败，请检查网络或 GitHub 连接${C_RESET}"
-        return
-    fi
-
-    echo -e "${C_BLUE}正在解压文件...${C_RESET}"
-    tar -zxvf "$FILE" -C /tmp >/dev/null 2>&1
-    cp -f frp_*/frps "$INSTALL_DIR/"
-    rm -rf frp_*
-
-    # 生成随机 token
-    TOKEN=$(openssl rand -hex 8)
-    SERVER_IP=$(curl -s ipv4.icanhazip.com || hostname -I | awk '{print $1}')
-
-    # 创建配置文件
-    cat > "$INSTALL_DIR/frps.ini" <<EOF
+# ================== 生成配置文件 ==================
+generate_config() {
+    local TOKEN=$1
+    mkdir -p $(dirname $CONFIG_FILE)
+    cat > "$CONFIG_FILE" <<EOF
 [common]
 bind_port = 7000
 dashboard_port = 7500
@@ -72,104 +37,111 @@ token = ${TOKEN}
 vhost_http_port = 8080
 vhost_https_port = 8443
 EOF
-
-    # 创建 systemd 服务
-    cat > "$SERVICE_FILE" <<EOF
-[Unit]
-Description=Frps Service
-After=network.target
-
-[Service]
-ExecStart=${INSTALL_DIR}/frps -c ${INSTALL_DIR}/frps.ini
-Restart=always
-User=root
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-    systemctl daemon-reload
-    systemctl enable frps
-    systemctl restart frps
-
-    echo ""
-    echo -e "${C_GREEN}✅ Frps ${VERSION} 安装完成！${C_RESET}"
-    echo -e "--------------------------------------------------"
-    echo -e "${C_YELLOW}Frps 服务已启动${C_RESET}"
-    echo -e "${C_BLUE}服务端地址：${C_RESET}${SERVER_IP}"
-    echo -e "${C_BLUE}绑定端口：${C_RESET}7000"
-    echo -e "${C_BLUE}Token：${C_RESET}${TOKEN}"
-    echo -e "${C_BLUE}Dashboard 地址：${C_RESET}http://${SERVER_IP}:7500"
-    echo -e "${C_BLUE}Dashboard 用户名：${C_RESET}admin"
-    echo -e "${C_BLUE}Dashboard 密码：${C_RESET}admin"
-    echo -e "${C_BLUE}配置文件：${C_RESET}${INSTALL_DIR}/frps.ini"
-    echo -e "--------------------------------------------------"
-    echo -e "可执行命令：${C_YELLOW}systemctl status frps${C_RESET}"
-    echo -e ""
+    echo -e "${C_GREEN}✅ 配置文件已生成/更新：${CONFIG_FILE}${C_RESET}"
+    echo -e "Token: ${C_YELLOW}${TOKEN}${C_RESET}"
 }
 
-# ================== 安装最新版本 ==================
-install_frps_latest() {
-    get_latest_version
-    install_frps_common "${LATEST_VERSION#v}"
-}
+# ================== 启动 FRPS Docker ==================
+start_frps() {
+    local IMAGE=$1
 
-# ================== 安装固定 0.20.0 版本 ==================
-install_frps_v020() {
-    echo -e "${C_YELLOW}开始安装 Frps 0.20.0 版本...${C_RESET}"
-    install_frps_common "0.20.0" 1
+    # 停止并删除旧容器
+    docker stop $CONTAINER_NAME >/dev/null 2>&1 || true
+    docker rm $CONTAINER_NAME >/dev/null 2>&1 || true
+
+    # 启动容器
+    docker run -d --name $CONTAINER_NAME \
+      -p 7000:7000 -p 7500:7500 -p 8080:8080 -p 8443:8443 \
+      -v $CONFIG_FILE:/frps.ini \
+      $IMAGE -c /frps.ini
+
+    sleep 3
+    if docker logs $CONTAINER_NAME --tail 20 | grep -q "dashboard listen"; then
+        echo -e "${C_GREEN}✅ FRPS Docker 已启动，Dashboard 可用${C_RESET}"
+        echo -e "Dashboard 地址: http://$(curl -s ipv4.icanhazip.com):7500 (admin/admin)"
+        echo -e "FRPS Token: ${C_YELLOW}$(grep token $CONFIG_FILE | cut -d '=' -f2)${C_RESET}"
+    else
+        echo -e "${C_RED}❌ Dashboard 启动失败，请检查日志${C_RESET}"
+        docker logs $CONTAINER_NAME --tail 50
+    fi
 }
 
 # ================== 卸载 ==================
 uninstall_frps() {
-    echo -e "${C_YELLOW}正在卸载 Frps...${C_RESET}"
-    systemctl stop frps >/dev/null 2>&1 || true
-    systemctl disable frps >/dev/null 2>&1 || true
-    rm -f "$SERVICE_FILE"
-    rm -rf "$INSTALL_DIR"
-    systemctl daemon-reload
-    echo -e "${C_GREEN}✅ Frps 已卸载${C_RESET}"
+    echo -e "${C_YELLOW}正在卸载 FRPS Docker...${C_RESET}"
+    docker stop $CONTAINER_NAME >/dev/null 2>&1 || true
+    docker rm $CONTAINER_NAME >/dev/null 2>&1 || true
+    rm -f $CONFIG_FILE
+    echo -e "${C_GREEN}✅ FRPS 已卸载${C_RESET}"
 }
 
 # ================== 更新 ==================
 update_frps() {
-    echo -e "${C_YELLOW}正在更新 Frps...${C_RESET}"
+    echo -e "${C_YELLOW}正在更新 FRPS Docker...${C_RESET}"
     uninstall_frps
-    install_frps_latest
+    install_latest
+}
+
+# ================== 安装最新版本 ==================
+install_latest() {
+    get_latest_version
+    IMAGE="ghcr.io/fatedier/frps:${LATEST}"
+    TOKEN=$(generate_token)
+    generate_config $TOKEN
+    start_frps $IMAGE
+}
+
+# ================== 安装 0.20.0 ==================
+install_v020() {
+    echo -e "${C_YELLOW}正在安装 FRPS 0.20.0 Docker...${C_RESET}"
+    IMAGE="ghcr.io/fatedier/frps:v0.20.0"
+    TOKEN=$(generate_token)
+    generate_config $TOKEN
+    start_frps $IMAGE
+}
+
+# ================== 修改配置 ==================
+modify_config() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo -e "${C_RED}❌ 配置文件不存在，请先安装 FRPS${C_RESET}"
+        return
+    fi
+    echo -e "${C_YELLOW}修改配置文件:${CONFIG_FILE}${C_RESET}"
+    nano "$CONFIG_FILE"
+    echo -e "${C_YELLOW}修改完成，重启容器生效${C_RESET}"
+    docker restart $CONTAINER_NAME
 }
 
 # ================== 查看信息 ==================
 show_info() {
-    echo -e "${C_YELLOW}========= Frps 状态信息 =========${C_RESET}"
-    if systemctl is-active --quiet frps; then
-        echo -e "${C_GREEN}✅ Frps 正在运行${C_RESET}"
+    if docker ps -a | grep -q $CONTAINER_NAME; then
+        echo -e "${C_GREEN}✅ FRPS Docker 容器存在${C_RESET}"
+        docker ps | grep $CONTAINER_NAME
+        echo -e "${C_BLUE}配置文件: ${CONFIG_FILE}${C_RESET}"
+        echo -e "${C_BLUE}查看日志: docker logs $CONTAINER_NAME --tail 50${C_RESET}"
     else
-        echo -e "${C_RED}❌ Frps 未运行${C_RESET}"
+        echo -e "${C_RED}❌ FRPS Docker 容器不存在${C_RESET}"
     fi
-    systemctl status frps --no-pager || true
-    echo ""
-    echo -e "${C_YELLOW}配置文件：${INSTALL_DIR}/frps.ini${C_RESET}"
-    echo -e "${C_YELLOW}查看日志：journalctl -u frps -f${C_RESET}"
 }
 
-# ================== 菜单循环 ==================
+# ================== 菜单 ==================
 while true; do
     echo ""
-    echo "================ Frps 管理菜单 ================"
-    echo "1) 安装 Frps 最新版"
-    echo "2) 卸载 Frps"
-    echo "3) 更新 Frps"
+    echo "============== FRPS Docker 管理 =============="
+    echo "1) 安装最新 FRPS"
+    echo "2) 安装 FRPS 0.20.0"
+    echo "3) 卸载 FRPS"
     echo "4) 查看运行信息"
-    echo "5) 安装 Frps 0.20.0 版本"
+    echo "5) 修改配置"
     echo "0) 退出"
-    echo "=============================================="
-    read -rp "请选择操作 [0-5]: " choice
+    echo "============================================="
+    read -rp "请选择 [0-5]: " choice
     case "$choice" in
-        1) install_frps_latest ;;
-        2) uninstall_frps ;;
-        3) update_frps ;;
+        1) install_latest ;;
+        2) install_v020 ;;
+        3) uninstall_frps ;;
         4) show_info ;;
-        5) install_frps_v020 ;;
+        5) modify_config ;;
         0) echo "已退出"; exit 0 ;;
         *) echo "无效选择，请重试。" ;;
     esac

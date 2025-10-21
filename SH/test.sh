@@ -1,331 +1,238 @@
 #!/bin/bash
-set -e
+set -Eeuo pipefail
 
-WORKDIR="/opt/moontv"
-COMPOSE_FILE="$WORKDIR/docker-compose.yml"
-ENV_FILE="$WORKDIR/.env"
+# ================== 统一失败处理 ==================
+trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) at line $line" >&2; exit $status' ERR
 
-# =========================
-# 安装 Docker & Docker Compose
-# =========================
-# =========================
-# 安装 Docker & Docker Compose（兼容国内网络）
-# =========================
-install_docker() {
-  echo "📦 检查 Docker 是否已安装..."
-  if ! command -v docker &>/dev/null; then
-    echo "🚀 Docker 未安装，开始安装..."
-    
-    # 安装依赖
-    sudo apt update
-    sudo apt install -y ca-certificates curl gnupg lsb-release
-    
-    # 添加 Docker 官方 GPG
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    
-    # 添加 Docker 官方源
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    
-    sudo apt update
-    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-    sudo systemctl enable docker
-    sudo systemctl start docker
-  else
-    echo "✅ Docker 已安装"
-  fi
+# ================== 基础配置 ==================
+SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh"
+SCRIPT_PATH="$HOME/menu.sh"
 
-  # 检查 docker compose
-  if command -v docker-compose &>/dev/null; then
-    DOCKER_COMPOSE="docker-compose"
-  else
-    DOCKER_COMPOSE="docker compose"
-  fi
-
-  echo "📦 Docker 版本: $(docker --version)"
-  echo "📦 Docker Compose 命令: $DOCKER_COMPOSE"
-}
-
-
-# =========================
-# 输入配置
-# =========================
-input_config() {
-  echo "⚙️ 配置 MoonTV 参数："
-  read -rp "用户名 (默认 admin): " USERNAME
-  USERNAME=${USERNAME:-admin}
-  read -rp "密码 (留空自动生成): " PASSWORD
-  PASSWORD=${PASSWORD:-$(openssl rand -hex 6)}
-  read -rp "AUTH_TOKEN (留空自动生成): " AUTH_TOKEN
-  AUTH_TOKEN=${AUTH_TOKEN:-$(openssl rand -hex 16)}
-
-  echo
-  echo "================= 配置信息确认 ================="
-  echo "用户名: $USERNAME"
-  echo "密码: $PASSWORD"
-  echo "AUTH_TOKEN: $AUTH_TOKEN"
-  echo "==============================================="
-  read -rp "是否确认保存？(Y/n): " CONFIRM
-  CONFIRM=${CONFIRM:-Y}
-  [[ ! "$CONFIRM" =~ ^[Yy]$ ]] && { echo "已取消"; return 1; }
-
-  mkdir -p "$WORKDIR"
-  [ -f "$ENV_FILE" ] && cp "$ENV_FILE" "$ENV_FILE.bak.$(date +%s)"
-  cat > "$ENV_FILE" <<EOF
-USERNAME=$USERNAME
-PASSWORD=$PASSWORD
-AUTH_TOKEN=$AUTH_TOKEN
-EOF
-  chmod 600 "$ENV_FILE"
-  echo "✅ 配置已保存"
-}
-
-# =========================
-# 镜像选择
-# =========================
-choose_image() {
-  echo "📦 请选择安装镜像："
-  echo "1) 小黄人大佬镜像（带弹幕）(默认) ghcr.io/szemeng76/lunatv:latest"
-  echo "2) 官方镜像 ghcr.io/moontechlab/lunatv:latest"
-  echo "3) Docker Hub 镜像 (官方备用镜像) featherhao/lunatv:latest"
-  echo "4) Docker Hub 镜像 （100版本号防作者删库用） featherhao/moontv:100"
-  read -rp "请输入数字 [1-4] (默认 1): " img_choice
-  img_choice=${img_choice:-1}
-  case "$img_choice" in
-    1) IMAGE="ghcr.io/szemeng76/lunatv:latest" ;;
-    2) IMAGE="ghcr.io/moontechlab/lunatv:latest" ;;
-    3) IMAGE="featherhao/lunatv:latest" ;;
-    4) IMAGE="featherhao/moontv:100" ;;
-    *) IMAGE="ghcr.io/szemeng76/lunatv:latest" ;;
-  esac
-  echo "使用镜像: $IMAGE"
-}
-
-# =========================
-# 选择端口并生成 docker-compose.yml
-# =========================
-choose_port_and_write_compose() {
-  POSSIBLE_PORTS=(8181 9090 10080 18080 28080)
-  HOST_PORT=""
-  for p in "${POSSIBLE_PORTS[@]}"; do
-    if ! ss -tulnp | grep -q ":$p"; then
-      HOST_PORT=$p
-      break
-    fi
-  done
-  [[ -z "$HOST_PORT" ]] && { echo "❌ 没有可用端口"; return 1; }
-  echo "使用端口 $HOST_PORT"
-
-  cat > "$COMPOSE_FILE" <<EOF
-services:
-  moontv-core:
-    image: $IMAGE
-    container_name: moontv-core
-    restart: unless-stopped
-    ports:
-      - '$HOST_PORT:3000'
-    env_file:
-      - .env
-    environment:
-      - NEXT_PUBLIC_STORAGE_TYPE=kvrocks
-      - KVROCKS_URL=redis://moontv-kvrocks:6666
-    networks:
-      - moontv-network
-    depends_on:
-      - moontv-kvrocks
-
-  moontv-kvrocks:
-    image: apache/kvrocks
-    container_name: moontv-kvrocks
-    restart: unless-stopped
-    volumes:
-      - kvrocks-data:/var/lib/kvrocks
-    networks:
-      - moontv-network
-
-networks:
-  moontv-network:
-    driver: bridge
-
-volumes:
-  kvrocks-data:
-EOF
-}
-
-# =========================
-# 更新
-# =========================
-update() {
-  echo "🔄 请选择更新镜像："
-  choose_image
-  if [ -f "$COMPOSE_FILE" ]; then
-    cd "$WORKDIR"
-    echo "📦 拉取镜像 $IMAGE..."
-    docker pull "$IMAGE"
-    $DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
-    echo "✅ 更新完成"
-  else
-    echo "❌ 未找到 $COMPOSE_FILE，请先安装"
-  fi
-}
-
-# =========================
-# 卸载
-# =========================
-uninstall() {
-  echo "⚠️ 即将卸载 MoonTV"
-  read -rp "确认？(Y/n): " CONFIRM
-  CONFIRM=${CONFIRM:-Y}
-  [[ ! "$CONFIRM" =~ ^[Yy]$ ]] && { echo "已取消"; return; }
-  if [ -f "$COMPOSE_FILE" ]; then
-    read -rp "是否删除容器数据卷？(Y/n): " DEL_VOL
-    DEL_VOL=${DEL_VOL:-Y}
-    if [[ "$DEL_VOL" =~ ^[Yy]$ ]]; then
-      $DOCKER_COMPOSE -f "$COMPOSE_FILE" down -v
-    else
-      $DOCKER_COMPOSE -f "$COMPOSE_FILE" down
-    fi
-  fi
-  read -rp "是否删除 $WORKDIR 目录？(Y/n): " DEL_DIR
-  DEL_DIR=${DEL_DIR:-Y}
-  [[ "$DEL_DIR" =~ ^[Yy]$ ]] && rm -rf "$WORKDIR"
-  echo "✅ 卸载完成"
-}
-
-# =========================
-# 管理菜单
-# =========================
-moontv_menu() {
-  while true; do
-    clear
-
-    if [ -d "$WORKDIR" ] && [ -f "$COMPOSE_FILE" ]; then
-      STATUS="已安装 ✅"
-      CONFIG_DISPLAY="配置："
-
-      if [ -f "$ENV_FILE" ]; then
-        CONFIG_DISPLAY+=$'\n'"$(grep -E "USERNAME|PASSWORD|AUTH_TOKEN" "$ENV_FILE")"
-      else
-        CONFIG_DISPLAY+=" ❌ 配置文件不存在"
-      fi
-
-      HOST_PORT=$(grep -Po "(?<=- )\d+(?=:3000)" "$COMPOSE_FILE" | tr -d "'")
-      HOST_PORT=${HOST_PORT:-8181}
-
-      IPV4=$(curl -4 -s ifconfig.me || hostname -I | awk '{print $1}')
-      IPV6=$(curl -6 -s ifconfig.me || ip -6 addr show scope global | awk '{print $2}' | cut -d/ -f1 | head -n1)
-
-      CONFIG_DISPLAY+=$'\n'"访问地址："
-      CONFIG_DISPLAY+=$'\n'"IPv4: http://$IPV4:$HOST_PORT"
-      [[ -n "$IPV6" ]] && CONFIG_DISPLAY+=$'\n'"IPv6: http://[$IPV6]:$HOST_PORT"
-    else
-      STATUS="未安装 ❌"
-      CONFIG_DISPLAY=""
-    fi
-
-    if [ "$STATUS" = "已安装 ✅" ]; then
-      echo -e "状态: \e[32m$STATUS\e[0m"
-    else
-      echo -e "状态: \e[31m$STATUS\e[0m"
-    fi
-
-    [ -n "$CONFIG_DISPLAY" ] && echo -e "$CONFIG_DISPLAY"
-
-    echo "------------------------------"
-    echo "1) 安装 / 初始化 MoonTV"
-    echo "2) 修改 MoonTV 配置"
-    echo "3) 卸载 MoonTV"
-    echo "4) 启动 MoonTV"
-    echo "5) 停止 MoonTV"
-    echo "6) 查看运行日志"
-    echo "00) 更新 MoonTV"
-    echo "b) 返回上一级"
-    echo "0) 退出"
-    echo "=============================="
-    read -rp "请输入选项: " choice
-
-    case "$choice" in
-      1)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          echo "❌ MoonTV 已安装，如需重新安装请先卸载"
-        else
-          input_config
-          choose_image
-          choose_port_and_write_compose
-          $DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
-          echo "✅ MoonTV 已启动"
-        fi
-        ;;
-      2) input_config ;;
-      3) uninstall ;;
-      4)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          cd "$WORKDIR"
-          $DOCKER_COMPOSE start
-        else
-          echo "❌ MoonTV 未安装"
-        fi
-        ;;
-      5)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          cd "$WORKDIR"
-          $DOCKER_COMPOSE stop
-        else
-          echo "❌ MoonTV 未安装"
-        fi
-        ;;
-      6)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          cd "$WORKDIR"
-          read -rp "是否持续跟踪日志？(Y/n): " LOG_FOLLOW
-          LOG_FOLLOW=${LOG_FOLLOW:-Y}
-          if [[ "$LOG_FOLLOW" =~ ^[Yy]$ ]]; then
-            $DOCKER_COMPOSE logs -f
-          else
-            $DOCKER_COMPOSE logs --tail 50
-          fi
-        else
-          echo "❌ MoonTV 未安装"
-        fi
-        ;;
-      00)
-        if [ "$STATUS" = "已安装 ✅" ]; then
-          update
-        else
-          echo "❌ MoonTV 未安装，无法更新"
-        fi
-        ;;
-      b|B) break ;;
-      0) exit 0 ;;
-      *) echo "❌ 无效输入，请重新选择" ;;
-    esac
-
-    read -rp "按回车继续..."
-  done
-}
-
-# =========================
-# 自动检查安装并启动菜单
-# =========================
-install_docker
-if [ ! -d "$WORKDIR" ] || [ ! -f "$COMPOSE_FILE" ]; then
-  echo "ℹ️ MoonTV 未安装，开始初始化安装..."
-  input_config
-  IMAGE="ghcr.io/szemeng76/lunatv:latest"
-  echo "使用默认镜像: $IMAGE"
-  choose_port_and_write_compose
-  $DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d
-
-  IPV4=$(curl -4 -s ifconfig.me || hostname -I | awk '{print $1}')
-  IPV6=$(curl -6 -s ifconfig.me || ip -6 addr show scope global | awk '{print $2}' | cut -d/ -f1 | head -n1)
-  HOST_PORT=$(grep -Po "(?<=- )\d+(?=:3000)" "$COMPOSE_FILE" | tr -d "'")
-  HOST_PORT=${HOST_PORT:-8181}
-
-  echo "✅ MoonTV 已启动"
-  echo "👉 IPv4 访问地址: http://$IPV4:$HOST_PORT"
-  [[ -n "$IPV6" ]] && echo "👉 IPv6 访问地址: http://[$IPV6]:$HOST_PORT"
-  echo "👉 用户名: $(grep USERNAME "$ENV_FILE" | cut -d '=' -f2)"
-  echo "👉 密码: $(grep PASSWORD "$ENV_FILE" | cut -d '=' -f2)"
+# ================== 彩色与日志 ==================
+if [[ -t 1 ]] && command -v tput &>/dev/null || true; then
+    C_RESET="\e[0m"; C_BOLD="\e[1m"
+    C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"; C_BLUE="\e[34m"; C_CYAN="\e[36m"
+else
+    C_RESET=""; C_BOLD=""; C_GREEN=""; C_RED=""; C_YELLOW=""; C_BLUE=""; C_CYAN=""
 fi
 
-moontv_menu
+info()  { echo -e "${C_CYAN}[*]${C_RESET} $*"; }
+warn()  { echo -e "${C_YELLOW}[!]${C_RESET} $*"; }
+error() { echo -e "${C_RED}[x]${C_RESET} $*" >&2; }
+
+print_header() {
+    local title="$1"
+    echo -e "${C_BOLD}==============================${C_RESET}"
+    echo -e "  ${C_BOLD}${title}${C_RESET}"
+    echo -e "${C_BOLD}==============================${C_RESET}"
+}
+
+render_menu() {
+    local title="$1"; shift
+    clear
+    print_header "$title"
+    for item in "$@"; do
+        echo -e "$item"
+    done
+    echo "=============================="
+}
+
+fetch() { curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@"; }
+run_url() { bash <(fetch "$1"); }
+
+# ================== 自我初始化 ==================
+SCRIPT_IS_FIRST_RUN=false
+if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
+    info "⚡ 检测到你是通过 <(curl …) 临时运行的"
+    info "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
+    curl -fsSL "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
+    chmod +x "$SCRIPT_PATH"
+    SCRIPT_IS_FIRST_RUN=true
+    sleep 2
+fi
+
+# ================== 快捷键 q/Q ==================
+set_q_shortcut_auto() {
+    local shell_rc=""
+    local script_cmd="bash ~/menu.sh"
+
+    if command -v apk &>/dev/null; then
+        shell_rc="$HOME/.profile"
+        script_cmd="sh ~/menu.sh"
+    elif [[ -n "${ZSH_VERSION:-}" ]]; then
+        shell_rc="$HOME/.zshrc"
+    else
+        shell_rc="$HOME/.bashrc"
+    fi
+
+    if ! grep -q "alias Q='${script_cmd}'" "$shell_rc" 2>/dev/null; then
+        echo "alias Q='${script_cmd}'" >> "$shell_rc"
+        echo "alias q='${script_cmd}'" >> "$shell_rc"
+        if $SCRIPT_IS_FIRST_RUN; then
+            info "✅ 已自动设置快捷键，下次可直接输入 q 或 Q 运行。"
+            info "👉 请执行 'source $shell_rc' 或重启终端以使其生效。"
+        fi
+    fi
+}
+set_q_shortcut_auto
+
+# ================== docker compose 兼容 ==================
+if command -v docker-compose &>/dev/null; then
+    COMPOSE="docker-compose"
+else
+    COMPOSE="docker compose"
+fi
+
+# ================== 子脚本路径 ==================
+WORKDIR_MOONTV="/opt/moontv"
+MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/mootvinstall.sh"
+WORKDIR_RUSTDESK="/opt/rustdesk"
+RUSTDESK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_rustdesk.sh"
+WORKDIR_LIBRETV="/opt/libretv"
+LIBRETV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_libretv.sh"
+ZJSYNC_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/zjsync.sh"
+NGINX_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/nginx"
+SUB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/subconverter-api.sh"
+SHLINK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_shlink.sh"
+ARGOSB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/argosb.sh"
+PANSO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/pansou.sh"
+POSTEIO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/Poste.io.sh"
+WORKDIR_SEARXNG="/opt/searxng"
+SEARXNG_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/searxng.sh"
+MTPROTO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/MTProto.sh"
+SYSTEM_TOOL_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/system_tool.sh"
+CLEAN_VPS_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/clean_vps.sh"
+COSYVOICE_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/cosyvoice.sh"
+
+# ================== 子脚本调用函数 ==================
+moon_menu() { bash <(fetch "${MOONTV_SCRIPT}?t=$(date +%s)"); }
+rustdesk_menu() { bash <(fetch "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
+libretv_menu() { bash <(fetch "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
+singbox_menu() { bash <(fetch "https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh"); }
+nginx_menu() { bash <(fetch "${NGINX_SCRIPT}?t=$(date +%s)"); }
+panso_menu() { bash <(fetch "${PANSO_SCRIPT}?t=$(date +%s)"); }
+zjsync_menu() { bash <(fetch "${ZJSYNC_SCRIPT}?t=$(date +%s)"); }
+subconverter_menu() { bash <(fetch "${SUB_SCRIPT}?t=$(date +%s)"); }
+shlink_menu() { bash <(fetch "${SHLINK_SCRIPT}?t=$(date +%s)"); }
+argosb_menu() { bash <(fetch "${ARGOSB_SCRIPT}?t=$(date +%s)"); }
+posteio_menu() { bash <(fetch "${POSTEIO_SCRIPT}?t=$(date +%s)"); }
+searxng_menu() { bash <(fetch "${SEARXNG_SCRIPT}?t=$(date +%s)"); }
+mtproto_menu() { bash <(fetch "${MTPROTO_SCRIPT}?t=$(date +%s)"); }
+system_tool_menu() { bash <(fetch "${SYSTEM_TOOL_SCRIPT}?t=$(date +%s)"); }
+cosyvoice_menu() { bash <(fetch "${COSYVOICE_SCRIPT}?t=$(date +%s)"); }
+
+# ================== 状态检测函数 ==================
+check_docker_service() {
+    local service_name="$1"
+    if ! command -v docker &>/dev/null; then
+        echo "❌ Docker 未安装"; return
+    fi
+    if ! docker info &>/dev/null; then
+        echo "❌ Docker 未运行"; return
+    fi
+    if docker ps -a --format '{{.Names}}' | grep -q "^${service_name}$"; then
+        if docker ps --format '{{.Names}}' | grep -q "^${service_name}$"; then
+            echo "✅ 运行中"
+        else
+            echo "⚠️ 已停止"
+        fi
+    else
+        echo "❌ 未安装"
+    fi
+}
+
+mtproto_status() {
+    if systemctl list-unit-files 2>/dev/null | grep -q "mtg.service"; then
+        systemctl is-active --quiet mtg && echo "✅ 运行中 (systemctl)" || echo "⚠️ 已停止 (systemctl)"
+        return
+    fi
+    if command -v docker &>/dev/null; then
+        local cid
+        cid=$(docker ps -a --filter "ancestor=telegrammessenger/proxy" --format '{{.ID}}' | head -n1)
+        [[ -z "$cid" ]] && cid=$(docker ps -a --filter "ancestor=mtproto" --format '{{.ID}}' | head -n1)
+        if [[ -n "$cid" ]]; then
+            docker ps --filter "id=$cid" --format '{{.ID}}' | grep -q . && echo "✅ 运行中 (docker)" || echo "⚠️ 已停止 (docker)"
+            return
+        fi
+    fi
+    echo "❌ 未安装"
+}
+
+argosb_status_check() {
+    [[ -f "/opt/argosb/installed.flag" ]] && { echo "✅ 已安装 (标记文件)"; return; }
+    command -v agsbx &>/dev/null || command -v agsb &>/dev/null && { echo "✅ 已安装 (命令可用)"; return; }
+    echo "❌ 未安装"
+}
+
+update_menu_script() {
+    info "🔄 正在更新 menu.sh..."
+    fetch "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
+    chmod +x "$SCRIPT_PATH"
+    info "✅ menu.sh 已更新到 $SCRIPT_PATH"
+    info "👉 以后可直接执行：bash ~/menu.sh"
+}
+
+# ================== 主菜单 ==================
+# 🚀 执行一次后退出，不再回主菜单
+clear
+moon_status=$([[ -d /opt/moontv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
+rustdesk_status=$([[ -d /opt/rustdesk ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
+libretv_status=$([[ -d /opt/libretv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
+if command -v sing-box &>/dev/null || command -v sb &>/dev/null; then
+    singbox_status="${C_GREEN}✅ 已安装${C_RESET}"
+else
+    singbox_status="❌ 未安装"
+fi
+
+argosb_status=$(argosb_status_check)
+panso_status=$(check_docker_service "pansou-web")
+zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "${C_GREEN}✅ 已配置${C_RESET}" || echo "❌ 未配置")
+subconverter_status=$(check_docker_service "subconverter")
+shlink_status=$(check_docker_service "shlink")
+posteio_status=$(check_docker_service "posteio")
+searxng_status=$(check_docker_service "searxng")
+
+render_menu "🚀 服务管理中心" \
+    "1) MoonTV 安装                 $moon_status" \
+    "2) RustDesk 安装               $rustdesk_status" \
+    "3) LibreTV 安装                $libretv_status" \
+    "4) 甬哥Sing-box-yg安装           $singbox_status" \
+    "5) 勇哥ArgoSB脚本                $argosb_status" \
+    "6) Kejilion.sh 一键脚本工具箱     ⚡ 远程调用" \
+    "7) zjsync（GitHub 文件自动同步）   $zjsync_status" \
+    "8) Pansou 网盘搜索               $panso_status" \
+    "9) 域名绑定管理                  ⚡ 远程调用" \
+    "10) Subconverter API后端         $subconverter_status" \
+    "11) Poste.io 邮件服务器          $posteio_status" \
+    "12) Shlink 短链接生成            $shlink_status" \
+    "13) SearxNG 一键安装/卸载        $searxng_status" \
+    "14) Telegram MTProto 代理         $(mtproto_status)" \
+    "15) CosyVoice 文本转语音          $(check_docker_service "cov")" \
+    "16) 系统工具（Swap 管理 + 主机名修改） ⚡" \
+    "00) 更新菜单脚本 menu.sh" \
+    "0) 退出" \
+    "" \
+    "提示：此脚本已自动设置 q 或 Q 快捷键，下次直接输入即可运行"
+
+read -rp "请输入选项: " main_choice
+case "${main_choice}" in
+    1) moon_menu; exit 0 ;;
+    2) rustdesk_menu; exit 0 ;;
+    3) libretv_menu; exit 0 ;;
+    4) singbox_menu; exit 0 ;;
+    5) argosb_menu; exit 0 ;;
+    6) bash <(fetch "https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh"); exit 0 ;;
+    7) zjsync_menu; exit 0 ;;
+    8) panso_menu; exit 0 ;;
+    9) nginx_menu; exit 0 ;;
+    10) subconverter_menu; exit 0 ;;
+    11) posteio_menu; exit 0 ;;
+    12) shlink_menu; exit 0 ;;
+    13) searxng_menu; exit 0 ;;
+    14) mtproto_menu; exit 0 ;;
+    15) cosyvoice_menu; exit 0 ;;
+    16) system_tool_menu; exit 0 ;;
+    00) update_menu_script; exit 0 ;;
+    0) exit 0 ;;
+    *) error "❌ 无效输入"; exit 1 ;;
+esac
