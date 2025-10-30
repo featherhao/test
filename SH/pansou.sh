@@ -121,6 +121,27 @@ restart_pansou() {
     echo "✅ PanSou 已重启"
 }
 
+# 新增的更新函数
+update_pansou() {
+    if [ ! -d "$PAN_DIR" ] || [ ! -f "$PAN_DIR/docker-compose.yml" ]; then
+        echo "⚠️ PanSou 未安装，请先执行安装选项 (1)。"
+        return
+    fi
+
+    cd "$PAN_DIR"
+    echo "🔄 正在检查并拉取最新 PanSou 镜像..."
+    # 使用 docker compose pull 拉取最新镜像
+    docker compose pull
+
+    echo "🚀 正在使用最新镜像重建并启动容器..."
+    # 使用 docker compose up -d --force-recreate 强制重建容器并启动，以应用新镜像
+    docker compose up -d --force-recreate
+
+    echo "✅ PanSou 更新完成！"
+    sleep 2
+    show_status
+}
+
 uninstall_pansou() {
     if [ -d "$PAN_DIR" ]; then
         cd "$PAN_DIR"
@@ -177,6 +198,12 @@ modify_env() {
     PROXY=${NEW_PROXY:-$CURRENT_PROXY}
     EXT=${NEW_EXT:-$CURRENT_EXT}
 
+    # 检查并获取端口配置（防止在未运行状态下修改配置导致端口丢失）
+    # 尝试从 docker-compose.yml 中解析当前端口
+    PORT_LINE=$(grep "ports:" "$PAN_DIR/docker-compose.yml" -A 1 | tail -n 1)
+    # 提取映射的宿主机端口，默认为 $FRONTEND_PORT
+    CURRENT_MAPPED_PORT=$(echo "$PORT_LINE" | sed -n 's/.*- "\([0-9]*\):80".*/\1/p' || echo "$FRONTEND_PORT")
+    
     # 更新 docker-compose.yml 文件
     cat > docker-compose.yml <<EOF
 services:
@@ -185,7 +212,7 @@ services:
     container_name: $CONTAINER_NAME
     restart: unless-stopped
     ports:
-      - "$FRONTEND_PORT:80"
+      - "$CURRENT_MAPPED_PORT:80"
     environment:
       PLUGINS_ENABLED: "$PLUGINS_ENABLED"
       PROXY: "$PROXY"
@@ -212,6 +239,7 @@ menu() {
         echo "4) 重启 PanSou"
         echo "5) 修改环境变量并重启"
         echo "6) 卸载 PanSou"
+        echo "7) **更新 PanSou (拉取最新镜像)**" # 新增选项
         echo "0) 退出"
         echo "===================================="
         read -p "请输入选项: " CHOICE
@@ -239,6 +267,9 @@ menu() {
                 ;;
             6)
                 uninstall_pansou
+                ;;
+            7) # 新增更新处理
+                update_pansou
                 ;;
             0)
                 echo "👋 退出"
