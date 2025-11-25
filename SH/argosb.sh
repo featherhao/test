@@ -56,12 +56,10 @@ EOF
 
 # ================== 内部函数：确保指定协议端口存在 ==================
 ensure_proto_port() {
-    # $1 = proto name ("vmpt" or "vwpt")
     local proto="$1"
-    local curval
-    curval="${!proto:-}"
+    local curval="${!proto:-}"
+
     if [[ -z "$curval" ]]; then
-        # 交互：提示用户输入，若留空则生成随机端口
         read -rp "检测到 ${proto} 未设置。请输入 ${proto} 端口（留空将使用随机端口）: " val
         if [[ -z "$val" ]]; then
             val=$((RANDOM%40000+10000))
@@ -91,7 +89,6 @@ add_or_update_protocols() {
     echo "13) Argo 固定隧道 (需 vmpt/vwpt/agn/agk)"
     read -rp "输入序号: " -a selections
 
-    # 清理旧的本次会话导出变量（仅取消临时变量，避免意外残留）
     unset vlpt xhpt vxpt sspt anpt arpt vmpt vwpt hypt tupt sopt agn agk argo
 
     for sel in "${selections[@]}"; do
@@ -108,7 +105,6 @@ add_or_update_protocols() {
             10) read -rp "hypt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export hypt="$val";;
             11) read -rp "tupt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export tupt="$val";;
             12)
-                # 临时隧道：选择底层协议并确保相应端口存在
                 echo "选择用于穿 Argo 的底层协议："
                 echo "1) VLESS-ws-enc (vwpt)"
                 echo "2) Vmess-ws (vmpt)"
@@ -122,7 +118,6 @@ add_or_update_protocols() {
                 fi
                 ;;
             13)
-                # 固定隧道：选择协议、确保端口，并要求 agn/agk
                 echo "固定隧道使用协议："
                 echo "1) VLESS-ws-enc (vwpt)"
                 echo "2) Vmess-ws (vmpt)"
@@ -137,29 +132,14 @@ add_or_update_protocols() {
 
                 read -rp "请输入 Argo 固定隧道域名 agn: " val; export agn="$val"
                 read -rp "请输入 Argo 固定隧道Token agk: " val; export agk="$val"
-                if [[ -z "${agn:-}" || -z "${agk:-}" ]]; then
-                    warn "agn 或 agk 为空：固定隧道可能无法生效，请检查。"
-                fi
                 ;;
             *) echo "⚠️ 无效选项 $sel";;
         esac
     done
 
-    if [[ "${argo:-}" == "y" ]]; then
-        warn "❌ 检测到 argo=y：此值已废弃，请使用 argo=vwpt 或 argo=vmpt"
-    fi
-
-    # 最终检查：如果设置了 argo，但对应端口变量仍为空，则自动补齐随机端口（防止主脚本跳过生成）
-    if [[ -n "${argo:-}" ]]; then
-        if [[ "$argo" == "vwpt" && -z "${vwpt:-}" ]]; then
-            info "自动补齐 vwpt 随机端口"
-            export vwpt=$((RANDOM%40000+10000))
-        elif [[ "$argo" == "vmpt" && -z "${vmpt:-}" ]]; then
-            info "自动补齐 vmpt 随机端口"
-            export vmpt=$((RANDOM%40000+10000))
-        fi
-        info "当前 argo=$argo; vmpt=${vmpt:-}<unset>; vwpt=${vwpt:-}<unset>"
-    fi
+    # ========== 显示最终环境（修复输出格式） ==========
+    info "当前配置: argo=${argo:-<none>} vmpt=${vmpt:-<unset>} vwpt=${vwpt:-<unset>}"
+    info "固定隧道参数: agn=${agn:-<none>} agk=${agk:-<none>}"
 
     if argosb_status_check; then
         rep_flag="rep"
@@ -170,9 +150,8 @@ add_or_update_protocols() {
     fi
 
     info "🚀 正在执行 ArgoSB 主程序..."
-    # 显示最终将传给主脚本的关键环境变量，便于调试
-    info "环境预览: argo=${argo:-}<none> vmpt=${vmpt:-}<none> vwpt=${vwpt:-}<none> agn=${agn:-}<none> agk=${agk:-}<none>"
     bash <(curl -Ls "$MAIN_SCRIPT") $rep_flag
+
     install_shortcut
     info "✅ 操作完成"
 }
