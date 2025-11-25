@@ -66,77 +66,73 @@ add_or_update_protocols() {
     echo "5) AnyTLS (anpt)"
     echo "6) Any-Reality (arpt)"
     echo "7) Vmess-ws (vmpt)"
-    echo "8) VLESS-ws-enc (vwpt 新增)"
-    echo "9) Socks5 (sopt)"
-    echo "10) Hysteria2 (hypt)"
-    echo "11) Tuic (tupt)"
-    echo "12) Argo 临时隧道"
-    echo "13) Argo 固定隧道 (需 vmpt/vwpt/agn/agk)"
+    echo "8) Socks5 (sopt)"
+    echo "9) Hysteria2 (hypt)"
+    echo "10) Tuic (tupt)"
+    echo "11) Argo 临时隧道"
+    echo "12) Argo 固定隧道 (需 vmpt/agn/agk)"
     read -rp "输入序号: " -a selections
 
-    unset vlpt xhpt vxpt sspt anpt arpt vmpt vwpt hypt tupt sopt agn agk argo
+    # 清空旧变量
+    unset vlpt xhpt vxpt sspt anpt arpt vmpt hypt tupt argo agn agk
+    vmess_enabled=0
 
     for sel in "${selections[@]}"; do
         case $sel in
-            1) read -rp "vlpt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export vlpt="$val";;
-            2) read -rp "xhpt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export xhpt="$val";;
-            3) read -rp "vxpt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export vxpt="$val";;
-            4) read -rp "sspt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export sspt="$val";;
-            5) read -rp "anpt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export anpt="$val";;
-            6) read -rp "arpt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export arpt="$val";;
-            7) read -rp "vmpt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export vmpt="$val";;
-            8) read -rp "vwpt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export vwpt="$val";;
-            9) read -rp "sopt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export sopt="$val";;
-            10) read -rp "hypt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export hypt="$val";;
-            11) read -rp "tupt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export tupt="$val";;
-            12)
-                echo "选择使用哪个协议穿 Argo？"
-                echo "1) 新版 VLESS-ws-enc (vwpt)"
-                echo "2) 旧版 Vmess-ws (vmpt)"
-                read -rp "选择: " choose
-                [[ "$choose" == "1" ]] && export argo="vwpt"
-                [[ "$choose" == "2" ]] && export argo="vmpt"
+            1) read -rp "请输入 vlpt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export vlpt="$val";;
+            2) read -rp "请输入 xhpt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export xhpt="$val";;
+            3) read -rp "请输入 vxpt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export vxpt="$val";;
+            4) read -rp "请输入 sspt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export sspt="$val";;
+            5) read -rp "请输入 anpt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export anpt="$val";;
+            6) read -rp "请输入 arpt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export arpt="$val";;
+            7) read -rp "请输入 vmpt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export vmpt="$val"; vmess_enabled=1;;
+            8) read -rp "请输入 sopt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export sopt="$val";;
+            9) read -rp "请输入 hypt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export hypt="$val";;
+            10) read -rp "请输入 tupt 端口（留空随机）: " val; [[ -z "$val" ]] && val=$((RANDOM%40000+10000)); export tupt="$val";;
+            11) 
+                export argo="y"
+                if [ -z "${vmpt:-}" ]; then
+                    echo "⚠️ 提示：未选择 vmpt，临时隧道可能无法生效"
+                fi
                 ;;
-            13)
-                echo "固定隧道使用协议："
-                echo "1) 新版 VLESS-ws-enc (vwpt)"
-                echo "2) 旧版 Vmess-ws (vmpt)"
-                read -rp "选择: " choose
-                [[ "$choose" == "1" ]] && export argo="vwpt"
-                [[ "$choose" == "2" ]] && export argo="vmpt"
-
-                read -rp "输入 Argo 固定隧道域名 agn: " val; export agn="$val"
-                read -rp "输入 Argo 固定隧道 Token agk: " val; export agk="$val"
+            12)
+                export argo="y"
+                if [ -z "${vmpt:-}" ]; then
+                    echo "⚠️ 提示：未选择 vmpt，固定隧道可能无法生效"
+                fi
+                read -rp "请输入 Argo固定隧道端口 vmpt（留空保持原值）: " val
+                [[ -n "$val" ]] && export vmpt="$val"
+                read -rp "请输入 Argo固定隧道域名 agn: " val; export agn="$val"
+                read -rp "请输入 Argo固定隧道Token agk: " val; export agk="$val"
                 ;;
             *) echo "⚠️ 无效选项 $sel";;
         esac
     done
 
-    [[ "$argo" == "y" ]] && warn "❌ argo=y 已废弃，请重新选择为 vmpt 或 vwpt"
-
     if argosb_status_check; then
         rep_flag="rep"
-        info "🔹 已安装，命令自动添加 rep"
+        info "🔹 已安装，修改协议将带 rep"
     else
         rep_flag=""
-        info "🟡 首次安装"
+        info "⚠️ 未安装，首次安装"
     fi
 
-    info "🚀 正在执行 ArgoSB 主程序..."
+    info "🚀 正在执行 ArgoSB 脚本..."
     bash <(curl -Ls "$MAIN_SCRIPT") $rep_flag
     install_shortcut
-    info "✅ 操作完成"
+    info "✅ 协议操作完成"
 }
 
+# ================== 其他操作 ==================
 view_nodes() { $AGSX_CMD list || true; }
 update_script() { bash <(curl -Ls "$MAIN_SCRIPT"); install_shortcut; info "脚本已更新"; }
 restart_script() { $AGSX_CMD res || true; }
 uninstall_script() { $AGSX_CMD del || true; rm -f "$AGSX_CMD"; info "脚本已卸载"; }
 toggle_ipv4_ipv6() { read -rp "显示 IPv4 节点请输入4，IPv6请输入6: " ipver; export ippz="$ipver"; $AGSX_CMD list || true; }
-change_port() { read -rp "请输入协议标识 (如 xmpt/vwpt): " proto; read -rp "请输入新的端口: " port; export "$proto"="$port"; bash <(curl -Ls "$MAIN_SCRIPT"); }
+change_port() { read -rp "请输入协议标识 (例如 xhpt): " proto; read -rp "请输入新的端口号: " port; export "$proto"="$port"; bash <(curl -Ls "$MAIN_SCRIPT"); }
 
+# ================== 主循环 ==================
 install_shortcut
-
 while true; do
     show_menu
     read -rp "请输入选项: " opt
@@ -152,5 +148,5 @@ while true; do
         *) echo "⚠️ 无效选项" ;;
     esac
     echo
-    read -rp "按回车继续..." _
+    read -rp "按回车键继续..." _
 done
