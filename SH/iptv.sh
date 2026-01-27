@@ -3,7 +3,15 @@ set -e
 
 # ==========================================================
 # IPTV Aggregator 傻瓜式一体化脚本
-# Oracle / NAT / iptables 免疫（host 网络）
+#
+# 功能：
+#   - 安装 / 启动
+#   - 查看状态 / 日志
+#   - 重启 / 卸载
+#
+# 说明：
+#   - 使用 host 网络，绕过 iptables 问题
+#   - docker-compose.yml 中【完整保留官方原始注释】
 # ==========================================================
 
 APP_NAME="iptv-aggregator"
@@ -15,13 +23,14 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# ================== 工具函数 ==================
-info()  { echo -e "\033[32m[INFO]\033[0m $1"; }
-warn()  { echo -e "\033[33m[WARN]\033[0m $1"; }
+# ================== 输出工具 ==================
+info() { echo -e "\033[32m[INFO]\033[0m $1"; }
+warn() { echo -e "\033[33m[WARN]\033[0m $1"; }
 
+# ================== Docker 安装 ==================
 install_docker() {
   if ! command -v docker &>/dev/null; then
-    info "安装 Docker..."
+    info "未检测到 Docker，开始安装..."
     curl -fsSL https://get.docker.com | bash
     systemctl enable docker
     systemctl start docker
@@ -30,7 +39,7 @@ install_docker() {
   fi
 
   if ! docker compose version &>/dev/null; then
-    info "安装 Docker Compose..."
+    info "未检测到 Docker Compose，开始安装..."
     mkdir -p /usr/local/lib/docker/cli-plugins
     curl -SL https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64 \
       -o /usr/local/lib/docker/cli-plugins/docker-compose
@@ -40,9 +49,12 @@ install_docker() {
   fi
 }
 
+# ================== 写入 docker-compose.yml ==================
 write_compose() {
   mkdir -p "${INSTALL_DIR}/data"
   cd "${INSTALL_DIR}"
+
+  info "生成 docker-compose.yml（官方注释完整版）"
 
   cat > docker-compose.yml <<'EOF'
 services:
@@ -51,9 +63,13 @@ services:
     image: cqshushu/iptv-spider:v1.0
     container_name: iptv-spider
     restart: unless-stopped
+
+    # ⚠ 使用 host 网络模式，避免 iptables / bridge 问题
     network_mode: host
+
     environment:
       - TZ=Asia/Shanghai
+
     volumes:
       - ./data:/app/data
 
@@ -62,28 +78,46 @@ services:
     image: yiwanaishare/iptv-aggregator:latest
     container_name: iptv-aggregator
     restart: unless-stopped
+
+    # ⚠ 使用 host 网络模式，避免 iptables / bridge 问题
     network_mode: host
+
     environment:
       # ==================== 用户自定义配置 ====================
+      # Spider 登录密码（必填，需与上方 spider 默认密码一致，或者自行修改）
       - SPIDER_PASSWORD=yiwan123
-      - FILTER_DAYS=5
-      - FILTER_TYPE=hotel
-      - PRIORITY_KEYWORDS=山西,联通
-      - COLLECTION_PAGES=5
-      - REFRESH_INTERVAL_HOURS=12
       
-      # ==================== 系统配置 ====================
-      - TZ=Asia/Shanghai
-      - SPIDER_URL=http://127.0.0.1:50085
-      - PORT=50086
-      - HTTP_TIMEOUT=8
-      - SPIDER_READY_MAX_WAIT_SECONDS=600
+      # 筛选条件配置
+      - FILTER_DAYS=5                    # 采集最近N天的数据源 (建议5-15)
+      - FILTER_TYPE=hotel                 # 数据源类型：hotel(酒店源), multicast(组播), all(全部)
+      - PRIORITY_KEYWORDS=山西,联通       # 优先关键词 (如 "山西,联通", 逗号分隔)
+      - COLLECTION_PAGES=5                # 采集页数 (建议3-8，页数越多耗时越长)
+      
+      # 运行时间配置
+      - REFRESH_INTERVAL_HOURS=12         # 自动更新间隔（小时）
+      
+      # ==================== 系统配置（一般无需修改） ====================
+      - TZ=Asia/Shanghai                  # 时区设置
+
+      # ⚠ host 网络下 spider 地址需使用 127.0.0.1
+      - SPIDER_URL=http://127.0.0.1:50085 # Spider 服务地址
+
+      - PORT=50086                        # Aggregator 服务端口
+      - HTTP_TIMEOUT=8                    # HTTP 请求超时时间（秒）
+      - SPIDER_READY_MAX_WAIT_SECONDS=600 # 等待 Spider 就绪的最大时间（秒）
+
+    depends_on:
+      - spider
+
     volumes:
+      # 数据持久化目录（生成的 iptv.txt 会在这里）
       - ./data:/app/data
+
     working_dir: /app
 EOF
 }
 
+# ================== 功能函数 ==================
 install_app() {
   info "开始安装 IPTV Aggregator"
   install_docker
@@ -100,12 +134,12 @@ show_status() {
 }
 
 show_logs() {
-  cd "${INSTALL_DIR}" || exit 0
+  cd "${INSTALL_DIR}" || return
   docker compose logs -f
 }
 
 restart_app() {
-  cd "${INSTALL_DIR}" || exit 0
+  cd "${INSTALL_DIR}" || return
   docker compose restart
 }
 
