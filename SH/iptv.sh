@@ -85,7 +85,7 @@ services:
     environment:
       # ==================== 用户自定义配置 ====================
       # Spider 登录密码（必填，需与上方 spider 默认密码一致，或者自行修改）
-      - SPIDER_PASSWORD=103997250
+      - SPIDER_PASSWORD=yiwan123
       
       # 筛选条件配置
       - FILTER_DAYS=5                    # 采集最近N天的数据源 (建议5-15)
