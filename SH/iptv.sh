@@ -90,7 +90,7 @@ services:
       # 筛选条件配置
       - FILTER_DAYS=5                    # 采集最近N天的数据源 (建议5-15)
       - FILTER_TYPE=hotel                 # 数据源类型：hotel(酒店源), multicast(组播), all(全部)
-      - PRIORITY_KEYWORDS=山西,联通       # 优先关键词 (如 "山西,联通", 逗号分隔)
+      - PRIORITY_KEYWORDS=湖北,移动       # 优先关键词 (如 "山西,联通", 逗号分隔)
       - COLLECTION_PAGES=5                # 采集页数 (建议3-8，页数越多耗时越长)
       
       # 运行时间配置
