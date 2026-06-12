@@ -1,5 +1,5 @@
 # 1. 写入通用清理脚本
-cat << 'EOF' > /root/vps_clean_universal.sh
+#cat << 'EOF' > /root/vps_clean_universal.sh
 #!/bin/bash
 
 # 检查是否为 Root 用户运行
