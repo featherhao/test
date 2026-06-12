@@ -1,5 +1,4 @@
-# 1. 写入通用清理脚本
-#cat << 'EOF' > /root/vps_clean_universal.sh
+
 #!/bin/bash
 
 # 检查是否为 Root 用户运行
@@ -73,10 +72,5 @@ echo "        清理完成！当前根目录硬盘状态："
 echo "================================================="
 df -h /
 
-EOF
 
-# 2. 赋予脚本执行权限
-chmod +x /root/vps_clean_universal.sh
 
-# 3. 立即运行
-bash /root/vps_clean_universal.sh
