@@ -1,95 +1,82 @@
+# 1. 写入通用清理脚本
+cat << 'EOF' > /root/vps_clean_universal.sh
 #!/bin/bash
-###
-# @Author: YourName
-# @Date: 2025-09-27
-# @Description: VPS 容器及残留清理脚本（优化逻辑：优先删除已停止容器）
-###
 
-set -Eeuo pipefail
-
-# ================== 彩色定义 ==================
-red='\033[0;31m'
-green='\033[0;32m'
-yellow='\033[0;33m'
-plain='\033[0m'
-
-info()  { echo -e "${green}[INFO]${plain} $*"; }
-warn()  { echo -e "${yellow}[WARN]${plain} $*"; }
-error() { echo -e "${red}[ERROR]${plain} $*" >&2; }
-
-# ================== 主功能 ==================
-echo "🚀 VPS 容器与残留清理工具"
-echo "===================================="
-
-# ------------------ 显示容器 ------------------
-echo ""
-info "当前正在运行的容器："
-docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Image}}\t{{.Ports}}"
-
-echo ""
-info "当前已停止的容器："
-docker ps -a --filter "status=exited" --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Image}}"
-
-# ------------------ 删除已停止容器 ------------------
-stopped_containers=$(docker ps -a -q --filter "status=exited")
-if [[ -n "$stopped_containers" ]]; then
-    read -rp "是否删除所有已停止的容器？ [y/N]: " del_stopped
-    if [[ "$del_stopped" =~ ^[Yy]$ ]]; then
-        docker rm $stopped_containers
-        info "已删除所有已停止容器"
-    fi
-else
-    warn "没有已停止的容器"
+# 检查是否为 Root 用户运行
+if [ "$EUID" -ne 0 ]; then
+  echo "请以 root 用户身份运行此脚本！"
+  exit 1
 fi
 
-# ------------------ 停止并删除运行中的容器 ------------------
-running_containers=$(docker ps -q)
-if [[ -n "$running_containers" ]]; then
-    read -rp "是否停止并删除正在运行的容器？ [y/N]: " stop_del_running
-    if [[ "$stop_del_running" =~ ^[Yy]$ ]]; then
-        docker stop $running_containers
-        docker rm $running_containers
-        info "已停止并删除所有运行容器"
-    fi
+echo "================================================="
+echo "       Linux VPS 通用深度清理脚本 (自动化版)"
+echo "================================================="
+
+# 1. 动态清理所有 Docker 容器日志与无用镜像
+if command -v docker &> /dev/null; then
+    echo "-> [Docker] 检测到 Docker 已安装，开始清理..."
+    
+    # 清空所有正在运行的容器日志
+    echo "-> [Docker] 正在清空所有容器的运行时日志..."
+    find /var/lib/docker/containers/ -name *-json.log -exec truncate -s 0 {} \; 2>/dev/null
+    
+    # 清理未使用的镜像、容器、网络和卷
+    echo "-> [Docker] 正在深度裁剪无用镜像与缓存..."
+    docker system prune -a --volumes -f
 else
-    warn "没有正在运行的容器"
+    echo "-> [Docker] 未检测到 Docker 环境，跳过。"
 fi
 
-# ------------------ 清理镜像 ------------------
-echo ""
-docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}"
-read -rp "是否删除未使用的镜像？ [y/N]: " prune_img
-[[ "$prune_img" =~ ^[Yy]$ ]] && docker image prune -a -f && info "未使用镜像已清理"
+# 2. 系统软件包缓存清理（自动识别系统家族）
+echo "-> [系统] 开始清理软件包管理器缓存..."
+if [ -f /usr/bin/apt-get ]; then
+    # Debian / Ubuntu 系列
+    dpkg --configure -a
+    apt-get autoremove -y
+    apt-get autoclean -y
+    apt-get clean -y
+elif [ -f /usr/bin/yum ]; then
+    # CentOS / RHEL / 旧版 Fedora 系列
+    yum autoremove -y
+    yum clean all
+elif [ -f /usr/bin/dnf ]; then
+    # 新版 Fedora / AlmaLinux / Rocky 系列
+    dnf autoremove -y
+    dnf clean all
+fi
 
-# ------------------ 清理卷 ------------------
-echo ""
-docker volume ls
-read -rp "是否删除未使用的卷？ [y/N]: " prune_vol
-[[ "$prune_vol" =~ ^[Yy]$ ]] && docker volume prune -f && info "未使用卷已清理"
+# 3. 系统日志与爆破残余清理
+echo "-> [日志] 正在限制并截断系统 journal 日志..."
+if command -v journalctl &> /dev/null; then
+    journalctl --rotate
+    journalctl --vacuum-time=3d
+    journalctl --vacuum-size=50M
+fi
 
-# ------------------ 清理网络 ------------------
-echo ""
-docker network ls
-read -rp "是否删除未使用的 Docker 网络？ [y/N]: " prune_net
-[[ "$prune_net" =~ ^[Yy]$ ]] && docker network prune -f && info "未使用网络已清理"
+echo "-> [日志] 正在清理常见的系统历史爆破与大日志文件..."
+# 清理防爆破历史日志
+[ -f /var/log/btmp ] && truncate -s 0 /var/log/btmp
+[ -f /var/log/btmp.1 ] && rm -f /var/log/btmp.1
+[ -f /var/log/auth.log ] && truncate -s 0 /var/log/auth.log
+[ -f /var/log/secure ] && truncate -s 0 /var/log/secure
 
-# ------------------ 清理残留 systemd 服务 ------------------
-echo ""
-info "检查常见残留 systemd 服务..."
-services=(/etc/systemd/system/mtg.service /etc/systemd/system/subconverter.service /etc/systemd/system/shlink.service)
-for svc in "${services[@]}"; do
-    if [[ -f "$svc" ]]; then
-        read -rp "检测到残留服务 $svc，是否删除？ [y/N]: " del_svc
-        if [[ "$del_svc" =~ ^[Yy]$ ]]; then
-            systemctl stop $(basename $svc .service) || true
-            systemctl disable $(basename $svc .service) || true
-            rm -f "$svc"
-            info "已删除 $svc"
-        fi
-    fi
-done
+# 4. 清理全盘所有 .log 后缀文件（保留文件，体积归零）
+echo "-> [全盘] 正在检索并清空所有大于 50M 的 .log 文本日志..."
+find / -type f -name "*.log" -size +50M -exec truncate -s 0 {} \; 2>/dev/null
 
-echo ""
-info "VPS 清理完成！"
-docker ps -a
-read -rp "按任意键返回主菜单..."
+# 5. 清理系统临时文件夹
+echo "-> [临时] 正在清理 /tmp 目录下的过期临时文件..."
+find /tmp -type f -atime +2 -delete 2>/dev/null
+
+echo "================================================="
+echo "        清理完成！当前根目录硬盘状态："
+echo "================================================="
+df -h /
+
+EOF
+
+# 2. 赋予脚本执行权限
+chmod +x /root/vps_clean_universal.sh
+
+# 3. 立即运行
+bash /root/vps_clean_universal.sh
