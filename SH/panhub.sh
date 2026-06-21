@@ -1,9 +1,8 @@
 #!/bin/bash
 
 # ====================================================================
-# 脚本名称: PanHub 一键安装与管理脚本 (支持无损更新)
-# 适用系统: Ubuntu / Debian / CentOS
-# 功能描述: 自动化安装 Docker、部署/更新 PanHub 容器、提供状态管理
+# 脚本名称: PanHub 一键安装与管理脚本 (支持无损更新 & 智能多架构兼容)
+# 适用系统: Ubuntu / Debian / CentOS (完美兼容 ARM64 / x86_64)
 # ====================================================================
 
 # 颜色定义
@@ -18,6 +17,15 @@ CONTAINER_NAME="panhub"
 IMAGE_NAME="ghcr.io/wu529778790/panhub.shenzjd.com:latest"
 DATA_DIR="/root/panhub/data"
 DEFAULT_PORT="3000"
+
+# 自动检测系统架构
+ARCH=$(uname -m)
+PLATFORM_ARG=""
+
+if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
+    echo -e "${YELLOW}检测到当前服务器为 ARM 架构 (${ARCH})，将自动启用多架构兼容模式运行。${NC}"
+    PLATFORM_ARG="--platform linux/amd64"
+fi
 
 # 必须以 root 用户运行
 if [ "$EUID" -ne 0 ]; then
@@ -36,6 +44,11 @@ check_docker() {
     else
         echo -e "${GREEN}检测到 Docker 已安装。${NC}"
     fi
+
+    # 如果是 ARM 架构，自动尝试初始化 QEMU 环境（防止镜像因没有 arm64 标签而报错）
+    if [ ! -z "$PLATFORM_ARG" ]; then
+        docker run --rm --privileged multiarch/qemu-user-static --reset -p yes &>/dev/null
+    fi
 }
 
 # 安装 / 更新 PanHub
@@ -46,7 +59,7 @@ install_panhub() {
     if [ "$(docker ps -aq -f name=^${CONTAINER_NAME}$)" ]; then
         echo -e "${YELLOW}检测到已存在名为 ${CONTAINER_NAME} 的容器，正在为您执行更新/重装流程...${NC}"
         
-        # 1. 自动备份旧容器的端口和密码配置（防止用户忘记）
+        # 1. 自动备份旧容器的端口和密码配置
         OLD_PORT=$(docker inspect --format='{{range $p, $conf := .HostConfig.PortBindings}}{{(index $conf 0).HostPort}}{{end}}' $CONTAINER_NAME 2>/dev/null)
         OLD_PWD=$(docker inspect --format='{{range .Config.Env}}{{if grep "SEARCH_PASSWORD=" .}}{{.}}{{end}}{{end}}' $CONTAINER_NAME 2>/dev/null | sed 's/SEARCH_PASSWORD=//')
         
@@ -72,22 +85,22 @@ install_panhub() {
     # 3. 创建持久化目录（如果不存在）
     mkdir -p "$DATA_DIR"
 
-    # 4. 强制拉取作者的最新镜像
+    # 4. 强制拉取最新镜像 (针对 ARM 加上 platform 指定)
     echo -e "${YELLOW}正在从 GHCR 拉取作者最新的 PanHub 镜像...${NC}"
-    docker pull "$IMAGE_NAME"
+    docker pull $PLATFORM_ARG "$IMAGE_NAME"
 
     echo -e "${YELLOW}正在启动新版容器...${NC}"
 
-    # 5. 组装 Docker 运行命令
+    # 5. 组装 Docker 运行命令 (加入架构兼容变量)
     if [ -z "$SEARCH_PASSWORD" ]; then
-        docker run -d \
+        docker run -d $PLATFORM_ARG \
             --name "$CONTAINER_NAME" \
             -p "$PORT":3000 \
             -v "$DATA_DIR":/app/data \
             --restart always \
             "$IMAGE_NAME"
     else
-        docker run -d \
+        docker run -d $PLATFORM_ARG \
             --name "$CONTAINER_NAME" \
             -p "$PORT":3000 \
             -v "$DATA_DIR":/app/data \
@@ -129,7 +142,7 @@ uninstall_panhub() {
 show_menu() {
     clear
     echo -e "${BLUE}=================================${NC}"
-    echo -e "${GREEN}    PanHub 一键管理脚本          ${NC}"
+    echo -e "${GREEN}    PanHub 一键管理脚本 (多架构版) ${NC}"
     echo -e "${BLUE}=================================${NC}"
     echo -e " 1. 安装 / 检查更新 PanHub"
     echo -e " 2. 查看 容器运行日志"
