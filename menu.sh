@@ -236,13 +236,28 @@ while true; do
 
     argosb_status=$(argosb_status_check)
     panso_status=$(check_docker_service "pansou-web")
-    panhub_status=$(check_docker_service "panhub")
     zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "${C_GREEN}✅ 已配置${C_RESET}" || echo "❌ 未配置")
     subconverter_status=$(check_docker_service "subconverter")
     shlink_status=$(check_docker_service "shlink")
     posteio_status=$(check_docker_service "posteio")
     searxng_status=$(check_docker_service "searxng")
     casaos_current_status=$(casaos_status)
+    # 智能刷新 PanHub 状态 (兼容 Docker 与 原生进程/PM2)
+    if command -v docker &>/dev/null && docker ps --format '{{.Names}}' | grep -q "^panhub$"; then
+        panhub_status="${C_GREEN}✅ 运行中 (Docker)${C_RESET}"
+    elif command -v docker &>/dev/null && docker ps -a --format '{{.Names}}' | grep -q "^panhub$"; then
+        panhub_status="${C_YELLOW}⚠️ 已停止 (Docker)${C_RESET}"
+    elif command -v pm2 &>/dev/null && pm2 list | grep -q "panhub"; then
+        if pm2 list | grep "panhub" | grep -q "online"; then
+            panhub_status="${C_GREEN}✅ 运行中 (PM2)${C_RESET}"
+        else
+            panhub_status="${C_YELLOW}⚠️ 已停止 (PM2)${C_RESET}"
+        fi
+    elif pgrep -f "node .output/server/index.mjs" &>/dev/null; then
+        panhub_status="${C_GREEN}✅ 运行中 (原生进程)${C_RESET}"
+    else
+        panhub_status="❌ 未安装"
+    fi
 
     # 渲染菜单
     render_menu "🚀 服务管理中心" \
