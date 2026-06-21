@@ -52,6 +52,7 @@ check_docker() {
 }
 
 # 安装 / 更新 PanHub
+# 安装 / 更新 PanHub
 install_panhub() {
     check_docker
 
@@ -85,24 +86,24 @@ install_panhub() {
     # 3. 创建持久化目录（如果不存在）
     mkdir -p "$DATA_DIR"
 
-    # 4. 强制拉取最新镜像 (针对 ARM 加上 platform 指定)
+    # 4. 强制拉取最新镜像
     echo -e "${YELLOW}正在从 GHCR 拉取作者最新的 PanHub 镜像...${NC}"
     docker pull $PLATFORM_ARG "$IMAGE_NAME"
 
     echo -e "${YELLOW}正在启动新版容器...${NC}"
 
-    # 5. 组装 Docker 运行命令 (加入架构兼容变量)
+    # 5. 组装 Docker 运行命令 (内部端口全面修正为 4000)
     if [ -z "$SEARCH_PASSWORD" ]; then
         docker run -d $PLATFORM_ARG \
             --name "$CONTAINER_NAME" \
-            -p "$PORT":3000 \
+            -p "$PORT":4000 \
             -v "$DATA_DIR":/app/data \
             --restart always \
             "$IMAGE_NAME"
     else
         docker run -d $PLATFORM_ARG \
             --name "$CONTAINER_NAME" \
-            -p "$PORT":3000 \
+            -p "$PORT":4000 \
             -v "$DATA_DIR":/app/data \
             -e SEARCH_PASSWORD="$SEARCH_PASSWORD" \
             --restart always \
@@ -122,7 +123,6 @@ install_panhub() {
         echo -e "${RED}❌ 容器启动失败，请检查端口是否被占用或网络是否正常。${NC}"
     fi
 }
-
 # 卸载 PanHub
 uninstall_panhub() {
     echo -e "${YELLOW}确定要卸载 PanHub 吗？${NC}"
