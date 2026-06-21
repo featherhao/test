@@ -11,20 +11,32 @@ APP_DIR="/root/panhub-app"
 ARCH=$(uname -m)
 
 # 彩色输出
-C_RESET="\e[0m"; C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"; C_BLUE="\e[34m"; C_CYAN="\e[36m"
+C_RESET="\e[0m"; C_BOLD="\e[1m"
+C_GREEN="\e[32m"; C_RED="\e[31m"; C_YELLOW="\e[33m"; C_BLUE="\e[34m"; C_CYAN="\e[36m"
+
+# 获取公网 IP 用于地址打印
+get_public_ip() {
+    local ip
+    ip=$(curl -s --connect-timeout 3 ifconfig.me || curl -s --connect-timeout 3 api.ipify.org || echo "您的服务器IP")
+    echo "$ip"
+}
 
 # ================== 核心功能函数 ==================
 
 # 1. 安装 / 检查更新
 install_panhub() {
-    # 自动检测并拉取/克隆最新版
+    local PORT=$DEFAULT_PORT
+    local PUBLIC_IP
+    PUBLIC_IP=$(get_public_ip)
+
     if [[ "$ARCH" == "x86_64" ]]; then
-        echo -e "${C_GREEN}检测到 AMD64 架构，正在使用 Docker 方案安装/更新...${C_RESET}"
+        echo -e "${C_GREEN}检测到 AMD64 架构，正在检查 Docker 方案...${C_RESET}"
         
-        # 备份端口（如果已存在）
+        # 备份端口（如果已存在说明是更新或检查）
         if [ "$(docker ps -aq -f name=^${CONTAINER_NAME}$)" ]; then
             OLD_PORT=$(docker inspect --format='{{range $p, $conf := .HostConfig.PortBindings}}{{(index $conf 0).HostPort}}{{end}}' $CONTAINER_NAME 2>/dev/null)
             PORT=${OLD_PORT:-$DEFAULT_PORT}
+            echo -e "${C_CYAN}检测到已安装 PanHub，正在为您平滑更新镜像...${C_RESET}"
             docker rm -f $CONTAINER_NAME &>/dev/null
         else
             read -rp "请输入映射端口 [默认: $DEFAULT_PORT]: " user_port
@@ -40,48 +52,75 @@ install_panhub() {
           "$IMAGE_NAME"
 
     elif [[ "$ARCH" == "aarch64" ]]; then
-        echo -e "${C_YELLOW}检测到 ARM64 架构，正在使用本地原生构建方案安装/更新...${C_RESET}"
+        echo -e "${C_YELLOW}检测到 ARM64 架构，正在检查本地原生方案...${C_RESET}"
         
-        # 确保环境存在
-        if ! command -v pnpm &>/dev/null; then
-            echo -e "${C_CYAN}正在安装 Node环境、pnpm 及 pm2 守护工具...${C_RESET}"
-            curl -fsSL https://fnm.vercel.app/install | bash || true
-            export PATH="$HOME/.local/share/fnm:$PATH"
-            eval "`fnm env`" || true
-            fnm use --install-if-missing 20 || true
-            npm install -g pnpm pm2 || true
-        fi
-
-        # 停止旧进程
-        if command -v pm2 &>/dev/null && pm2 list | grep -q "$CONTAINER_NAME"; then
-            pm2 delete "$CONTAINER_NAME" &>/dev/null || true
+        # 【关键改动】检查是否已经原生编译过
+        if [ -d "$APP_DIR/.output/server" ]; then
+            echo -e "${C_GREEN}检测到系统已存在编译好的 PanHub 原生程序。${C_RESET}"
+            read -rp "是否强制重新拉取源码并构建？(y:重新装一大堆/N:跳过构建直接启动) [默认: N]: " rebuild_choice
+            rebuild_choice=${rebuild_choice:-"n"}
         else
-            pkill -f "node .output/server/index.mjs" || true
+            # 没安装过，必须构建
+            rebuild_choice="y"
         fi
 
-        # 下载源码并编译
-        cd /root
-        rm -rf "$APP_DIR"
-        echo -e "${C_CYAN}正在从 GitHub 克隆最新源码...${C_RESET}"
-        git clone https://github.com/wu529778790/panhub.shenzjd.com.git "$APP_DIR"
+        if [[ "$rebuild_choice" == "y" || "$rebuild_choice" == "Y" ]]; then
+            # 确保基础环境存在
+            if ! command -v pnpm &>/dev/null; then
+                echo -e "${C_CYAN}正在安装 Node 环境、pnpm 及 pm2 守护工具...${C_RESET}"
+                curl -fsSL https://fnm.vercel.app/install | bash || true
+                export PATH="$HOME/.local/share/fnm:$PATH"
+                eval "`fnm env`" || true
+                fnm use --install-if-missing 20 || true
+                npm install -g pnpm pm2 || true
+            fi
+
+            # 停止旧进程
+            if command -v pm2 &>/dev/null && pm2 list | grep -q "$CONTAINER_NAME"; then
+                pm2 delete "$CONTAINER_NAME" &>/dev/null || true
+            else
+                pkill -f "node .output/server/index.mjs" || true
+            fi
+
+            # 下载源码并编译
+            cd /root
+            rm -rf "$APP_DIR"
+            echo -e "${C_CYAN}正在从 GitHub 克隆最新源码...${C_RESET}"
+            git clone https://github.com/wu529778790/panhub.shenzjd.com.git "$APP_DIR"
+            cd "$APP_DIR"
+            
+            echo -e "${C_CYAN}正在原生编译（此步骤较慢，已为您过滤非必要构建）...${C_RESET}"
+            pnpm install && pnpm build
+            
+            read -rp "请输入运行端口 [默认: $DEFAULT_PORT]: " user_port
+            PORT=${user_port:-$DEFAULT_PORT}
+        else
+            echo -e "${C_GREEN}已跳过大堆文件的编译流程，正在尝试唤醒进程...${C_RESET}"
+            # 提取现有端口，如果提取不到则用默认
+            PORT=$DEFAULT_PORT
+        fi
+
+        # 确保启动常驻
         cd "$APP_DIR"
-        
-        echo -e "${C_CYAN}正在原生编译（请耐心等待）...${C_RESET}"
-        pnpm install && pnpm build
-
-        # 启动常驻
-        read -rp "请输入运行端口 [默认: $DEFAULT_PORT]: " user_port
-        PORT=${user_port:-$DEFAULT_PORT}
-
         if command -v pm2 &>/dev/null; then
+            # 如果 pm2 里有这个任务，先删再加确保端口刷新
+            pm2 delete "$CONTAINER_NAME" &>/dev/null || true
             PORT=$PORT pm2 start .output/server/index.mjs --name "$CONTAINER_NAME"
             pm2 save &>/dev/null || true
         else
+            pkill -f "node .output/server/index.mjs" || true
+            sleep 1
             PORT=$PORT nohup node .output/server/index.mjs > panhub.log 2>&1 &
         fi
     fi
 
-    echo -e "${C_GREEN}🎉 PanHub 安装/更新流程执行完毕！端口: ${PORT}${C_RESET}"
+    # ================== 统一漂亮地址面板输出 ==================
+    echo -e "\n${C_GREEN}===============================================${NC}"
+    echo -e "${C_GREEN}🎉 PanHub 安装 / 检查流程执行成功！${NC}"
+    echo -e "${C_BLUE}🌐 访问地址:${NC} http://${PUBLIC_IP}:${PORT}"
+    echo -e "${C_BLUE}📁 数据目录:${NC} $DATA_DIR"
+    echo -e "${C_BLUE}⚙️ 运行芯片:${NC} $ARCH"
+    echo -e "${C_GREEN}===============================================${NC}"
 }
 
 # 2. 查看日志
