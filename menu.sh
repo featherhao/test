@@ -97,6 +97,7 @@ SUB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH
 SHLINK_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/install_shlink.sh"
 ARGOSB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/argosb.sh"
 PANSO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/pansou.sh"
+PANHUB_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/panhub.sh"
 POSTEIO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/Poste.io.sh"
 WORKDIR_SEARXNG="/opt/searxng"
 SEARXNG_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/searxng.sh"
@@ -112,6 +113,7 @@ libretv_menu() { bash <(fetch "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
 singbox_menu() { bash <(fetch "https://raw.githubusercontent.com/yonggekkk/sing-box-yg/main/sb.sh"); }
 nginx_menu() { bash <(fetch "${NGINX_SCRIPT}?t=$(date +%s)"); }
 panso_menu() { bash <(fetch "${PANSO_SCRIPT}?t=$(date +%s)"); }
+panhub_menu() { bash <(fetch "${PANHUB_SCRIPT}?t=$(date +%s)"); }
 zjsync_menu() { bash <(fetch "${ZJSYNC_SCRIPT}?t=$(date +%s)"); }
 subconverter_menu() { bash <(fetch "${SUB_SCRIPT}?t=$(date +%s)"); }
 shlink_menu() { bash <(fetch "${SHLINK_SCRIPT}?t=$(date +%s)"); }
@@ -146,7 +148,7 @@ casaos_menu() {
     print_header "CasaOS 第三方应用商店源"
     # 提示第三方应用商店源
     echo -e "${C_CYAN}# CasaOS 第三方应用商店源:${C_RESET} ${C_BOLD}https://play.cuse.eu.org/Cp0204-AppStore-Play.zip${C_RESET}"
-    echo -e "   👉 您可以在 CasaOS UI界面的'App Store' -> '源' 中添加此链接。"
+    echo -e "    👉 您可以在 CasaOS UI界面的'App Store' -> '源' 中添加此链接。"
     echo -e "=============================="
     return 0
 }
@@ -234,6 +236,7 @@ while true; do
 
     argosb_status=$(argosb_status_check)
     panso_status=$(check_docker_service "pansou-web")
+    panhub_status=$(check_docker_service "panhub")
     zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "${C_GREEN}✅ 已配置${C_RESET}" || echo "❌ 未配置")
     subconverter_status=$(check_docker_service "subconverter")
     shlink_status=$(check_docker_service "shlink")
@@ -244,8 +247,8 @@ while true; do
     # 渲染菜单
     render_menu "🚀 服务管理中心" \
         "1) MoonTV 安装                 $moon_status" \
-        "2) RustDesk 安装               $rustdesk_status" \
-        "3) LibreTV 安装                $libretv_status" \
+        "2) RustDesk 安装                $rustdesk_status" \
+        "3) LibreTV 安装                 $libretv_status" \
         "4) 甬哥Sing-box-yg安装           $singbox_status" \
         "5) 勇哥ArgoSB脚本                $argosb_status" \
         "6) Kejilion.sh 一键脚本工具箱     ⚡ 远程调用" \
@@ -253,13 +256,14 @@ while true; do
         "8) Pansou 网盘搜索               $panso_status" \
         "9) 域名绑定管理                  ⚡ 远程调用" \
         "10) Subconverter API后端         $subconverter_status" \
-        "11) Poste.io 邮件服务器          $posteio_status" \
-        "12) Shlink 短链接生成            $shlink_status" \
-        "13) SearxNG 一键安装/卸载        $searxng_status" \
+        "11) Poste.io 邮件服务器           $posteio_status" \
+        "12) Shlink 短链接生成             $shlink_status" \
+        "13) SearxNG 一键安装/卸载         $searxng_status" \
         "14) Telegram MTProto 代理         $(mtproto_status)" \
         "15) CosyVoice 文本转语音          $(check_docker_service "cov")" \
         "16) 系统工具（Swap 管理 + 主机名修改） ⚡" \
         "17) CasaOS 一键安装/管理         $casaos_current_status" \
+        "18) PanHub 盘搜聚合 (支持多架构)  $panhub_status" \
         "00) 更新菜单脚本 menu.sh" \
         "0) 退出" \
         "" \
@@ -285,6 +289,7 @@ while true; do
         15) cosyvoice_menu ;;
         16) system_tool_menu ;;
         17) casaos_menu ;;
+        18) panhub_menu ;;
         00) update_menu_script ;;
         0) exit 0 ;;
         *) error "❌ 无效输入"; sleep 2 ;;
