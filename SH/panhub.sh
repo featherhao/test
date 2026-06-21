@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # ====================================================================
-# 脚本名称: PanHub 一键安装与管理脚本
+# 脚本名称: PanHub 一键安装与管理脚本 (支持无损更新)
 # 适用系统: Ubuntu / Debian / CentOS
-# 功能描述: 自动化安装 Docker、部署 PanHub 容器、提供状态管理
+# 功能描述: 自动化安装 Docker、部署/更新 PanHub 容器、提供状态管理
 # ====================================================================
 
 # 颜色定义
@@ -38,37 +38,47 @@ check_docker() {
     fi
 }
 
-# 安装 PanHub
+# 安装 / 更新 PanHub
 install_panhub() {
     check_docker
 
-    # 如果容器已存在，先处理
+    # 如果容器已存在，说明是更新或重装
     if [ "$(docker ps -aq -f name=^${CONTAINER_NAME}$)" ]; then
-        echo -e "${YELLOW}检测到已存在名为 ${CONTAINER_NAME} 的容器。${NC}"
-        read -p "是否删除旧容器并重新安装？(y/n): " choice
-        if [[ "$choice" == [Yy] ]]; then
-            docker rm -f $CONTAINER_NAME
-        else
-            echo -e "${BLUE}已取消安装。${NC}"
-            exit 0
-        fi
+        echo -e "${YELLOW}检测到已存在名为 ${CONTAINER_NAME} 的容器，正在为您执行更新/重装流程...${NC}"
+        
+        # 1. 自动备份旧容器的端口和密码配置（防止用户忘记）
+        OLD_PORT=$(docker inspect --format='{{range $p, $conf := .HostConfig.PortBindings}}{{(index $conf 0).HostPort}}{{end}}' $CONTAINER_NAME 2>/dev/null)
+        OLD_PWD=$(docker inspect --format='{{range .Config.Env}}{{if grep "SEARCH_PASSWORD=" .}}{{.}}{{end}}{{end}}' $CONTAINER_NAME 2>/dev/null | sed 's/SEARCH_PASSWORD=//')
+        
+        PORT=${OLD_PORT:-$DEFAULT_PORT}
+        SEARCH_PASSWORD=$OLD_PWD
+
+        echo -e "${BLUE}检测到旧容器配置: 端口=${PORT}, 密码=${SEARCH_PASSWORD:-无}${NC}"
+        
+        # 2. 停止并删除旧容器
+        echo -e "${YELLOW}正在停止并删除旧容器...${NC}"
+        docker stop $CONTAINER_NAME &>/dev/null
+        docker rm -f $CONTAINER_NAME &>/dev/null
+    else
+        # 新安装流程：手动输入配置
+        echo -e "${BLUE}=== 自定义配置 (直接回车使用默认值) ===${NC}"
+        read -p "请输入映射端口 [默认: $DEFAULT_PORT]: " user_port
+        PORT=${user_port:-$DEFAULT_PORT}
+
+        read -p "是否启用访问密码？(直接回车不启用，输入密码则启用): " search_pwd
+        SEARCH_PASSWORD=$search_pwd
     fi
 
-    # 用户自定义配置
-    echo -e "${BLUE}=== 自定义配置 (直接回车使用默认值) ===${NC}"
-    
-    read -p "请输入映射端口 [默认: $DEFAULT_PORT]: " user_port
-    PORT=${user_port:-$DEFAULT_PORT}
-
-    read -p "是否启用访问密码？(直接回车不启用，输入密码则启用): " search_pwd
-    SEARCH_PASSWORD=$search_pwd
-
-    # 创建持久化目录
+    # 3. 创建持久化目录（如果不存在）
     mkdir -p "$DATA_DIR"
 
-    echo -e "${YELLOW}正在拉取最新镜像并启动容器...${NC}"
+    # 4. 强制拉取作者的最新镜像
+    echo -e "${YELLOW}正在从 GHCR 拉取作者最新的 PanHub 镜像...${NC}"
+    docker pull "$IMAGE_NAME"
 
-    # 组装 Docker 运行命令
+    echo -e "${YELLOW}正在启动新版容器...${NC}"
+
+    # 5. 组装 Docker 运行命令
     if [ -z "$SEARCH_PASSWORD" ]; then
         docker run -d \
             --name "$CONTAINER_NAME" \
@@ -88,7 +98,7 @@ install_panhub() {
 
     if [ $? -eq 0 ]; then
         echo -e "\n${GREEN}===============================================${NC}"
-        echo -e "${GREEN}🎉 PanHub 部署成功！${NC}"
+        echo -e "${GREEN}🎉 PanHub 安装/更新成功！${NC}"
         echo -e "${BLUE}访问地址:${NC} http://$(curl -s ifconfig.me):$PORT"
         echo -e "${BLUE}数据目录:${NC} $DATA_DIR"
         if [ ! -z "$SEARCH_PASSWORD" ]; then
@@ -121,7 +131,7 @@ show_menu() {
     echo -e "${BLUE}=================================${NC}"
     echo -e "${GREEN}    PanHub 一键管理脚本          ${NC}"
     echo -e "${BLUE}=================================${NC}"
-    echo -e " 1. 安装 / 更新 PanHub"
+    echo -e " 1. 安装 / 检查更新 PanHub"
     echo -e " 2. 查看 容器运行日志"
     echo -e " 3. 重启 PanHub"
     echo -e " 4. 停止 PanHub"
