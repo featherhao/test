@@ -16,10 +16,16 @@ error() { echo -e "${C_RED}[ERROR]${C_RESET} $*" >&2; }
 # ========== 获取公网 IP ==========
 get_public_ip() {
   local port="$1"
-  ipv4=$(curl -s --max-time 5 ipv4.icanhazip.com || true)
-  ipv6=$(curl -s --max-time 5 ipv6.icanhazip.com || true)
-  [ -n "$ipv4" ] && echo "IPv4: http://$ipv4:$port"
-  [ -n "$ipv6" ] && echo "IPv6: http://[$ipv6]:$port"
+  # 即使获取不到或者超时，也绝对不会让 set -e 崩溃
+  ipv4=$(curl -s --max-time 5 ipv4.icanhazip.com 2>/dev/null || echo "")
+  ipv6=$(curl -s --max-time 5 ipv6.icanhazip.com 2>/dev/null || echo "")
+  
+  if [ -n "$ipv4" ]; then
+    echo "IPv4: http://$ipv4:$port"
+  fi
+  if [ -n "$ipv6" ]; then
+    echo "IPv6: http://[$ipv6]:$port"
+  fi
 }
 
 # ========== 查找可用端口 ==========
