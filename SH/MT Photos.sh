@@ -1,18 +1,16 @@
-# =====================================================================
-# 1. 创建 /DATA 下的必要程序文件夹
-# =====================================================================
-echo "正在创建 /DATA 目录及相关文件夹..."
+# 1. 彻底清理之前冲突的残留容器
+docker stop mtphotos mtphotos_ai mtphotos_face_api 2>/dev/null
+docker rm mtphotos mtphotos_ai mtphotos_face_api 2>/dev/null
+
+# 2. 创建文件夹并赋权限
 mkdir -p /DATA/docker/mt_photos/compose
 mkdir -p /DATA/docker/mt_photos/config
 mkdir -p /DATA/docker/mt_photos/upload
 chmod -R 777 /DATA/docker/mt_photos
 
-# =====================================================================
-# 2. 切换到配置目录，并写入标准的 docker-compose.yml 文件
-# =====================================================================
+# 3. 进入目录并写入干净的纯文本配置
 cd /DATA/docker/mt_photos/compose
 
-echo "正在写入 docker-compose.yml 配置文件..."
 cat << 'EOF' > docker-compose.yml
 version: "3"
 
@@ -55,10 +53,7 @@ services:
       - API_AUTH_KEY=mt_photos_ai_extra
 EOF
 
-# =====================================================================
-# 3. 启动 Docker 容器
-# =====================================================================
-echo "文件夹与配置文件准备就绪，正在后台拉取并启动 MT Photos..."
+# 4. 启动容器
 docker compose up -d
 
 echo "--------------------------------------------------------"
