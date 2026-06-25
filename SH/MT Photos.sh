@@ -26,6 +26,7 @@ services:
     volumes:
       - /DATA/docker/mt_photos/config:/config
       - /DATA/docker/mt_photos/upload:/upload
+      - /mnt/娱乐/嗯哼专用:/enheng
     environment:
       - TZ=Asia/Shanghai
       - LANG=C.UTF-8
