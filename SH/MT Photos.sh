@@ -2,11 +2,15 @@
 docker stop mtphotos mtphotos_ai mtphotos_face_api 2>/dev/null
 docker rm mtphotos mtphotos_ai mtphotos_face_api 2>/dev/null
 
-# 2. 创建文件夹并赋权限
+# 2. 创建文件夹并赋予正确的权限
 mkdir -p /DATA/docker/mt_photos/compose
-mkdir -p /DATA/docker/mt_photos/config
+mkdir -p /DATA/docker/mt_photos/config/pgsql  # 👈 提前创建好 pgsql 目录
 mkdir -p /DATA/docker/mt_photos/upload
 chmod -R 777 /DATA/docker/mt_photos
+
+# 💡【核心修正】单独收紧数据库目录权限，防止底层 PostgreSQL 报权限错误
+chmod -R 700 /DATA/docker/mt_photos/config/pgsql
+chown -R 103:105 /DATA/docker/mt_photos/config/pgsql
 
 # 3. 进入目录并写入干净的纯文本配置
 cd /DATA/docker/mt_photos/compose
