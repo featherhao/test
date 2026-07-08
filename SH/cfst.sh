@@ -64,7 +64,7 @@ run_cfst() {
     echo " 1. 全球节点 (默认全部随机测试)"
     echo " 2. 仅中国香港节点 (低延迟)"
     echo " 3. 仅日本节点 (东京/大阪)"
-    echo " 4. 仅美西节点 (洛杉矶/圣何塞/西雅图)"
+    echo " 4. 仅美西节点 (洛杉矶/圣假塞/西雅图)"
     echo " 0. 返回上一级菜单"
     echo -e "${BLUE}=============================================${NC}"
     read -p "请选择区域 [0-4]: " region_num
@@ -94,6 +94,33 @@ run_cfst() {
             ./cfst -tp 443 -tl 180 -dn 5 -dt 15
             ;;
     esac
+}
+
+# 【新增功能】指定单个 IP 测速
+run_single_ip_cfst() {
+    if ! check_status; then
+        echo -e "${RED}[-] 未检测到程序，请先选择 1 进行安装！${NC}"
+        return 1
+    fi
+
+    cd "$INSTALL_DIR" || exit 1
+    
+    echo -e "\n${BLUE}=============================================${NC}"
+    echo -e "         🎯 指定单个 IP 测速"
+    echo -e "${BLUE}=============================================${NC}"
+    read -p "请输入要测试的 Cloudflare IP (例如 104.25.255.205): " target_ip
+
+    # 简单校验输入是否为空
+    if [ -z "$target_ip" ]; then
+        echo -e "${RED}[-] IP 不能为空，已取消单点测速。${NC}"
+        return 1
+    fi
+
+    echo -e "${GREEN}[+] 开始点名测试单个 IP: $target_ip${NC}"
+    echo -e "${YELLOW}提示: 测速时间调整为 15 秒，以确保单线程爬坡更准确${NC}"
+    
+    # 执行单点测速
+    ./cfst -ip "$target_ip" -tp 443 -dt 15
 }
 
 # 卸载功能
@@ -126,10 +153,11 @@ main_menu() {
     echo "---------------------------------------------"
     echo " 1. 安装 CloudflareSpeedTest"
     echo " 2. 运行 优选测速 (可自选区域)"
-    echo " 3. 卸载 CloudflareSpeedTest"
+    echo " 3. 指定单个 IP 测速 (点名测试)"
+    echo " 4. 卸载 CloudflareSpeedTest"
     echo " 0. 退出脚本"
     echo "============================================="
-    read -p "请选择操作 [0-3]: " num
+    read -p "请选择操作 [0-4]: " num
 
     case "$num" in
         1)
@@ -139,6 +167,9 @@ main_menu() {
             run_cfst
             ;;
         3)
+            run_single_ip_cfst
+            ;;
+        4)
             uninstall_cfst
             ;;
         0)
