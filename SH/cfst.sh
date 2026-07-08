@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# 定义安装路径（可根据需要修改）
-INSTALL_DIR="$HOME/cfst"
-DOWNLOAD_URL="https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_arm64.tar.gz"
-# 国内加速镜像备选（如果需要默认国内加速，取消下面这行的注释即可）
-#DOWNLOAD_URL="https://ghfast.top/https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_arm64.tar.gz"
+# 定义安装路径
+INSTALL_DIR="/root/cfst"
+# 默认使用国内加速镜像链接
+DOWNLOAD_URL="https://ghfast.top/https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_arm64.tar.gz"
 
 # 字体颜色定义
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # 无颜色
 
 # 检查是否安装
@@ -40,7 +40,7 @@ install_cfst() {
     fi
 
     echo -e "${GREEN}[+] 正在解压...${NC}"
-    tar -zxf cfst_linux_arm64.tar.gz  # 👈 改成 arm64
+    tar -zxf cfst_linux_arm64.tar.gz
 
     echo -e "${GREEN}[+] 正在赋予执行权限...${NC}"
     chmod +x cfst
@@ -48,7 +48,7 @@ install_cfst() {
     echo -e "${GREEN}[√] 安装完成！主程序路径: $INSTALL_DIR/cfst${NC}"
 }
 
-# 运行测速
+# 运行测速 (新增区域选择)
 run_cfst() {
     if ! check_status; then
         echo -e "${RED}[-] 未检测到程序，请先选择 1 进行安装！${NC}"
@@ -56,9 +56,43 @@ run_cfst() {
     fi
 
     cd "$INSTALL_DIR" || exit 1
-    echo -e "${GREEN}[+] 开始运行 CloudflareSpeedTest...${NC}"
-    echo -e "${YELLOW}提示: 默认运行常用优选参数 (-tp 443 -tl 200 -dn 10)${NC}"
-    ./cfst -tp 443 -tl 200 -dn 10
+
+    echo -e "\n${BLUE}=============================================${NC}"
+    echo -e "         🌐 请选择你要测速的区域"
+    echo -e "${BLUE}=============================================${NC}"
+    echo " 1. 全球节点 (默认全部随机测试)"
+    echo " 2. 仅中国香港节点 (低延迟)"
+    echo " 3. 仅日本节点 (东京/大阪)"
+    echo " 4. 仅美西节点 (洛杉矶/圣何塞/西雅图)"
+    echo " 0. 返回上一级菜单"
+    echo -e "${BLUE}=============================================${NC}"
+    read -p "请选择区域 [0-4]: " region_num
+
+    case "$region_num" in
+        1)
+            echo -e "${GREEN}[+] 开始运行全球节点测速...${NC}"
+            ./cfst -tp 443 -tl 180 -dn 5 -dt 15
+            ;;
+        2)
+            echo -e "${GREEN}[+] 开始运行仅中国香港(HKG)节点测速...${NC}"
+            ./cfst -tp 443 -cfcolo HKG -tl 180 -dn 5 -dt 15
+            ;;
+        3)
+            echo -e "${GREEN}[+] 开始运行仅日本(NRT,KIX)节点测速...${NC}"
+            ./cfst -tp 443 -cfcolo NRT,KIX -tl 180 -dn 5 -dt 15
+            ;;
+        4)
+            echo -e "${GREEN}[+] 开始运行仅美西(LAX,SJC,SEA)节点测速...${NC}"
+            ./cfst -tp 443 -cfcolo LAX,SJC,SEA -tl 180 -dn 5 -dt 15
+            ;;
+        0)
+            return
+            ;;
+        *)
+            echo -e "${RED}[-] 输入错误，默认运行全球节点测速...${NC}"
+            ./cfst -tp 443 -tl 180 -dn 5 -dt 15
+            ;;
+    esac
 }
 
 # 卸载功能
@@ -90,7 +124,7 @@ main_menu() {
     fi
     echo "---------------------------------------------"
     echo " 1. 安装 CloudflareSpeedTest"
-    echo " 2. 运行 优选测速"
+    echo " 2. 运行 优选测速 (可自选区域)"
     echo " 3. 卸载 CloudflareSpeedTest"
     echo " 0. 退出脚本"
     echo "============================================="
