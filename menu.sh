@@ -62,6 +62,7 @@ set_q_shortcut_auto() {
         script_cmd="sh ~/menu.sh"
     elif [[ -n "${ZSH_VERSION:-}" ]]; then
         shell_rc="$HOME/.zshrc"
+        script_cmd="bash ~/menu.sh"
     else
         shell_rc="$HOME/.bashrc"
     fi
@@ -105,6 +106,7 @@ MTPROTO_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/mai
 SYSTEM_TOOL_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/system_tool.sh"
 CLEAN_VPS_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/clean_vps.sh"
 COSYVOICE_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/cosyvoice.sh"
+CFST_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/cfst.sh"
 
 # ================== 子脚本调用函数 ==================
 moon_menu() { bash <(fetch "${MOONTV_SCRIPT}?t=$(date +%s)"); }
@@ -123,6 +125,7 @@ searxng_menu() { bash <(fetch "${SEARXNG_SCRIPT}?t=$(date +%s)"); }
 mtproto_menu() { bash <(fetch "${MTPROTO_SCRIPT}?t=$(date +%s)"); }
 system_tool_menu() { bash <(fetch "${SYSTEM_TOOL_SCRIPT}?t=$(date +%s)"); }
 cosyvoice_menu() { bash <(fetch "${COSYVOICE_SCRIPT}?t=$(date +%s)"); }
+cfst_menu() { bash <(fetch "${CFST_SCRIPT}?t=$(date +%s)"); }
 
 casaos_menu() {
     clear
@@ -242,6 +245,8 @@ while true; do
     posteio_status=$(check_docker_service "posteio")
     searxng_status=$(check_docker_service "searxng")
     casaos_current_status=$(casaos_status)
+    cfst_status=$([[ -d /root/cfst ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
+    
     # 智能刷新 PanHub 状态 (兼容 Docker 与 原生进程/PM2)
     if command -v docker &>/dev/null && docker ps --format '{{.Names}}' | grep -q "^panhub$"; then
         panhub_status="${C_GREEN}✅ 运行中 (Docker)${C_RESET}"
@@ -266,7 +271,7 @@ while true; do
         "3) LibreTV 安装                 $libretv_status" \
         "4) 甬哥Sing-box-yg安装           $singbox_status" \
         "5) 勇哥ArgoSB脚本                $argosb_status" \
-        "6) Kejilion.sh 一键脚本工具箱     ⚡ 远程调用" \
+        "6) Kejilion.sh 一键脚本工具箱      ⚡ 远程调用" \
         "7) zjsync（GitHub 文件自动同步）   $zjsync_status" \
         "8) Pansou 网盘搜索               $panso_status" \
         "9) 域名绑定管理                  ⚡ 远程调用" \
@@ -279,6 +284,7 @@ while true; do
         "16) 系统工具（Swap 管理 + 主机名修改） ⚡" \
         "17) CasaOS 一键安装/管理         $casaos_current_status" \
         "18) PanHub 盘搜聚合 (支持多架构)  $panhub_status" \
+        "19) Cloudflare 优选 IP 工具箱     $cfst_status" \
         "00) 更新菜单脚本 menu.sh" \
         "0) 退出" \
         "" \
@@ -305,6 +311,7 @@ while true; do
         16) system_tool_menu ;;
         17) casaos_menu ;;
         18) panhub_menu ;;
+        19) cfst_menu ;;
         00) update_menu_script ;;
         0) exit 0 ;;
         *) error "❌ 无效输入"; sleep 2 ;;
