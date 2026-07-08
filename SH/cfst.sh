@@ -3,8 +3,6 @@
 # 定义安装路径
 INSTALL_DIR="/root/cfst"
 DOWNLOAD_URL="https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_arm64.tar.gz"
-# 默认使用国内加速镜像链接
-#DOWNLOAD_URL="https://ghfast.top/https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_arm64.tar.gz"
 
 # 字体颜色定义
 GREEN='\033[0;32m'
@@ -36,7 +34,7 @@ install_cfst() {
     echo -e "${GREEN}[+] 正在下载最新版 CloudflareSpeedTest...${NC}"
     wget -N "$DOWNLOAD_URL"
     if [ $? -ne 0 ]; then
-        echo -e "${RED}[-] 下载失败，请检查网络或更换加速镜像链接！${NC}"
+        echo -e "${RED}[-] 下载失败，请检查网络！${NC}"
         return 1
     fi
 
@@ -49,7 +47,7 @@ install_cfst() {
     echo -e "${GREEN}[√] 安装完成！主程序路径: $INSTALL_DIR/cfst${NC}"
 }
 
-# 运行测速 (新增区域选择)
+# 运行测速 (区域选择)
 run_cfst() {
     if ! check_status; then
         echo -e "${RED}[-] 未检测到程序，请先选择 1 进行安装！${NC}"
@@ -96,7 +94,22 @@ run_cfst() {
     esac
 }
 
-# 【新增功能】指定单个 IP 测速
+# 【特加功能】162.159 专项高带宽测速
+run_special_162_cfst() {
+    if ! check_status; then
+        echo -e "${RED}[-] 未检测到程序，请先选择 1 进行安装！${NC}"
+        return 1
+    fi
+
+    cd "$INSTALL_DIR" || exit 1
+    echo -e "\n${GREEN}[+] 启动 162.159.x.x 专项高带宽测速...${NC}"
+    echo -e "${YELLOW}提示: 该网段常用于 WARP 业务，单线程极易跑满 10M+ 带宽。${NC}"
+    
+    # 强制注入整个 162.159.0.0/16 纯净大网段进行全速扫描
+    ./cfst -ip 162.159.0.0/16 -tp 443 -tl 200 -dn 5 -dt 15
+}
+
+# 指定单个 IP 测速
 run_single_ip_cfst() {
     if ! check_status; then
         echo -e "${RED}[-] 未检测到程序，请先选择 1 进行安装！${NC}"
@@ -110,16 +123,12 @@ run_single_ip_cfst() {
     echo -e "${BLUE}=============================================${NC}"
     read -p "请输入要测试的 Cloudflare IP (例如 104.25.255.205): " target_ip
 
-    # 简单校验输入是否为空
     if [ -z "$target_ip" ]; then
         echo -e "${RED}[-] IP 不能为空，已取消单点测速。${NC}"
         return 1
     fi
 
     echo -e "${GREEN}[+] 开始点名测试单个 IP: $target_ip${NC}"
-    echo -e "${YELLOW}提示: 测速时间调整为 15 秒，以确保单线程爬坡更准确${NC}"
-    
-    # 执行单点测速
     ./cfst -ip "$target_ip" -tp 443 -dt 15
 }
 
@@ -153,28 +162,20 @@ main_menu() {
     echo "---------------------------------------------"
     echo " 1. 安装 CloudflareSpeedTest"
     echo " 2. 运行 优选测速 (可自选区域)"
-    echo " 3. 指定单个 IP 测速 (点名测试)"
-    echo " 4. 卸载 CloudflareSpeedTest"
+    echo " 3. 运行 162.159 专项测速 (高带宽/10M+)"
+    echo " 4. 指定单个 IP 测速 (点名测试)"
+    echo " 5. 卸载 CloudflareSpeedTest"
     echo " 0. 退出脚本"
     echo "============================================="
-    read -p "请选择操作 [0-4]: " num
+    read -p "请选择操作 [0-5]: " num
 
     case "$num" in
-        1)
-            install_cfst
-            ;;
-        2)
-            run_cfst
-            ;;
-        3)
-            run_single_ip_cfst
-            ;;
-        4)
-            uninstall_cfst
-            ;;
-        0)
-            exit 0
-            ;;
+        1) install_cfst ;;
+        2) run_cfst ;;
+        3) run_special_162_cfst ;;
+        4) run_single_ip_cfst ;;
+        5) uninstall_cfst ;;
+        0) exit 0 ;;
         *)
             echo -e "${RED}[-] 输入错误，请输入正确的数字！${NC}"
             sleep 1
