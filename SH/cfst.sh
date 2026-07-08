@@ -94,19 +94,19 @@ run_cfst() {
     esac
 }
 
-# 【特加功能】162.159 专项高带宽测速
-run_special_162_cfst() {
+# 【特加功能】全明星高带宽专属扫描 (整合 162.159 / 104.28 / 188.114)
+run_special_high_speed() {
     if ! check_status; then
         echo -e "${RED}[-] 未检测到程序，请先选择 1 进行安装！${NC}"
         return 1
     fi
 
     cd "$INSTALL_DIR" || exit 1
-    echo -e "\n${GREEN}[+] 启动 162.159.x.x 专项高带宽测速...${NC}"
-    echo -e "${YELLOW}提示: 该网段常用于 WARP 业务，单线程极易跑满 10M+ 带宽。${NC}"
+    echo -e "\n${GREEN}[+] 启动全明星高带宽专属网段扫描...${NC}"
+    echo -e "${YELLOW}提示: 强力扫描 162.159 / 104.28 / 188.114 等 WARP 及官方特殊吞吐段，单线程极易破 10M+ 带宽。${NC}"
     
-    # 强制注入整个 162.159.0.0/16 纯净大网段进行全速扫描
-    ./cfst -ip 162.159.0.0/16 -tp 443 -tl 200 -dn 5 -dt 15
+    # 强制将多个高带宽网段组合传入进行精细测试
+    ./cfst -ip "162.159.0.0/16,104.28.0.0/16,188.114.96.0/20" -tp 443 -tl 200 -dn 8 -dt 15
 }
 
 # 指定单个 IP 测速
@@ -162,7 +162,7 @@ main_menu() {
     echo "---------------------------------------------"
     echo " 1. 安装 CloudflareSpeedTest"
     echo " 2. 运行 优选测速 (可自选区域)"
-    echo " 3. 运行 162.159 专项测速 (高带宽/10M+)"
+    echo " 3. 运行 高带宽专项测速 (全明星 10M+ 极品段)"
     echo " 4. 指定单个 IP 测速 (点名测试)"
     echo " 5. 卸载 CloudflareSpeedTest"
     echo " 0. 退出脚本"
@@ -172,7 +172,7 @@ main_menu() {
     case "$num" in
         1) install_cfst ;;
         2) run_cfst ;;
-        3) run_special_162_cfst ;;
+        3) run_special_high_speed ;;
         4) run_single_ip_cfst ;;
         5) uninstall_cfst ;;
         0) exit 0 ;;
