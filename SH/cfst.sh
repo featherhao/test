@@ -2,9 +2,9 @@
 
 # 定义安装路径（可根据需要修改）
 INSTALL_DIR="$HOME/cfst"
-#DOWNLOAD_URL="https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_amd64.tar.gz"
+DOWNLOAD_URL="https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_amd64.tar.gz"
 # 国内加速镜像备选（如果需要默认国内加速，取消下面这行的注释即可）
-DOWNLOAD_URL="https://ghfast.top/https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_amd64.tar.gz"
+#DOWNLOAD_URL="https://ghfast.top/https://github.com/XIU2/CloudflareSpeedTest/releases/latest/download/cfst_linux_amd64.tar.gz"
 
 # 字体颜色定义
 GREEN='\033[0;32m'
