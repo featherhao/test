@@ -40,7 +40,7 @@ install_cfst() {
     fi
 
     echo -e "${GREEN}[+] 正在解压...${NC}"
-    tar -zxf cfst_linux_amd64.tar.gz
+    tar -zxf cfst_linux_arm64.tar.gz  # 👈 改成 arm64
 
     echo -e "${GREEN}[+] 正在赋予执行权限...${NC}"
     chmod +x cfst
