@@ -85,18 +85,15 @@ fetch() {
     curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@" "$target_url"
 }
 
-# 💡 精准放行与变量安全防护：通过 ${DOCKER_PROXY:-} 机制完美规避子进程变量未定义导致熔断的致命问题
+# 💡 恢复为正常的通用镜像拦截加速函数（移除了对特殊容器名 derp 的篡改逻辑）
 docker() {
     local cmd="$1"
     if [[ "$cmd" == "run" || "$cmd" == "pull" ]]; then
         local args=()
-        local current_proxy="${DOCKER_PROXY:-}" # ✨ 修复：加一层防未定义变量熔断防御
+        local current_proxy="${DOCKER_PROXY:-}" # 防未定义变量熔断防御
         for arg in "$@"; do
-            # 只要碰到了子脚本传进来的 derp 镜像，直接放行直连原生干净路径
-            if [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ "derp" ]] && [[ "$arg" != "$cmd" ]]; then
-                arg="lonelyelk/derper:latest"
-            # 其余常规镜像（比如 Shlink、Posteio 等）在有代理变量时继续套用大厂代理加速
-            elif [[ -n "$current_proxy" ]] && [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ [a-zA-Z0-9_/-]+:[a-zA-Z0-9_.-]+ || "$arg" =~ [a-zA-Z0-9_/-]+$ ]] && [[ "$arg" != "$cmd" ]]; then
+            # 常规镜像在有代理变量、非参数且符合镜像命名规则时，自动套用镜像加速
+            if [[ -n "$current_proxy" ]] && [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ [a-zA-Z0-9_/-]+:[a-zA-Z0-9_.-]+ || "$arg" =~ [a-zA-Z0-9_/-]+$ ]] && [[ "$arg" != "$cmd" ]]; then
                 if [[ ! "$arg" =~ "/" ]] && [[ ! "$arg" =~ "$current_proxy" ]]; then
                     arg="${current_proxy}/library/${arg}"
                 elif [[ ! "$arg" =~ "$current_proxy" && ! "$arg" =~ "ghcr.io" && ! "$arg" =~ "quay.io" ]]; then
