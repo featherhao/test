@@ -39,15 +39,14 @@ render_menu() {
     echo "=============================="
 }
 
-# ================== 自动化网络检测与智能拉取（防误判版） ==================
+# ================== 自动化网络检测与智能拉取（三保险+防误判版） ==================
 GH_PREFIX=""
 check_network() {
     info "📡 正在检测网络环境，自动适配最佳下载通道..."
     
     # 1. 优先检测国内加速节点是否可用（如果在国内，这步会极快通过，且不会被误判）
     if curl -I -s --connect-timeout 2 "${PROXY_URL}" &>/dev/null; then
-        # 加速节点通了，但为了照顾国外VPS，我们再顺便看一眼官方是不是也通（且不是劫持）
-        # 我们用一个几乎无法被劫持伪造的 404 页面来测试官方真实连通性
+        # 加速节点通了，用一个几乎无法被劫持伪造的 404 页面来测试官方真实连通性，防止 DNS 劫持误判
         if curl -s -m 2 "https://raw.githubusercontent.com" | grep -q "Not Found" 2>/dev/null; then
             info "🌐 网络检测结果：${C_GREEN}当前处于海外环境，使用直连官方模式。${C_RESET}"
             GH_PREFIX=""
@@ -75,14 +74,18 @@ check_network() {
     GH_PREFIX=""
 }
 check_network
-# 智能拉取器：自动根据网络适配决定是否套用代理前缀
+
+# 智能拉取器：完美兼容 -o 保存文件或其他自定义位置参数
 fetch() { 
     local target_url="$1"
+    shift # 弹掉第一个 URL 参数，剩下的是可能存在的 -o "$SCRIPT_PATH" 等多余参数
+    
     # 如果目标是 GitHub 相关的链接且需要代理加速，并且本身不含代理前缀，则自动套用
     if [[ -n "$GH_PREFIX" ]] && [[ "$target_url" =~ "github" ]] && [[ ! "$target_url" =~ "$PROXY_URL" ]]; then
         target_url="${GH_PREFIX}${target_url}"
     fi
-    curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$target_url"
+    # 把其他参数 (如 -o) 规范地传给 curl，最后放 target_url
+    curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@" "$target_url"
 }
 run_url() { bash <(fetch "$1"); }
 
@@ -174,7 +177,6 @@ cfst_menu() { bash <(fetch "${CFST_SCRIPT}?t=$(date +%s)"); }
 
 casaos_menu() {
     clear
-    # 检查 CasaOS 是否已安装
     if systemctl list-unit-files 2>/dev/null | grep -q "casaos.service"; then
         warn "⚠️ CasaOS 似乎已经安装！"
         info "您可能不需要重复安装。"
@@ -184,7 +186,6 @@ casaos_menu() {
         info "🚀 正在运行 CasaOS 安装脚本..."
         info "这可能需要您输入sudo密码并花费一些时间。"
         
-        # 执行安装命令
         if ! fetch "$CASAOS_INSTALL_URL" | sudo bash; then
             error "CasaOS 安装失败！请检查错误信息。"
             return 1
@@ -194,7 +195,6 @@ casaos_menu() {
     
     echo ""
     print_header "CasaOS 第三方应用商店源"
-    # 提示第三方应用商店源
     echo -e "${C_CYAN}# CasaOS 第三方应用商店源:${C_RESET} ${C_BOLD}https://play.cuse.eu.org/Cp0204-AppStore-Play.zip${C_RESET}"
     echo -e "    👉 您可以在 CasaOS UI界面的'App Store' -> '源' 中添加此链接。"
     echo -e "=============================="
@@ -222,7 +222,6 @@ check_docker_service() {
 }
 
 casaos_status() {
-    # 1. 检查 systemctl 中是否有 casaos.service
     if systemctl list-unit-files 2>/dev/null | grep -q "casaos.service"; then
         if systemctl is-active --quiet casaos; then
             echo "${C_GREEN}✅ 运行中${C_RESET}"
@@ -231,7 +230,6 @@ casaos_status() {
         fi
         return
     fi
-    # 2. 检查是否有 casaos 命令
     if command -v casaos &>/dev/null; then
         echo "${C_YELLOW}⚠️ 已安装 (状态未知)${C_RESET}"
         return
@@ -292,7 +290,6 @@ while true; do
     casaos_current_status=$(casaos_status)
     cfst_status=$([[ -d /root/cfst ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     
-    # 智能刷新 PanHub 状态 (兼容 Docker 与 原生进程/PM2)
     if command -v docker &>/dev/null && docker ps --format '{{.Names}}' | grep -q "^panhub$"; then
         panhub_status="${C_GREEN}✅ 运行中 (Docker)${C_RESET}"
     elif command -v docker &>/dev/null && docker ps -a --format '{{.Names}}' | grep -q "^panhub$"; then
@@ -362,7 +359,6 @@ while true; do
         *) error "❌ 无效输入"; sleep 2 ;;
     esac
 
-    # 在执行完一个菜单项后，等待用户按回车键，返回主菜单。
     if [[ "$main_choice" != "0" ]]; then
         echo ""
         read -rp "按 [Enter] 键返回主菜单..."
