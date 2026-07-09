@@ -8,10 +8,7 @@ YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}====================================================${NC}"
-echo -e "${GREEN}   Tailscale & 1Panel 兼容版 交互式工具 (已修正)   ${NC}"
-echo -e "${BLUE}====================================================${NC}"
-
+# 检查权限
 if [ "$EUID" -ne 0 ]; then
     echo -e "${RED}错误: 请使用 root 用户或 sudo 运行此脚本！${NC}"
     exit 1
@@ -35,24 +32,24 @@ install_tailscale() {
     if ! command -v tailscale &> /dev/null; then
         curl -fsSL https://tailscale.com/install.sh | sh
     fi
-    echo -e "${YELLOW}正在启动 Tailscale，请在浏览器中完成登录绑定...${NC}"
-    tailscale up
+    echo -e "${YELLOW}正在启动 Tailscale...${NC}"
+    tailscale up --accept-dns=false
     echo -e "${GREEN}Tailscale 组网成功！当前 IP: ${YELLOW}$(tailscale ip -4)${NC}"
 }
 
 deploy_derp_1panel() {
     echo -e "\n${BLUE}====================================================${NC}"
-    echo -e "${GREEN}          准备进入 1Panel 联动 DERP 部署流程          ${NC}"
+    echo -e "${GREEN}        准备进入 1Panel 联动 DERP 部署流程         ${NC}"
     echo -e "${BLUE}====================================================${NC}"
     
-    confirm_step "你已经在 1Panel 创建了网站，配置好 HTTPS 证书，并设定代理地址为 127.0.0.1:3443 了吗？"
+    confirm_step "你已经在 1Panel 创建了网站，配置好 HTTPS 证书，并设定反代地址为 127.0.0.1:3443 了吗？"
 
     read -p "请输入你的 DERP 域名 (例如 ts.52zy.eu.org): " DERP_DOMAIN
     
     echo -e "\n${BLUE}正在清理旧容器并启动新 DERP 容器...${NC}"
     docker rm -f derper &> /dev/null
 
-    # 核心修复：纯 HTTP 模式，不验证客户端，适配 1Panel 反代
+    # 兼容 1Panel 反代模式的 DERP 启动命令
     docker run -d \
       --name derper \
       --restart=always \
@@ -65,12 +62,9 @@ deploy_derp_1panel() {
       --http-port=443 \
       --stun=true
 
-    local my_ip
-    my_ip=$(curl -s 4.ipw.cn || echo "")
-
     echo -e "\n${GREEN}====================================================${NC}"
     echo -e "${GREEN}🎉 容器已启动 (Up)，正在监听 3443/443 和 3478/udp${NC}"
-    echo -e "${YELLOW}请将以下 JSON 复制到 Tailscale 控制台的 Access Control：${NC}"
+    echo -e "${YELLOW}请将以下 JSON 块复制到 Tailscale 控制台的 Access Control 中：${NC}"
     echo -e "${GREEN}====================================================${NC}"
     cat <<EOF
 "derpMap": {
@@ -94,16 +88,31 @@ deploy_derp_1panel() {
 EOF
 }
 
-# 菜单入口
+cleanup_all() {
+    echo -e "${RED}正在进行深度清理...${NC}"
+    # 停止并删除容器
+    docker rm -f derper &> /dev/null
+    # 停止 Tailscale 服务
+    systemctl stop tailscaled &> /dev/null
+    echo -e "${GREEN}清理完成。已停止 DERP 容器及 Tailscale 服务。${NC}"
+}
+
+# 菜单主体
+clear
+echo -e "${BLUE}====================================================${NC}"
+echo -e "${GREEN}    Tailscale & 1Panel 兼容版 交互式工具 (已修正)    ${NC}"
+echo -e "${BLUE}====================================================${NC}"
 echo -e "${YELLOW}请选择操作：${NC}"
 echo -e " [1] 安装 Tailscale"
 echo -e " [2] 安装 Tailscale 并部署 DERP (联动 1Panel)"
 echo -e " [3] 彻底清理"
+echo -e " [0] 退出"
 read -p "请输入数字: " ROLE
 
 case "$ROLE" in
     1) install_tailscale ;;
     2) install_tailscale; deploy_derp_1panel ;;
-    3) echo "清理逻辑请参考原脚本";;
-    *) exit 1 ;;
+    3) cleanup_all ;;
+    0) exit 0 ;;
+    *) echo "无效选项"; exit 1 ;;
 esac
