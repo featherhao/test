@@ -96,17 +96,19 @@ deploy_derp_1panel() {
     docker rm -f derper &> /dev/null
 
     echo -e "\n${BLUE}正在拉取并启动专属 DERP 容器...${NC}"
-    # 💡 已经更换为 100% 公开、全架构支持且长期稳定的自建专用优秀源
+    # 💡 更换为官方原厂镜像，并适配了标准的验证挂载与端口参数
     docker run -d \
       --name derper \
       --restart=always \
       -p 3443:443 \
       -p 3478:3478/udp \
       -v /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock \
-      -e DERP_DOMAIN="${DERP_DOMAIN}" \
-      -e DERP_CERT_MODE=manual \
-      -e DERP_HTTP_PORT=-1 \
-      sanposhiho/tailscale-derp:latest
+      ghcr.io/tailscale/derper:latest \
+      --hostname="${DERP_DOMAIN}" \
+      --certmode=manual \
+      --aead=true \
+      --verify-clients=true \
+      --stun=true
 
     echo -e "\n${GREEN}====================================================${NC}"
     echo -e "${GREEN}🎉 DERP 容器在后台启动成功！(监听本地 3443 和 3478/udp)${NC}"
