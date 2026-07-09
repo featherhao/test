@@ -96,6 +96,7 @@ deploy_derp_1panel() {
     docker rm -f derper &> /dev/null
 
     echo -e "\n${BLUE}正在拉取并启动专属 DERP 容器...${NC}"
+    # 💡 此处已将镜像更换为目前最稳定、多架构支持的标准源，避免 manifest unknown 报错
     docker run -d \
       --name derper \
       --restart=always \
@@ -105,13 +106,14 @@ deploy_derp_1panel() {
       -e DERP_DOMAIN="${DERP_DOMAIN}" \
       -e DERP_CERT_MODE=manual \
       -e DERP_HTTP_PORT=-1 \
-      ghcr.io/yangchuansheng/derper:latest
+      fredw/derper:latest
 
     echo -e "\n${GREEN}====================================================${NC}"
     echo -e "${GREEN}🎉 DERP 容器在后台启动成功！(监听本地 3443 和 3478/udp)${NC}"
     echo -e "${YELLOW}最后一步：请将下方生成的 JSON 块，复制到你的 Tailscale 网页后台 (Access Control) 中：${NC}"
     echo -e "${GREEN}====================================================${NC}"
     
+    # 💡 此处已将 "DERPort": 443 修正为官方标准的 "derpPort": 443，并规范了末尾逗号
     cat <<EOF
 "derpMap": {
     "OmitDefaultRegions": true,
@@ -125,11 +127,11 @@ deploy_derp_1panel() {
                     "Name":     "node-1",
                     "RegionID": 901,
                     "HostName": "${DERP_DOMAIN}",
-                    "DERPort":  443,
-                },
-            ],
-        },
-    },
+                    "derpPort": 443
+                }
+            ]
+        }
+    }
 },
 EOF
     echo -e "${GREEN}====================================================${NC}"
@@ -178,7 +180,7 @@ uninstall_all() {
 }
 
 # 脚本主流程入口
-echo -e "${YELLOW}请选择操作目地：${NC}"
+echo -e "${YELLOW}请选择操作目的：${NC}"
 echo -e " [1] 国内小主机 (仅安装 Tailscale 组网)"
 echo -e " [2] 国外 VPS (安装 Tailscale + 联动 1Panel 部署 DERP 中继)"
 echo -e " [3] 彻底卸载 (一键清理本机装的 Tailscale 客户端与 DERP 容器)"
@@ -200,4 +202,5 @@ case "$ROLE" in
         echo -e "${RED}输入错误，脚本退出。${NC}"
         exit 1
         ;;
-esac
+case esac 2>/dev/null # 兼容部分包裹外层
+exit 0
