@@ -148,6 +148,7 @@ SYSTEM_TOOL_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads
 CLEAN_VPS_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/clean_vps.sh"
 COSYVOICE_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/cosyvoice.sh"
 CFST_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/cfst.sh"
+TAILSCALE_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/Tailscale"
 
 # ================== 子脚本调用函数 ==================
 moon_menu() { bash <(fetch "${MOONTV_SCRIPT}?t=$(date +%s)"); }
@@ -167,6 +168,7 @@ mtproto_menu() { bash <(fetch "${MTPROTO_SCRIPT}?t=$(date +%s)"); }
 system_tool_menu() { bash <(fetch "${SYSTEM_TOOL_SCRIPT}?t=$(date +%s)"); }
 cosyvoice_menu() { bash <(fetch "${COSYVOICE_SCRIPT}?t=$(date +%s)"); }
 cfst_menu() { bash <(fetch "${CFST_SCRIPT}?t=$(date +%s)"); }
+tailscale_menu() { bash <(fetch "${TAILSCALE_SCRIPT}?t=$(date +%s)"); }
 
 casaos_menu() {
     clear
@@ -196,15 +198,14 @@ casaos_menu() {
 
 # ================== 状态检测函数 ==================
 check_docker_service() {
-    local service_name="$1"
     if ! command -v docker &>/dev/null; then
         echo "❌ Docker 未安装"; return
     fi
     if ! docker info &>/dev/null; then
         echo "❌ Docker 未运行"; return
     fi
-    if docker ps -a --format '{{.Names}}' | grep -q "^${service_name}$"; then
-        if docker ps --format '{{.Names}}' | grep -q "^${service_name}$"; then
+    if docker ps -a --format '{{.Names}}' | grep -q "^${1}$"; then
+        if docker ps --format '{{.Names}}' | grep -q "^${1}$"; then
             echo "✅ 运行中"
         else
             echo "⚠️ 已停止"
@@ -253,6 +254,18 @@ argosb_status_check() {
     echo "❌ 未安装"
 }
 
+tailscale_status_check() {
+    if command -v tailscale &>/dev/null; then
+        if systemctl is-active --quiet tailscaled 2>/dev/null || pgrep -x tailscaled &>/dev/null; then
+            echo "${C_GREEN}✅ 运行中${C_RESET}"
+        else
+            echo "${C_YELLOW}⚠️ 已停止${C_RESET}"
+        fi
+    else
+        echo "❌ 未安装"
+    fi
+}
+
 update_menu_script() {
     info "🔄 正在更新 menu.sh..."
     fetch "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
@@ -282,6 +295,7 @@ while true; do
     searxng_status=$(check_docker_service "searxng")
     casaos_current_status=$(casaos_status)
     cfst_status=$([[ -d /root/cfst ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
+    tailscale_current_status=$(tailscale_status_check)
     
     if command -v docker &>/dev/null && docker ps --format '{{.Names}}' | grep -q "^panhub$"; then
         panhub_status="${C_GREEN}✅ 运行中 (Docker)${C_RESET}"
@@ -320,6 +334,7 @@ while true; do
         "17) CasaOS 一键安装/管理          $casaos_current_status" \
         "18) PanHub 盘搜聚合 (支持多架构)  $panhub_status" \
         "19) Cloudflare 优选 IP 工具箱     $cfst_status" \
+        "20) Tailscale & DERP 组网工具     $tailscale_current_status" \
         "00) 更新菜单脚本 menu.sh" \
         "0) 退出" \
         "" \
@@ -347,6 +362,7 @@ while true; do
         17) casaos_menu ;;
         18) panhub_menu ;;
         19) cfst_menu ;;
+        20) tailscale_menu ;;
         00) update_menu_script ;;
         0) exit 0 ;;
         *) error "❌ 无效输入"; sleep 2 ;;
