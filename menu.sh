@@ -39,35 +39,28 @@ render_menu() {
     echo "=============================="
 }
 
-# ================== 自动化网络检测与智能拉取（三保险+防误判版） ==================
+# ================== 自动化网络检测与智能拉取（IP/环境精准识别版） ==================
 GH_PREFIX=""
 check_network() {
     info "📡 正在检测网络环境，自动适配最佳下载通道..."
     
-    # 1. 优先检测国内加速节点是否可用（如果在国内，这步会极快通过，且不会被误判）
-    if curl -I -s --connect-timeout 2 "${PROXY_URL}" &>/dev/null; then
-        # 加速节点通了，用一个几乎无法被劫持伪造的 404 页面来测试官方真实连通性，防止 DNS 劫持误判
-        if curl -s -m 2 "https://raw.githubusercontent.com" | grep -q "Not Found" 2>/dev/null; then
-            info "🌐 网络检测结果：${C_GREEN}当前处于海外环境，使用直连官方模式。${C_RESET}"
-            GH_PREFIX=""
-        else
-            info "🚀 网络检测结果：${C_GREEN}当前处于国内环境，已自动切换至 GHProxy 加速模式。${C_RESET}"
-            GH_PREFIX="${PROXY_URL}"
-        fi
+    # 1. 核心判定：测试连接 Google（超时 1.5 秒），如果通了，铁定是海外 VPS
+    if curl -I -s --connect-timeout 1.5 "https://www.google.com" &>/dev/null; then
+        info "🌐 网络检测结果：${C_GREEN}当前处于海外环境，全面启用原生直连模式。${C_RESET}"
+        GH_PREFIX=""
         return 0
     fi
 
-    # 2. 如果连加速节点都断网了，再看官方原生能不能碰运气
-    warn "⚡ 加速节点无法连接，正在尝试直连官方..."
-    if curl -s -m 2 "https://raw.githubusercontent.com" | grep -q "Not Found" 2>/dev/null; then
-        warn "🌐 官方原生通道竟然可用，切换至直连模式。"
-        GH_PREFIX=""
+    # 2. 如果不通谷歌，再检测国内加速节点是否可用
+    if curl -I -s --connect-timeout 2 "${PROXY_URL}" &>/dev/null; then
+        info "🚀 网络检测结果：${C_GREEN}当前处于国内环境，已自动切换至 GHProxy 加速模式。${C_RESET}"
+        GH_PREFIX="${PROXY_URL}"
         return 0
     fi
 
     # 3. 终极兜底：两边都挂了
     echo -e "${C_RED}==================================================${C_RESET}"
-    echo -e "${C_RED}[x] 严重警告：网络环境极差，官方与加速节点均无法连接！${C_RESET}"
+    echo -e "${C_RED}[x] 严重警告：网络环境极差，海外通道与国内加速节点均无法连接！${C_RESET}"
     echo -e "${C_YELLOW}[!] 脚本将强行切回【官方原始链接】盲跑，请检查本地网络或代理。${C_RESET}"
     echo -e "${C_RED}==================================================${C_RESET}"
     sleep 3
