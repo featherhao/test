@@ -1,0 +1,161 @@
+#!/bin/bash
+
+# 颜色定义
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+echo -e "${BLUE}====================================================${NC}"
+echo -e "${GREEN}      Tailscale & 1Panel 兼容版 DERP 交互式部署工具    ${NC}"
+echo -e "${BLUE}====================================================${NC}"
+
+# 1. 检查 root 权限
+if [ "$EUID" -ne 0 ]; then
+    echo -e "${RED}错误: 请使用 root 用户或 sudo 运行此脚本！${NC}"
+    exit 1
+fi
+
+# 交互式确认函数
+confirm_step() {
+    local msg="$1"
+    while true; do
+        echo -e "\n${YELLOW}👉 [请确认] $msg${NC}"
+        read -p "已经准备好了吗？(y/n): " choice
+        case "$choice" in
+            [Yy]* ) break;;
+            [Nn]* ) echo -e "${RED}建议先去完成上述准备工作，按任意键重新确认...${NC}"; read -n 1;;
+            * ) echo "请输入 y 或 n。";;
+        esac
+    done
+}
+
+# 2. 检查并安装环境
+check_env() {
+    echo -e "\n${BLUE}检查并更新系统依赖环境...${NC}"
+    apt-get update -y && apt-get install -y curl wget sudo jq openssl lsof > /dev/null 2>&1
+
+    if ! command -v docker &> /dev/null; then
+        echo -e "${YELLOW}未检测到 Docker，正在自动安装...${NC}"
+        curl -fsSL https://get.docker.com | bash
+        systemctl enable --now docker
+    else
+        echo -e "${GREEN}Docker 环境已就绪。${NC}"
+    fi
+}
+
+# 3. 安装 Tailscale
+install_tailscale() {
+    echo -e "\n${BLUE}正在检查并安装 Tailscale...${NC}"
+    if ! command -v tailscale &> /dev/null; then
+        curl -fsSL https://tailscale.com/install.sh | sh
+    fi
+
+    echo -e "${YELLOW}正在启动 Tailscale，请复制下方的 URL 到浏览器登录绑定：${NC}"
+    tailscale up
+    echo -e "${GREEN}Tailscale 组网成功！当前内网 IP: ${YELLOW}$(tailscale ip -4)${NC}"
+}
+
+# 4. 部署 DERP 核心逻辑
+deploy_derp_1panel() {
+    check_env
+    
+    echo -e "\n${BLUE}====================================================${NC}"
+    echo -e "${GREEN}         准备进入 1Panel 联动 DERP 部署流程           ${NC}"
+    echo -e "${BLUE}====================================================${NC}"
+
+    # 引导式交互提示
+    echo -e "${BLUE}为了避免和 1Panel 冲突，请先在 1Panel 后台完成以下操作：${NC}"
+    echo -e " 1. 在【1Panel -> 证书管理】中申请或准备好你的 DERP 域名证书。"
+    echo -e " 2. 在【1Panel -> 网站 -> 创建网站】中，新建一个【反向代理】网站。"
+    echo -e "    - 主域名：填你的 DERP 域名（如 derp.abc.com）"
+    echo -e "    - 代理地址：填写 ${GREEN}127.0.0.1:3443${NC}"
+    echo -e " 3. 进入该网站设置，开启 HTTPS 并挂载刚才准备好的证书。"
+    
+    confirm_step "你已经在 1Panel 做好反向代理和证书配置了吗？"
+
+    # 获取用户域名
+    while true; do
+        read -p "请输入你刚才在 1Panel 配置的 DERP 域名 (例如 derp.abc.com): " DERP_DOMAIN
+        if [ -n "$DERP_DOMAIN" ]; then
+            break
+        else
+            echo -e "${RED}域名不能为空，请重新输入！${NC}"
+        fi
+    done
+
+    # 检查本地 3443 和 3478 端口
+    echo -e "\n${BLUE}正在检查本地端口占用情况...${NC}"
+    if lsof -i:3443 -t &> /dev/null; then
+        echo -e "${RED}错误：本地 3443 端口已被占用，请排查或清理后再试！${NC}"
+        exit 1
+    fi
+    if lsof -i:3478 -t &> /dev/null; then
+        echo -e "${RED}错误：本地 3478 (UDP) 端口已被占用（可能运行了旧的 DERP 或 STUN 服务）！${NC}"
+        exit 1
+    fi
+
+    # 清理旧容器
+    docker rm -f derper &> /dev/null
+
+    echo -e "\n${BLUE}正在拉取并启动专属 DERP 容器...${NC}"
+    docker run -d \
+      --name derper \
+      --restart=always \
+      -p 3443:443 \
+      -p 3478:3478/udp \
+      -v /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock \
+      -e DERP_DOMAIN="${DERP_DOMAIN}" \
+      -e DERP_CERT_MODE=manual \
+      -e DERP_HTTP_PORT=-1 \
+      ghcr.io/yangchuansheng/derper:latest
+
+    echo -e "\n${GREEN}====================================================${NC}"
+    echo -e "${GREEN}🎉 DERP 容器在后台启动成功！(监听本地 3443 和 3478/udp)${NC}"
+    echo -e "${YELLOW}最后一步：请将下方生成的 JSON 块，复制到你的 Tailscale 网页后台 (Access Control) 中：${NC}"
+    echo -e "${GREEN}====================================================${NC}"
+    
+    cat <<EOF
+"derpMap": {
+    "OmitDefaultRegions": true,
+    "Regions": {
+        "901": {
+            "RegionID":   901,
+            "RegionCode": "vps-1panel-derp",
+            "RegionName": "1Panel Managed DERP",
+            "Nodes": [
+                {
+                    "Name":     "node-1",
+                    "RegionID": 901,
+                    "HostName": "${DERP_DOMAIN}",
+                    "DERPort":  443,
+                },
+            ],
+        },
+    },
+},
+EOF
+    echo -e "${GREEN}====================================================${NC}"
+}
+
+# 脚本主流程入口
+echo -e "${YELLOW}请选择当前机器的角色：${NC}"
+echo -e " [1] 国内小主机 (仅安装 Tailscale 组网)"
+echo -e " [2] 国外 VPS (安装 Tailscale + 联动 1Panel 部署 DERP 中继)"
+read -p "请输入数字 (1/2): " ROLE
+
+case "$ROLE" in
+    1)
+        install_tailscale
+        echo -e "\n${GREEN}小主机配置完成！请去外网控制端/VPS 上继续配置。${NC}"
+        ;;
+    2)
+        install_tailscale
+        deploy_derp_1panel
+        ;;
+    *)
+        echo -e "${RED}输入错误，脚本退出。${NC}"
+        exit 1
+        ;;
+esac
