@@ -8,6 +8,7 @@ trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) a
 SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh"
 SCRIPT_PATH="$HOME/menu.sh"
 CASAOS_INSTALL_URL="https://get.casaos.io" # CasaOS 安装地址变量
+PROXY_URL="https://js.52zy.eu.org/"        # 你的 GHProxy 加速节点地址
 
 # ================== 彩色与日志 ==================
 if [[ -t 1 ]] && command -v tput &>/dev/null || true; then
@@ -38,7 +39,45 @@ render_menu() {
     echo "=============================="
 }
 
-fetch() { curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@"; }
+# ================== 自动化网络检测与智能拉取（三保险版） ==================
+GH_PREFIX=""
+check_network() {
+    info "📡 正在检测网络环境，自动适配最佳下载通道..."
+    
+    # 【第一道保险】尝试直连 GitHub Raw（超时 2 秒）
+    if curl -I -s --connect-timeout 2 "https://raw.githubusercontent.com" &>/dev/null; then
+        info "🌐 网络检测结果：${C_GREEN}官方原生网络连通良好，使用直连模式。${C_RESET}"
+        GH_PREFIX=""
+        return 0
+    fi
+
+    # 【第二道保险】直连失败，尝试连接你的 GHProxy 加速节点（超时 2 秒）
+    warn "⚡ 直连 GitHub 受阻，正在检测加速节点连通性..."
+    if curl -I -s --connect-timeout 2 "${PROXY_URL}" &>/dev/null; then
+        info "🚀 加速节点检测结果：${C_GREEN}加速通道正常，已切换至 GHProxy 加速模式。${C_RESET}"
+        GH_PREFIX="${PROXY_URL}"
+        return 0
+    fi
+
+    # 【第三道兜底】加速节点也挂了，输出警告并切回原始链接
+    echo -e "${C_RED}==================================================${C_RESET}"
+    echo -e "${C_RED}[x] 严重警告：加速节点 [${PROXY_URL}] 似乎也无法连接！${C_RESET}"
+    echo -e "${C_YELLOW}[!] 脚本将死马当活马医，强行切回【官方原始链接】尝试下载...${C_RESET}"
+    echo -e "${C_RED}==================================================${C_RESET}"
+    sleep 3
+    GH_PREFIX=""
+}
+check_network
+
+# 智能拉取器：自动根据网络适配决定是否套用代理前缀
+fetch() { 
+    local target_url="$1"
+    # 如果目标是 GitHub 相关的链接且需要代理加速，并且本身不含代理前缀，则自动套用
+    if [[ -n "$GH_PREFIX" ]] && [[ "$target_url" =~ "github" ]] && [[ ! "$target_url" =~ "$PROXY_URL" ]]; then
+        target_url="${GH_PREFIX}${target_url}"
+    fi
+    curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$target_url"
+}
 run_url() { bash <(fetch "$1"); }
 
 # ================== 自我初始化 ==================
@@ -46,7 +85,7 @@ SCRIPT_IS_FIRST_RUN=false
 if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
     info "⚡ 检测到你是通过 <(curl …) 临时运行的"
     info "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
-    curl -fsSL "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
+    fetch "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
     SCRIPT_IS_FIRST_RUN=true
     sleep 2
@@ -272,7 +311,7 @@ while true; do
         "4) 甬哥Sing-box-yg安装           $singbox_status" \
         "5) 勇哥ArgoSB脚本                $argosb_status" \
         "6) Kejilion.sh 一键脚本工具箱      ⚡ 远程调用" \
-        "7) zjsync（GitHub 文件自动同步）   $zjsync_status" \
+        "7) zjsync（GitHub 文件自动同步）    $zjsync_status" \
         "8) Pansou 网盘搜索               $panso_status" \
         "9) 域名绑定管理                  ⚡ 远程调用" \
         "10) Subconverter API后端         $subconverter_status" \
@@ -282,7 +321,7 @@ while true; do
         "14) Telegram MTProto 代理         $(mtproto_status)" \
         "15) CosyVoice 文本转语音          $(check_docker_service "cov")" \
         "16) 系统工具（Swap 管理 + 主机名修改） ⚡" \
-        "17) CasaOS 一键安装/管理         $casaos_current_status" \
+        "17) CasaOS 一键安装/管理          $casaos_current_status" \
         "18) PanHub 盘搜聚合 (支持多架构)  $panhub_status" \
         "19) Cloudflare 优选 IP 工具箱     $cfst_status" \
         "00) 更新菜单脚本 menu.sh" \
