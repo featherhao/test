@@ -85,16 +85,14 @@ fetch() {
     curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@" "$target_url"
 }
 
-# 💡 强力升级版劫持：不管子脚本写的是 ghcr.io 还是别的什么，只要带 derp 关键词，强制干成可用的镜像！
+# 💡 强力劫持函数
 docker() {
     local cmd="$1"
     if [[ "$cmd" == "run" || "$cmd" == "pull" ]]; then
         local args=()
         for arg in "$@"; do
-            # ✨ 核心降维打击：发现包含 derp 关键词的镜像参数，直接进行硬替换
             if [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ "derp" ]] && [[ "$arg" != "$cmd" ]]; then
                 arg="docker.anyhub.us.kg/lonelyelk/derper:latest"
-            # 普通镜像按原逻辑套代理
             elif [[ -n "$DOCKER_PROXY" ]] && [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ [a-zA-Z0-9_/-]+:[a-zA-Z0-9_.-]+ || "$arg" =~ [a-zA-Z0-9_/-]+$ ]] && [[ "$arg" != "$cmd" ]]; then
                 if [[ ! "$arg" =~ "/" ]] && [[ ! "$arg" =~ "$DOCKER_PROXY" ]]; then
                     arg="${DOCKER_PROXY}/library/${arg}"
@@ -236,10 +234,18 @@ tailscale_status_check() {
     else echo "❌ 未安装"; fi
 }
 
+# ✨ 修复：补全状态日志输出，并在更新完毕后实现自动 reload 刷新
 update_menu_script() {
-    info "🔄 正在更新 menu.sh..."
-    fetch "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
-    chmod +x "$SCRIPT_PATH"
+    info "🔄 正在从 GitHub 拉取最新的 menu.sh..."
+    if fetch "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"; then
+        chmod +x "$SCRIPT_PATH"
+        info "✅ menu.sh 已经成功更新到 $SCRIPT_PATH！"
+        info "🚀 正在为您自动重新载入主菜单..."
+        sleep 1.5
+        exec bash "$SCRIPT_PATH" # 彻底告别手动回车，更新完直接无感刷新菜单
+    else
+        error "❌ 更新失败，请检查网络连接！"
+    fi
 }
 
 # ================== 主菜单循环 ==================
