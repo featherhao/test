@@ -39,36 +39,42 @@ render_menu() {
     echo "=============================="
 }
 
-# ================== 自动化网络检测与智能拉取（三保险版） ==================
+# ================== 自动化网络检测与智能拉取（防误判版） ==================
 GH_PREFIX=""
 check_network() {
     info "📡 正在检测网络环境，自动适配最佳下载通道..."
     
-    # 【第一道保险】尝试直连 GitHub Raw（超时 2 秒）
-    if curl -I -s --connect-timeout 2 "https://raw.githubusercontent.com" &>/dev/null; then
-        info "🌐 网络检测结果：${C_GREEN}官方原生网络连通良好，使用直连模式。${C_RESET}"
+    # 1. 优先检测国内加速节点是否可用（如果在国内，这步会极快通过，且不会被误判）
+    if curl -I -s --connect-timeout 2 "${PROXY_URL}" &>/dev/null; then
+        # 加速节点通了，但为了照顾国外VPS，我们再顺便看一眼官方是不是也通（且不是劫持）
+        # 我们用一个几乎无法被劫持伪造的 404 页面来测试官方真实连通性
+        if curl -s -m 2 "https://raw.githubusercontent.com" | grep -q "Not Found" 2>/dev/null; then
+            info "🌐 网络检测结果：${C_GREEN}当前处于海外环境，使用直连官方模式。${C_RESET}"
+            GH_PREFIX=""
+        else
+            info "🚀 网络检测结果：${C_GREEN}当前处于国内环境，已自动切换至 GHProxy 加速模式。${C_RESET}"
+            GH_PREFIX="${PROXY_URL}"
+        fi
+        return 0
+    fi
+
+    # 2. 如果连加速节点都断网了，再看官方原生能不能碰运气
+    warn "⚡ 加速节点无法连接，正在尝试直连官方..."
+    if curl -s -m 2 "https://raw.githubusercontent.com" | grep -q "Not Found" 2>/dev/null; then
+        warn "🌐 官方原生通道竟然可用，切换至直连模式。"
         GH_PREFIX=""
         return 0
     fi
 
-    # 【第二道保险】直连失败，尝试连接你的 GHProxy 加速节点（超时 2 秒）
-    warn "⚡ 直连 GitHub 受阻，正在检测加速节点连通性..."
-    if curl -I -s --connect-timeout 2 "${PROXY_URL}" &>/dev/null; then
-        info "🚀 加速节点检测结果：${C_GREEN}加速通道正常，已切换至 GHProxy 加速模式。${C_RESET}"
-        GH_PREFIX="${PROXY_URL}"
-        return 0
-    fi
-
-    # 【第三道兜底】加速节点也挂了，输出警告并切回原始链接
+    # 3. 终极兜底：两边都挂了
     echo -e "${C_RED}==================================================${C_RESET}"
-    echo -e "${C_RED}[x] 严重警告：加速节点 [${PROXY_URL}] 似乎也无法连接！${C_RESET}"
-    echo -e "${C_YELLOW}[!] 脚本将死马当活马医，强行切回【官方原始链接】尝试下载...${C_RESET}"
+    echo -e "${C_RED}[x] 严重警告：网络环境极差，官方与加速节点均无法连接！${C_RESET}"
+    echo -e "${C_YELLOW}[!] 脚本将强行切回【官方原始链接】盲跑，请检查本地网络或代理。${C_RESET}"
     echo -e "${C_RED}==================================================${C_RESET}"
     sleep 3
     GH_PREFIX=""
 }
 check_network
-
 # 智能拉取器：自动根据网络适配决定是否套用代理前缀
 fetch() { 
     local target_url="$1"
