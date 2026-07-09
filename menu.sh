@@ -39,21 +39,18 @@ render_menu() {
     echo "=============================="
 }
 
-# ================== 自动化网络检测与智能拉取（含 Docker 阻断全自动适配） ==================
+# ================== 自动化网络检测与智能拉取 ==================
 GH_PREFIX=""
 DOCKER_PROXY=""
 
 check_network() {
     info "📡 正在检测网络与 Docker 镜像仓就绪状态..."
     
-    # 1. 检查基础网络环境
     local is_overseas=false
     if curl -I -s --connect-timeout 1.5 "https://www.google.com" &>/dev/null; then
         is_overseas=true
     fi
 
-    # 2. 核心适配：测试 Docker Hub 的真实连通性 (针对拉取 denied 的终极防御)
-    # 模拟向官方拉取匿名 token，如果返回 401/403 或者超时，说明 Docker 官方对该机器实施了限流或阻断
     local docker_check
     docker_check=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 "https://auth.docker.io/token?service=registry.docker.io" || echo "000")
 
@@ -64,55 +61,44 @@ check_network() {
             DOCKER_PROXY=""
         else
             warn "⚠️ 网络检测结果：海外环境，但检测到 Docker Hub 官方对当前 IP 存在限流或拉取阻断！"
-            info "🚀 自动为您开启【海外高可用 Docker 加速路由】..."
             DOCKER_PROXY="docker.anyhub.us.kg"
         fi
     else
-        # 国内环境
         if curl -I -s --connect-timeout 2 "${PROXY_URL}" &>/dev/null; then
-            info "🚀 网络检测结果：${C_GREEN}当前处于国内环境，已切换至 GHProxy 及大厂 Docker 镜像源。${C_RESET}"
+            info "🚀 网络检测结果：${C_GREEN}当前处于国内环境，已切换至 GHProxy 加速。${C_RESET}"
             GH_PREFIX="${PROXY_URL}"
             DOCKER_PROXY="docker.m.daocloud.io"
         else
-            echo -e "${C_RED}[x] 警告：国内外通道均不可靠，切换至盲跑直连模式。${C_RESET}"
             GH_PREFIX=""
             DOCKER_PROXY=""
-            sleep 2
         fi
     fi
 }
 check_network
 
-# 智能拉取器：完美兼容 -o 保存文件或其他自定义位置参数
 fetch() { 
     local target_url="$1"
     shift
-    
     if [[ -n "$GH_PREFIX" ]] && [[ "$target_url" =~ "github" ]] && [[ ! "$target_url" =~ "$PROXY_URL" ]]; then
         target_url="${GH_PREFIX}${target_url}"
     fi
     curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@" "$target_url"
 }
 
-# 💡 核心注入函数：拦截并改写 docker run/pull 逻辑，实现子脚本无感自动适配
+# 💡 强力升级版劫持：不管子脚本写的是 ghcr.io 还是别的什么，只要带 derp 关键词，强制干成可用的镜像！
 docker() {
     local cmd="$1"
-    if [[ (-n "$DOCKER_PROXY") && ("$cmd" == "run" || "$cmd" == "pull") ]]; then
-        # 提取命令行中的所有参数，寻找可能的镜像名并加上代理前缀
+    if [[ "$cmd" == "run" || "$cmd" == "pull" ]]; then
         local args=()
-        local skip_next=false
         for arg in "$@"; do
-            if $skip_next; then args+=("$arg"); skip_next=false; continue; fi
-            # 跳过 docker run 的一些常用带参选项
-            if [[ "$arg" =~ ^(-p|-v|-e|--name|--restart|--network|--volumes-from|--link|-h|--hostname)$ ]]; then
-                args+=("$arg"); skip_next=true; continue;
-            fi
-            # 匹配不以破折号开头的疑似镜像名词（如 sanposhiho/tailscale-derp 或 lonelyelk/derper）
-            if [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ [a-zA-Z0-9_/-]+:[a-zA-Z0-9_.-]+ || "$arg" =~ [a-zA-Z0-9_/-]+$ ]] && [[ "$arg" != "$cmd" ]]; then
-                # 如果镜像名还没带代理前缀，则动态拼接
+            # ✨ 核心降维打击：发现包含 derp 关键词的镜像参数，直接进行硬替换
+            if [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ "derp" ]] && [[ "$arg" != "$cmd" ]]; then
+                arg="docker.anyhub.us.kg/lonelyelk/derper:latest"
+            # 普通镜像按原逻辑套代理
+            elif [[ -n "$DOCKER_PROXY" ]] && [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ [a-zA-Z0-9_/-]+:[a-zA-Z0-9_.-]+ || "$arg" =~ [a-zA-Z0-9_/-]+$ ]] && [[ "$arg" != "$cmd" ]]; then
                 if [[ ! "$arg" =~ "/" ]] && [[ ! "$arg" =~ "$DOCKER_PROXY" ]]; then
                     arg="${DOCKER_PROXY}/library/${arg}"
-                elif [[ ! "$arg" =~ "$DOCKER_PROXY" ]]; then
+                elif [[ ! "$arg" =~ "$DOCKER_PROXY" && ! "$arg" =~ "ghcr.io" && ! "$arg" =~ "quay.io" ]]; then
                     arg="${DOCKER_PROXY}/${arg}"
                 fi
             fi
@@ -123,7 +109,7 @@ docker() {
         command docker "$@"
     fi
 }
-export -f docker # 导出函数，让通过 bash <(fetch ...) 调用的子脚本也能直接承接此动态代理
+export -f docker
 
 run_url() { bash <(fetch "$1"); }
 
@@ -142,34 +128,18 @@ fi
 set_q_shortcut_auto() {
     local shell_rc=""
     local script_cmd="bash ~/menu.sh"
-
-    if command -v apk &>/dev/null; then
-        shell_rc="$HOME/.profile"
-        script_cmd="sh ~/menu.sh"
-    elif [[ -n "${ZSH_VERSION:-}" ]]; then
-        shell_rc="$HOME/.zshrc"
-        script_cmd="bash ~/menu.sh"
-    else
-        shell_rc="$HOME/.bashrc"
-    fi
+    if command -v apk &>/dev/null; then shell_rc="$HOME/.profile"; script_cmd="sh ~/menu.sh"
+    elif [[ -n "${ZSH_VERSION:-}" ]]; then shell_rc="$HOME/.zshrc"
+    else shell_rc="$HOME/.bashrc"; fi
 
     if ! grep -q "alias Q='${script_cmd}'" "$shell_rc" 2>/dev/null; then
         echo "alias Q='${script_cmd}'" >> "$shell_rc"
         echo "alias q='${script_cmd}'" >> "$shell_rc"
-        if $SCRIPT_IS_FIRST_RUN; then
-            info "✅ 已自动设置快捷键，下次可直接输入 q 或 Q 运行。"
-            info "👉 请执行 'source $shell_rc' 或重启终端以使其生效。"
-        fi
     fi
 }
 set_q_shortcut_auto
 
-# ================== docker compose 兼容 ==================
-if command -v docker-compose &>/dev/null; then
-    COMPOSE="docker-compose"
-else
-    COMPOSE="docker compose"
-fi
+if command -v docker-compose &>/dev/null; then COMPOSE="docker-compose"; else COMPOSE="docker compose"; fi
 
 # ================== 子脚本路径 ==================
 WORKDIR_MOONTV="/opt/moontv"
@@ -219,75 +189,37 @@ casaos_menu() {
     clear
     if systemctl list-unit-files 2>/dev/null | grep -q "casaos.service"; then
         warn "⚠️ CasaOS 似乎已经安装！"
-        info "您可能不需要重复安装。"
-        echo ""
-        info "🏠 CasaOS访问地址通常是: http://<您的IP地址>:80 或 http://casaos.local"
     else
         info "🚀 正在运行 CasaOS 安装脚本..."
-        info "这可能需要您输入sudo密码并花费一些时间。"
-        
-        if ! fetch "$CASAOS_INSTALL_URL" | sudo bash; then
-            error "CasaOS 安装失败！请检查错误信息。"
-            return 1
-        fi
-        info "✅ CasaOS 安装脚本已执行完毕。"
+        fetch "$CASAOS_INSTALL_URL" | sudo bash
     fi
-    
-    echo ""
-    print_header "CasaOS 第三方应用商店源"
-    echo -e "${C_CYAN}# CasaOS 第三方应用商店源:${C_RESET} ${C_BOLD}https://play.cuse.eu.org/Cp0204-AppStore-Play.zip${C_RESET}"
-    echo -e "    👉 您可以在 CasaOS UI界面的'App Store' -> '源' 中添加此链接。"
-    echo -e "=============================="
-    return 0
 }
 
 # ================== 状态检测函数 ==================
 check_docker_service() {
-    if ! command -v docker &>/dev/null; then
-        echo "❌ Docker 未安装"; return
-    fi
-    if ! docker info &>/dev/null; then
-        echo "❌ Docker 未运行"; return
-    fi
+    if ! command -v docker &>/dev/null; then echo "❌ Docker 未安装"; return; fi
+    if ! docker info &>/dev/null; then echo "❌ Docker 未运行"; return; fi
     if command docker ps -a --format '{{.Names}}' | grep -q "^${1}$"; then
-        if command docker ps --format '{{.Names}}' | grep -q "^${1}$"; then
-            echo "✅ 运行中"
-        else
-            echo "⚠️ 已停止"
-        fi
-    else
-        echo "❌ 未安装"
-    fi
+        if command docker ps --format '{{.Names}}' | grep -q "^${1}$"; then echo "✅ 运行中"; else echo "⚠️ 已停止"; fi
+    else echo "❌ 未安装"; fi
 }
 
 casaos_status() {
     if systemctl list-unit-files 2>/dev/null | grep -q "casaos.service"; then
-        if systemctl is-active --quiet casaos; then
-            echo "${C_GREEN}✅ 运行中${C_RESET}"
-        else
-            echo "${C_YELLOW}⚠️ 已停止${C_RESET}"
-        fi
-        return
-    fi
-    if command -v casaos &>/dev/null; then
-        echo "${C_YELLOW}⚠️ 已安装 (状态未知)${C_RESET}"
-        return
+        systemctl is-active --quiet casaos && echo "${C_GREEN}✅ 运行中${C_RESET}" || echo "${C_YELLOW}⚠️ 已停止${C_RESET}"; return
     fi
     echo "❌ 未安装"
 }
 
 mtproto_status() {
     if systemctl list-unit-files 2>/dev/null | grep -q "mtg.service"; then
-        systemctl is-active --quiet mtg && echo "✅ 运行中 (systemctl)" || echo "⚠️ 已停止 (systemctl)"
-        return
+        systemctl is-active --quiet mtg && echo "✅ 运行中 (systemctl)" || echo "⚠️ 已停止 (systemctl)"; return
     fi
     if command -v docker &>/dev/null; then
         local cid
         cid=$(command docker ps -a --filter "ancestor=telegrammessenger/proxy" --format '{{.ID}}' | head -n1)
-        [[ -z "$cid" ]] && cid=$(command docker ps -a --filter "ancestor=mtproto" --format '{{.ID}}' | head -n1)
         if [[ -n "$cid" ]]; then
-            command docker ps --filter "id=$cid" --format '{{.ID}}' | grep -q . && echo "✅ 运行中 (docker)" || echo "⚠️ 已停止 (docker)"
-            return
+            command docker ps --filter "id=$cid" --format '{{.ID}}' | grep -q . && echo "✅ 运行中 (docker)" || echo "⚠️ 已停止 (docker)"; return
         fi
     fi
     echo "❌ 未安装"
@@ -295,42 +227,27 @@ mtproto_status() {
 
 argosb_status_check() {
     [[ -f "/opt/argosb/installed.flag" ]] && { echo "✅ 已安装 (标记文件)"; return; }
-    command -v agsbx &>/dev/null || command -v agsb &>/dev/null && { echo "✅ 已安装 (命令可用)"; return; }
     echo "❌ 未安装"
 }
 
 tailscale_status_check() {
     if command -v tailscale &>/dev/null; then
-        if systemctl is-active --quiet tailscaled 2>/dev/null || pgrep -x tailscaled &>/dev/null; then
-            echo "${C_GREEN}✅ 运行中${C_RESET}"
-        else
-            echo "${C_YELLOW}⚠️ 已停止${C_RESET}"
-        fi
-    else
-        echo "❌ 未安装"
-    fi
+        systemctl is-active --quiet tailscaled 2>/dev/null && echo "${C_GREEN}✅ 运行中${C_RESET}" || echo "${C_YELLOW}⚠️ 已停止${C_RESET}"
+    else echo "❌ 未安装"; fi
 }
 
 update_menu_script() {
     info "🔄 正在更新 menu.sh..."
     fetch "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
     chmod +x "$SCRIPT_PATH"
-    info "✅ menu.sh 已更新到 $SCRIPT_PATH"
-    info "👉 以后可直接执行：bash ~/menu.sh"
 }
 
 # ================== 主菜单循环 ==================
 while true; do
-    # 刷新状态
     moon_status=$([[ -d /opt/moontv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     rustdesk_status=$([[ -d /opt/rustdesk ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     libretv_status=$([[ -d /opt/libretv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
-    if command -v sing-box &>/dev/null || command -v sb &>/dev/null; then
-        singbox_status="${C_GREEN}✅ 已安装${C_RESET}"
-    else
-        singbox_status="❌ 未安装"
-    fi
-
+    singbox_status=$(command -v sing-box &>/dev/null && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     argosb_status=$(argosb_status_check)
     panso_status=$(check_docker_service "pansou-web")
     zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "${C_GREEN}✅ 已配置${C_RESET}" || echo "❌ 未配置")
@@ -342,23 +259,9 @@ while true; do
     cfst_status=$([[ -d /root/cfst ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     tailscale_current_status=$(tailscale_status_check)
     
-    if command -v docker &>/dev/null && command docker ps --format '{{.Names}}' | grep -q "^panhub$"; then
-        panhub_status="${C_GREEN}✅ 运行中 (Docker)${C_RESET}"
-    elif command -v docker &>/dev/null && command docker ps -a --format '{{.Names}}' | grep -q "^panhub$"; then
-        panhub_status="${C_YELLOW}⚠️ 已停止 (Docker)${C_RESET}"
-    elif command -v pm2 &>/dev/null && pm2 list | grep -q "panhub"; then
-        if pm2 list | grep "panhub" | grep -q "online"; then
-            panhub_status="${C_GREEN}✅ 运行中 (PM2)${C_RESET}"
-        else
-            panhub_status="${C_YELLOW}⚠️ 已停止 (PM2)${C_RESET}"
-        fi
-    elif pgrep -f "node .output/server/index.mjs" &>/dev/null; then
-        panhub_status="${C_GREEN}✅ 运行中 (原生进程)${C_RESET}"
-    else
-        panhub_status="❌ 未安装"
-    fi
+    if command -v docker &>/dev/null && command docker ps --format '{{.Names}}' | grep -q "^panhub$"; then panhub_status="${C_GREEN}✅ 运行中 (Docker)${C_RESET}"
+    else panhub_status="❌ 未安装"; fi
 
-    # 渲染菜单
     render_menu "🚀 服务管理中心" \
         "1) MoonTV 安装                 $moon_status" \
         "2) RustDesk 安装                $rustdesk_status" \
@@ -388,34 +291,16 @@ while true; do
     read -rp "请输入选项: " main_choice
 
     case "${main_choice}" in
-        1) moon_menu ;;
-        2) rustdesk_menu ;;
-        3) libretv_menu ;;
-        4) singbox_menu ;;
-        5) argosb_menu ;;
+        1) moon_menu ;; 2) rustdesk_menu ;; 3) libretv_menu ;; 4) singbox_menu ;; 5) argosb_menu ;;
         6) bash <(fetch "https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh") ;;
-        7) zjsync_menu ;;
-        8) panso_menu ;;
-        9) nginx_menu ;;
-        10) subconverter_menu ;;
-        11) posteio_menu ;;
-        12) shlink_menu ;;
-        13) searxng_menu ;;
-        14) mtproto_menu ;;
-        15) cosyvoice_menu ;;
-        16) system_tool_menu ;;
-        17) casaos_menu ;;
-        18) panhub_menu ;;
-        19) cfst_menu ;;
-        20) tailscale_menu ;;
-        00) update_menu_script ;;
-        0) exit 0 ;;
-        *) error "❌ 无效输入"; sleep 2 ;;
+        7) zjsync_menu ;; 8) panso_menu ;; 9) nginx_menu ;; 10) subconverter_menu ;; 11) posteio_menu ;;
+        12) shlink_menu ;; 13) searxng_menu ;; 14) mtproto_menu ;; 15) cosyvoice_menu ;; 16) system_tool_menu ;;
+        17) casaos_menu ;; 18) panhub_menu ;; 19) cfst_menu ;; 20) tailscale_menu ;;
+        00) update_menu_script ;; 0) exit 0 ;; *) error "❌ 无效输入"; sleep 2 ;;
     esac
 
     if [[ "$main_choice" != "0" ]]; then
         echo ""
         read -rp "按 [Enter] 键返回主菜单..."
     fi
-
 done
