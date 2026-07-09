@@ -1,4 +1,5 @@
 #!/bin/bash
+set -Eeuo pipefail
 
 # 颜色定义
 RED='\033[0;31m'
@@ -36,7 +37,7 @@ check_env() {
     echo -e "\n${BLUE}检查并更新系统依赖环境...${NC}"
     apt-get update -y && apt-get install -y curl wget sudo jq openssl lsof > /dev/null 2>&1
 
-    if ! command -v docker &> /dev/null; then
+    if ! command -v docker &>/dev/null; then
         echo -e "${YELLOW}未检测到 Docker，正在自动安装...${NC}"
         curl -fsSL https://get.docker.com | bash
         systemctl enable --now docker
@@ -62,7 +63,7 @@ deploy_derp_1panel() {
     check_env
     
     echo -e "\n${BLUE}====================================================${NC}"
-    echo -e "${GREEN}         准备进入 1Panel 联动 DERP 部署流程           ${NC}"
+    echo -e "${GREEN}          准备进入 1Panel 联动 DERP 部署流程           ${NC}"
     echo -e "${BLUE}====================================================${NC}"
 
     echo -e "${BLUE}为了避免和 1Panel 冲突，请先在 1Panel 后台完成以下操作：${NC}"
@@ -96,19 +97,23 @@ deploy_derp_1panel() {
     docker rm -f derper &> /dev/null
 
     echo -e "\n${BLUE}正在拉取并启动专属 DERP 容器...${NC}"
-    # 💡 更换为官方原厂镜像，并适配了标准的验证挂载与端口参数
+    # ✨ 核心修复：更换为稳定免代理直连的第三方开源维护镜像，规避官方 Hub 无公开镜像与限流问题
     docker run -d \
       --name derper \
       --restart=always \
       -p 3443:443 \
       -p 3478:3478/udp \
       -v /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock \
-      ghcr.io/tailscale/derper:latest \
+      lonelyelk/derper:latest \
       --hostname="${DERP_DOMAIN}" \
       --certmode=manual \
       --aead=true \
       --verify-clients=true \
       --stun=true
+
+    # 获取本机公网 IP 用于 DNS 容灾优化
+    local my_ip
+    my_ip=$(curl -s 4.ipw.cn || curl -s ipinfo.io/ip || echo "")
 
     echo -e "\n${GREEN}====================================================${NC}"
     echo -e "${GREEN}🎉 DERP 容器在后台启动成功！(监听本地 3443 和 3478/udp)${NC}"
@@ -128,7 +133,7 @@ deploy_derp_1panel() {
                     "Name":     "node-1",
                     "RegionID": 901,
                     "HostName": "${DERP_DOMAIN}",
-                    "derpPort": 443
+                    "derpPort": 443$( [[ -n "$my_ip" ]] && echo ",\n                    \"IPv4\":     \"${my_ip}\"" )
                 }
             ]
         }
@@ -150,7 +155,7 @@ uninstall_all() {
     fi
 
     # 停止并清理 DERP 容器
-    if command -v docker &> /dev/null; then
+    if command -v docker &>/dev/null; then
         if docker ps -a | grep -q "derper"; then
             echo -e "${YELLOW}正在停止并删除 DERP 容器 (derper)...${NC}"
             docker stop derper && docker rm derper
@@ -159,17 +164,17 @@ uninstall_all() {
     fi
 
     # 卸载 Tailscale
-    if command -v tailscale &> /dev/null; then
+    if command -v tailscale &>/dev/null; then
         echo -e "${YELLOW}正在退出并清理 Tailscale 绑定状态...${NC}"
-        tailscale logout &> /dev/null
-        tailscale down &> /dev/null
+        tailscale logout &> /dev/null || true
+        tailscale down &> /dev/null || true
         
         echo -e "${YELLOW}正在移除 Tailscale 系统程序...${NC}"
-        systemctl stop tailscaled &> /dev/null
-        systemctl disable tailscaled &> /dev/null
+        systemctl stop tailscaled &> /dev/null || true
+        systemctl disable tailscaled &> /dev/null || true
         
         # 兼容 Debian/Ubuntu 卸载
-        apt-get remove --purge -y tailscale &> /dev/null
+        apt-get remove --purge -y tailscale &> /dev/null || true
         rm -rf /var/lib/tailscale /etc/tailscale
         echo -e "${GREEN}Tailscale 客户端已彻底卸载。${NC}"
     else
