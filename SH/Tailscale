@@ -8,7 +8,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo -e "${BLUE}====================================================${NC}"
-echo -e "${GREEN}      Tailscale & 1Panel 兼容版 DERP 交互式部署工具    ${NC}"
+echo -e "${GREEN}    Tailscale & 1Panel 兼容版 交互式工具 (含卸载)   ${NC}"
 echo -e "${BLUE}====================================================${NC}"
 
 # 1. 检查 root 权限
@@ -65,7 +65,6 @@ deploy_derp_1panel() {
     echo -e "${GREEN}         准备进入 1Panel 联动 DERP 部署流程           ${NC}"
     echo -e "${BLUE}====================================================${NC}"
 
-    # 引导式交互提示
     echo -e "${BLUE}为了避免和 1Panel 冲突，请先在 1Panel 后台完成以下操作：${NC}"
     echo -e " 1. 在【1Panel -> 证书管理】中申请或准备好你的 DERP 域名证书。"
     echo -e " 2. 在【1Panel -> 网站 -> 创建网站】中，新建一个【反向代理】网站。"
@@ -75,7 +74,6 @@ deploy_derp_1panel() {
     
     confirm_step "你已经在 1Panel 做好反向代理和证书配置了吗？"
 
-    # 获取用户域名
     while true; do
         read -p "请输入你刚才在 1Panel 配置的 DERP 域名 (例如 derp.abc.com): " DERP_DOMAIN
         if [ -n "$DERP_DOMAIN" ]; then
@@ -85,7 +83,6 @@ deploy_derp_1panel() {
         fi
     done
 
-    # 检查本地 3443 和 3478 端口
     echo -e "\n${BLUE}正在检查本地端口占用情况...${NC}"
     if lsof -i:3443 -t &> /dev/null; then
         echo -e "${RED}错误：本地 3443 端口已被占用，请排查或清理后再试！${NC}"
@@ -96,7 +93,6 @@ deploy_derp_1panel() {
         exit 1
     fi
 
-    # 清理旧容器
     docker rm -f derper &> /dev/null
 
     echo -e "\n${BLUE}正在拉取并启动专属 DERP 容器...${NC}"
@@ -139,20 +135,66 @@ EOF
     echo -e "${GREEN}====================================================${NC}"
 }
 
+# 5. 彻底卸载与清理逻辑
+uninstall_all() {
+    echo -e "\n${RED}====================================================${NC}"
+    echo -e "${RED}             警告：准备彻底卸载并清理环境             ${NC}"
+    echo -e "${RED}====================================================${NC}"
+    read -p "确定要删除此机器上的 DERP 容器和 Tailscale 吗？(y/n): " confirm_un
+    if [[ "$confirm_un" != "y" && "$confirm_un" != "Y" ]]; then
+        echo -e "${GREEN}已取消卸载。${NC}"
+        exit 0
+    fi
+
+    # 停止并清理 DERP 容器
+    if command -v docker &> /dev/null; then
+        if docker ps -a | grep -q "derper"; then
+            echo -e "${YELLOW}正在停止并删除 DERP 容器 (derper)...${NC}"
+            docker stop derper && docker rm derper
+            echo -e "${GREEN}DERP 容器清理完成。${NC}"
+        fi
+    fi
+
+    # 卸载 Tailscale
+    if command -v tailscale &> /dev/null; then
+        echo -e "${YELLOW}正在退出并清理 Tailscale 绑定状态...${NC}"
+        tailscale logout &> /dev/null
+        tailscale down &> /dev/null
+        
+        echo -e "${YELLOW}正在移除 Tailscale 系统程序...${NC}"
+        systemctl stop tailscaled &> /dev/null
+        systemctl disable tailscaled &> /dev/null
+        
+        # 兼容 Debian/Ubuntu 卸载
+        apt-get remove --purge -y tailscale &> /dev/null
+        rm -rf /var/lib/tailscale /etc/tailscale
+        echo -e "${GREEN}Tailscale 客户端已彻底卸载。${NC}"
+    else
+        echo -e "${YELLOW}系统未检测到 Tailscale 客户端，跳过。${NC}"
+    fi
+
+    echo -e "\n${GREEN}🎉 清理完成！本机的相关网络环境和容器已全部卸载。${NC}"
+    echo -e "${YELLOW}提示：别忘了手动去 1Panel 后台删除对应的反向代理网站，以及去 Tailscale 网页端删除对应的设备节点。${NC}"
+}
+
 # 脚本主流程入口
-echo -e "${YELLOW}请选择当前机器的角色：${NC}"
+echo -e "${YELLOW}请选择操作目地：${NC}"
 echo -e " [1] 国内小主机 (仅安装 Tailscale 组网)"
 echo -e " [2] 国外 VPS (安装 Tailscale + 联动 1Panel 部署 DERP 中继)"
-read -p "请输入数字 (1/2): " ROLE
+echo -e " [3] 彻底卸载 (一键清理本机装的 Tailscale 客户端与 DERP 容器)"
+read -p "请输入数字 (1/2/3): " ROLE
 
 case "$ROLE" in
     1)
         install_tailscale
-        echo -e "\n${GREEN}小主机配置完成！请去外网控制端/VPS 上继续配置。${NC}"
+        echo -e "\n${GREEN}小主机配置完成！${NC}"
         ;;
     2)
         install_tailscale
         deploy_derp_1panel
+        ;;
+    3)
+        uninstall_all
         ;;
     *)
         echo -e "${RED}输入错误，脚本退出。${NC}"
