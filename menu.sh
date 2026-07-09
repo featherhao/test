@@ -61,7 +61,7 @@ check_network() {
             DOCKER_PROXY=""
         else
             warn "⚠️ 网络检测结果：海外环境，但检测到 Docker Hub 官方对当前 IP 存在限流或拉取阻断！"
-            DOCKER_PROXY="docker.anyhub.us.kg"
+            DOCKER_PROXY="docker.m.daocloud.io"
         fi
     else
         if curl -I -s --connect-timeout 2 "${PROXY_URL}" &>/dev/null; then
@@ -85,14 +85,16 @@ fetch() {
     curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@" "$target_url"
 }
 
-# 💡 强力劫持函数
+# 💡 精准放行改造：其他镜像继续开心走代理，冷门 DERP 直接放行直连官方 Hub！
 docker() {
     local cmd="$1"
     if [[ "$cmd" == "run" || "$cmd" == "pull" ]]; then
         local args=()
         for arg in "$@"; do
+            # ✨ 核心修正：只要碰到了子脚本传进来的 derp 镜像，直接还原成绝对能拉取的原生 Hub 路径
             if [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ "derp" ]] && [[ "$arg" != "$cmd" ]]; then
-                arg="docker.anyhub.us.kg/lonelyelk/derper:latest"
+                arg="lonelyelk/derper:latest"
+            # 其余常规镜像（比如 Shlink、Posteio 等）继续安全地套用大厂代理加速
             elif [[ -n "$DOCKER_PROXY" ]] && [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ [a-zA-Z0-9_/-]+:[a-zA-Z0-9_.-]+ || "$arg" =~ [a-zA-Z0-9_/-]+$ ]] && [[ "$arg" != "$cmd" ]]; then
                 if [[ ! "$arg" =~ "/" ]] && [[ ! "$arg" =~ "$DOCKER_PROXY" ]]; then
                     arg="${DOCKER_PROXY}/library/${arg}"
@@ -234,7 +236,6 @@ tailscale_status_check() {
     else echo "❌ 未安装"; fi
 }
 
-# ✨ 修复：补全状态日志输出，并在更新完毕后实现自动 reload 刷新
 update_menu_script() {
     info "🔄 正在从 GitHub 拉取最新的 menu.sh..."
     if fetch "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"; then
@@ -242,7 +243,7 @@ update_menu_script() {
         info "✅ menu.sh 已经成功更新到 $SCRIPT_PATH！"
         info "🚀 正在为您自动重新载入主菜单..."
         sleep 1.5
-        exec bash "$SCRIPT_PATH" # 彻底告别手动回车，更新完直接无感刷新菜单
+        exec bash "$SCRIPT_PATH"
     else
         error "❌ 更新失败，请检查网络连接！"
     fi
