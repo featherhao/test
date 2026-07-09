@@ -39,47 +39,92 @@ render_menu() {
     echo "=============================="
 }
 
-# ================== 自动化网络检测与智能拉取（IP/环境精准识别版） ==================
+# ================== 自动化网络检测与智能拉取（含 Docker 阻断全自动适配） ==================
 GH_PREFIX=""
+DOCKER_PROXY=""
+
 check_network() {
-    info "📡 正在检测网络环境，自动适配最佳下载通道..."
+    info "📡 正在检测网络与 Docker 镜像仓就绪状态..."
     
-    # 1. 核心判定：测试连接 Google（超时 1.5 秒），如果通了，铁定是海外 VPS
+    # 1. 检查基础网络环境
+    local is_overseas=false
     if curl -I -s --connect-timeout 1.5 "https://www.google.com" &>/dev/null; then
-        info "🌐 网络检测结果：${C_GREEN}当前处于海外环境，全面启用原生直连模式。${C_RESET}"
+        is_overseas=true
+    fi
+
+    # 2. 核心适配：测试 Docker Hub 的真实连通性 (针对拉取 denied 的终极防御)
+    # 模拟向官方拉取匿名 token，如果返回 401/403 或者超时，说明 Docker 官方对该机器实施了限流或阻断
+    local docker_check
+    docker_check=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 "https://auth.docker.io/token?service=registry.docker.io" || echo "000")
+
+    if $is_overseas; then
         GH_PREFIX=""
-        return 0
+        if [[ "$docker_check" == "401" || "$docker_check" == "200" ]]; then
+            info "🌐 网络检测结果：${C_GREEN}海外直连环境，且 Docker 官方仓正常就绪。${C_RESET}"
+            DOCKER_PROXY=""
+        else
+            warn "⚠️ 网络检测结果：海外环境，但检测到 Docker Hub 官方对当前 IP 存在限流或拉取阻断！"
+            info "🚀 自动为您开启【海外高可用 Docker 加速路由】..."
+            DOCKER_PROXY="docker.anyhub.us.kg"
+        fi
+    else
+        # 国内环境
+        if curl -I -s --connect-timeout 2 "${PROXY_URL}" &>/dev/null; then
+            info "🚀 网络检测结果：${C_GREEN}当前处于国内环境，已切换至 GHProxy 及大厂 Docker 镜像源。${C_RESET}"
+            GH_PREFIX="${PROXY_URL}"
+            DOCKER_PROXY="docker.m.daocloud.io"
+        else
+            echo -e "${C_RED}[x] 警告：国内外通道均不可靠，切换至盲跑直连模式。${C_RESET}"
+            GH_PREFIX=""
+            DOCKER_PROXY=""
+            sleep 2
+        fi
     fi
-
-    # 2. 如果不通谷歌，再检测国内加速节点是否可用
-    if curl -I -s --connect-timeout 2 "${PROXY_URL}" &>/dev/null; then
-        info "🚀 网络检测结果：${C_GREEN}当前处于国内环境，已自动切换至 GHProxy 加速模式。${C_RESET}"
-        GH_PREFIX="${PROXY_URL}"
-        return 0
-    fi
-
-    # 3. 终极兜底：两边都挂了
-    echo -e "${C_RED}==================================================${C_RESET}"
-    echo -e "${C_RED}[x] 严重警告：网络环境极差，海外通道与国内加速节点均无法连接！${C_RESET}"
-    echo -e "${C_YELLOW}[!] 脚本将强行切回【官方原始链接】盲跑，请检查本地网络或代理。${C_RESET}"
-    echo -e "${C_RED}==================================================${C_RESET}"
-    sleep 3
-    GH_PREFIX=""
 }
 check_network
 
 # 智能拉取器：完美兼容 -o 保存文件或其他自定义位置参数
 fetch() { 
     local target_url="$1"
-    shift # 弹掉第一个 URL 参数，剩下的是可能存在的 -o "$SCRIPT_PATH" 等多余参数
+    shift
     
-    # 如果目标是 GitHub 相关的链接且需要代理加速，并且本身不含代理前缀，则自动套用
     if [[ -n "$GH_PREFIX" ]] && [[ "$target_url" =~ "github" ]] && [[ ! "$target_url" =~ "$PROXY_URL" ]]; then
         target_url="${GH_PREFIX}${target_url}"
     fi
-    # 把其他参数 (如 -o) 规范地传给 curl，最后放 target_url
     curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@" "$target_url"
 }
+
+# 💡 核心注入函数：拦截并改写 docker run/pull 逻辑，实现子脚本无感自动适配
+docker() {
+    local cmd="$1"
+    if [[ (-n "$DOCKER_PROXY") && ("$cmd" == "run" || "$cmd" == "pull") ]]; then
+        # 提取命令行中的所有参数，寻找可能的镜像名并加上代理前缀
+        local args=()
+        local skip_next=false
+        for arg in "$@"; do
+            if $skip_next; then args+=("$arg"); skip_next=false; continue; fi
+            # 跳过 docker run 的一些常用带参选项
+            if [[ "$arg" =~ ^(-p|-v|-e|--name|--restart|--network|--volumes-from|--link|-h|--hostname)$ ]]; then
+                args+=("$arg"); skip_next=true; continue;
+            fi
+            # 匹配不以破折号开头的疑似镜像名词（如 sanposhiho/tailscale-derp 或 lonelyelk/derper）
+            if [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ [a-zA-Z0-9_/-]+:[a-zA-Z0-9_.-]+ || "$arg" =~ [a-zA-Z0-9_/-]+$ ]] && [[ "$arg" != "$cmd" ]]; then
+                # 如果镜像名还没带代理前缀，则动态拼接
+                if [[ ! "$arg" =~ "/" ]] && [[ ! "$arg" =~ "$DOCKER_PROXY" ]]; then
+                    arg="${DOCKER_PROXY}/library/${arg}"
+                elif [[ ! "$arg" =~ "$DOCKER_PROXY" ]]; then
+                    arg="${DOCKER_PROXY}/${arg}"
+                fi
+            fi
+            args+=("$arg")
+        done
+        command docker "${args[@]}"
+    else
+        command docker "$@"
+    fi
+}
+export -f docker # 导出函数，让通过 bash <(fetch ...) 调用的子脚本也能直接承接此动态代理
+
 run_url() { bash <(fetch "$1"); }
 
 # ================== 自我初始化 ==================
@@ -204,8 +249,8 @@ check_docker_service() {
     if ! docker info &>/dev/null; then
         echo "❌ Docker 未运行"; return
     fi
-    if docker ps -a --format '{{.Names}}' | grep -q "^${1}$"; then
-        if docker ps --format '{{.Names}}' | grep -q "^${1}$"; then
+    if command docker ps -a --format '{{.Names}}' | grep -q "^${1}$"; then
+        if command docker ps --format '{{.Names}}' | grep -q "^${1}$"; then
             echo "✅ 运行中"
         else
             echo "⚠️ 已停止"
@@ -238,10 +283,10 @@ mtproto_status() {
     fi
     if command -v docker &>/dev/null; then
         local cid
-        cid=$(docker ps -a --filter "ancestor=telegrammessenger/proxy" --format '{{.ID}}' | head -n1)
-        [[ -z "$cid" ]] && cid=$(docker ps -a --filter "ancestor=mtproto" --format '{{.ID}}' | head -n1)
+        cid=$(command docker ps -a --filter "ancestor=telegrammessenger/proxy" --format '{{.ID}}' | head -n1)
+        [[ -z "$cid" ]] && cid=$(command docker ps -a --filter "ancestor=mtproto" --format '{{.ID}}' | head -n1)
         if [[ -n "$cid" ]]; then
-            docker ps --filter "id=$cid" --format '{{.ID}}' | grep -q . && echo "✅ 运行中 (docker)" || echo "⚠️ 已停止 (docker)"
+            command docker ps --filter "id=$cid" --format '{{.ID}}' | grep -q . && echo "✅ 运行中 (docker)" || echo "⚠️ 已停止 (docker)"
             return
         fi
     fi
@@ -297,9 +342,9 @@ while true; do
     cfst_status=$([[ -d /root/cfst ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     tailscale_current_status=$(tailscale_status_check)
     
-    if command -v docker &>/dev/null && docker ps --format '{{.Names}}' | grep -q "^panhub$"; then
+    if command -v docker &>/dev/null && command docker ps --format '{{.Names}}' | grep -q "^panhub$"; then
         panhub_status="${C_GREEN}✅ 运行中 (Docker)${C_RESET}"
-    elif command -v docker &>/dev/null && docker ps -a --format '{{.Names}}' | grep -q "^panhub$"; then
+    elif command -v docker &>/dev/null && command docker ps -a --format '{{.Names}}' | grep -q "^panhub$"; then
         panhub_status="${C_YELLOW}⚠️ 已停止 (Docker)${C_RESET}"
     elif command -v pm2 &>/dev/null && pm2 list | grep -q "panhub"; then
         if pm2 list | grep "panhub" | grep -q "online"; then
