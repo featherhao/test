@@ -85,21 +85,22 @@ fetch() {
     curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@" "$target_url"
 }
 
-# 💡 精准放行改造：其他镜像继续开心走代理，冷门 DERP 直接放行直连官方 Hub！
+# 💡 精准放行与变量安全防护：通过 ${DOCKER_PROXY:-} 机制完美规避子进程变量未定义导致熔断的致命问题
 docker() {
     local cmd="$1"
     if [[ "$cmd" == "run" || "$cmd" == "pull" ]]; then
         local args=()
+        local current_proxy="${DOCKER_PROXY:-}" # ✨ 修复：加一层防未定义变量熔断防御
         for arg in "$@"; do
-            # ✨ 核心修正：只要碰到了子脚本传进来的 derp 镜像，直接还原成绝对能拉取的原生 Hub 路径
+            # 只要碰到了子脚本传进来的 derp 镜像，直接放行直连原生干净路径
             if [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ "derp" ]] && [[ "$arg" != "$cmd" ]]; then
                 arg="lonelyelk/derper:latest"
-            # 其余常规镜像（比如 Shlink、Posteio 等）继续安全地套用大厂代理加速
-            elif [[ -n "$DOCKER_PROXY" ]] && [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ [a-zA-Z0-9_/-]+:[a-zA-Z0-9_.-]+ || "$arg" =~ [a-zA-Z0-9_/-]+$ ]] && [[ "$arg" != "$cmd" ]]; then
-                if [[ ! "$arg" =~ "/" ]] && [[ ! "$arg" =~ "$DOCKER_PROXY" ]]; then
-                    arg="${DOCKER_PROXY}/library/${arg}"
-                elif [[ ! "$arg" =~ "$DOCKER_PROXY" && ! "$arg" =~ "ghcr.io" && ! "$arg" =~ "quay.io" ]]; then
-                    arg="${DOCKER_PROXY}/${arg}"
+            # 其余常规镜像（比如 Shlink、Posteio 等）在有代理变量时继续套用大厂代理加速
+            elif [[ -n "$current_proxy" ]] && [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ [a-zA-Z0-9_/-]+:[a-zA-Z0-9_.-]+ || "$arg" =~ [a-zA-Z0-9_/-]+$ ]] && [[ "$arg" != "$cmd" ]]; then
+                if [[ ! "$arg" =~ "/" ]] && [[ ! "$arg" =~ "$current_proxy" ]]; then
+                    arg="${current_proxy}/library/${arg}"
+                elif [[ ! "$arg" =~ "$current_proxy" && ! "$arg" =~ "ghcr.io" && ! "$arg" =~ "quay.io" ]]; then
+                    arg="${current_proxy}/${arg}"
                 fi
             fi
             args+=("$arg")
