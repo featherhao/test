@@ -97,14 +97,15 @@ deploy_derp_1panel() {
     docker rm -f derper &> /dev/null
 
     echo -e "\n${BLUE}正在拉取并启动专属 DERP 容器...${NC}"
-    # ✨ 核心修复：更换为稳定免代理直连的第三方开源维护镜像，规避官方 Hub 无公开镜像与限流问题
+    # ✨ 核心修复：更换为通过验证的主流 fredliang/derper 镜像，并采用 /app/derper 绝对路径启动，彻底规避环境变量及路径找不到的问题
     docker run -d \
       --name derper \
       --restart=always \
       -p 3443:443 \
       -p 3478:3478/udp \
       -v /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock \
-      lonelyelk/derper:latest \
+      fredliang/derper:latest \
+      /app/derper \
       --hostname="${DERP_DOMAIN}" \
       --certmode=manual \
       --aead=true \
@@ -178,7 +179,7 @@ uninstall_all() {
         rm -rf /var/lib/tailscale /etc/tailscale
         echo -e "${GREEN}Tailscale 客户端已彻底卸载。${NC}"
     else
-        echo -e "${YELLOW}系统未检测到 Tailscale 客户端，跳过。${NC}"
+        echo -e "${YELLOW}系统未检测到 Tailscale 客户端，跳过. ${NC}"
     fi
 
     echo -e "\n${GREEN}🎉 清理完成！本机的相关网络环境和容器已全部卸载。${NC}"
