@@ -96,7 +96,6 @@ deploy_derp_1panel() {
     docker rm -f derper &> /dev/null
 
     echo -e "\n${BLUE}正在拉取并启动专属 DERP 容器...${NC}"
-    # 💡 此处已将镜像更换为目前最稳定、多架构支持的标准源，避免 manifest unknown 报错
     docker run -d \
       --name derper \
       --restart=always \
@@ -113,7 +112,6 @@ deploy_derp_1panel() {
     echo -e "${YELLOW}最后一步：请将下方生成的 JSON 块，复制到你的 Tailscale 网页后台 (Access Control) 中：${NC}"
     echo -e "${GREEN}====================================================${NC}"
     
-    # 💡 此处已将 "DERPort": 443 修正为官方标准的 "derpPort": 443，并规范了末尾逗号
     cat <<EOF
 "derpMap": {
     "OmitDefaultRegions": true,
@@ -202,5 +200,6 @@ case "$ROLE" in
         echo -e "${RED}输入错误，脚本退出。${NC}"
         exit 1
         ;;
-case esac 2>/dev/null # 兼容部分包裹外层
+esac
+
 exit 0
