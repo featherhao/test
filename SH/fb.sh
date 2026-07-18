@@ -4,12 +4,6 @@
 INSTALL_DIR="$HOME/filebrowser"
 APP_NAME="filebrowser"
 
-# 检查是否安装了 Docker
-if ! command -v docker &> /dev/null; then
-    echo "未检测到 Docker，请先安装 Docker。"
-    exit 1
-fi
-
 # 安装函数
 install() {
     echo "--- 正在初始化目录 ---"
@@ -43,7 +37,8 @@ EOF
     echo "访问地址: http://服务器IP:8001"
     echo "初始密码查找方法: 查看下方日志或运行: docker logs $APP_NAME"
     echo "=================================================="
-    sleep 2
+    # 等待容器初始化，显示初始密码
+    sleep 3
     docker logs $APP_NAME 2>&1 | grep "password"
 }
 
@@ -64,8 +59,10 @@ uninstall() {
     echo "卸载完成。"
 }
 
-# 菜单逻辑
-case "$1" in
+# 自动参数处理：如果未提供参数，默认为 install
+ACTION=${1:-install}
+
+case "$ACTION" in
     install)
         install
         ;;
