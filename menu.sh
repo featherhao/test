@@ -7,8 +7,8 @@ trap 'status=$?; line=${BASH_LINENO[0]}; echo "❌ 发生错误 (exit=$status) a
 # ================== 基础配置 ==================
 SCRIPT_URL="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/menu.sh"
 SCRIPT_PATH="$HOME/menu.sh"
-CASAOS_INSTALL_URL="https://get.casaos.io" # CasaOS 安装地址变量
-PROXY_URL="https://js.52zy.eu.org/"        # 你的 GHProxy 加速节点地址
+CASAOS_INSTALL_URL="https://get.casaos.io"
+PROXY_URL="https://js.52zy.eu.org/"
 
 # ================== 彩色与日志 ==================
 if [[ -t 1 ]] && command -v tput &>/dev/null || true; then
@@ -85,14 +85,12 @@ fetch() {
     curl -fsSL --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 30 "$@" "$target_url"
 }
 
-# 💡 恢复为正常的通用镜像拦截加速函数（移除了对特殊容器名 derp 的篡改逻辑）
 docker() {
     local cmd="$1"
     if [[ "$cmd" == "run" || "$cmd" == "pull" ]]; then
         local args=()
-        local current_proxy="${DOCKER_PROXY:-}" # 防未定义变量熔断防御
+        local current_proxy="${DOCKER_PROXY:-}"
         for arg in "$@"; do
-            # 常规镜像在有代理变量、非参数且符合镜像命名规则时，自动套用镜像加速
             if [[ -n "$current_proxy" ]] && [[ ! "$arg" =~ ^- ]] && [[ "$arg" =~ [a-zA-Z0-9_/-]+:[a-zA-Z0-9_.-]+ || "$arg" =~ [a-zA-Z0-9_/-]+$ ]] && [[ "$arg" != "$cmd" ]]; then
                 if [[ ! "$arg" =~ "/" ]] && [[ ! "$arg" =~ "$current_proxy" ]]; then
                     arg="${current_proxy}/library/${arg}"
@@ -109,37 +107,8 @@ docker() {
 }
 export -f docker
 
-run_url() { bash <(fetch "$1"); }
-
-# ================== 自我初始化 ==================
-SCRIPT_IS_FIRST_RUN=false
-if [[ "$0" == "/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
-    info "⚡ 检测到你是通过 <(curl …) 临时运行的"
-    info "👉 正在自动保存 menu.sh 到 $SCRIPT_PATH"
-    fetch "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"
-    chmod +x "$SCRIPT_PATH"
-    SCRIPT_IS_FIRST_RUN=true
-    sleep 2
-fi
-
-# ================== 快捷键 q/Q ==================
-set_q_shortcut_auto() {
-    local shell_rc=""
-    local script_cmd="bash ~/menu.sh"
-    if command -v apk &>/dev/null; then shell_rc="$HOME/.profile"; script_cmd="sh ~/menu.sh"
-    elif [[ -n "${ZSH_VERSION:-}" ]]; then shell_rc="$HOME/.zshrc"
-    else shell_rc="$HOME/.bashrc"; fi
-
-    if ! grep -q "alias Q='${script_cmd}'" "$shell_rc" 2>/dev/null; then
-        echo "alias Q='${script_cmd}'" >> "$shell_rc"
-        echo "alias q='${script_cmd}'" >> "$shell_rc"
-    fi
-}
-set_q_shortcut_auto
-
-if command -v docker-compose &>/dev/null; then COMPOSE="docker-compose"; else COMPOSE="docker compose"; fi
-
 # ================== 子脚本路径 ==================
+FILEBROWSER_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/fb.sh"
 WORKDIR_MOONTV="/opt/moontv"
 MOONTV_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/mootvinstall.sh"
 WORKDIR_RUSTDESK="/opt/rustdesk"
@@ -164,6 +133,7 @@ CFST_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/S
 TAILSCALE_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/Tailscale"
 
 # ================== 子脚本调用函数 ==================
+filebrowser_menu() { bash <(fetch "${FILEBROWSER_SCRIPT}?t=$(date +%s)"); }
 moon_menu() { bash <(fetch "${MOONTV_SCRIPT}?t=$(date +%s)"); }
 rustdesk_menu() { bash <(fetch "${RUSTDESK_SCRIPT}?t=$(date +%s)"); }
 libretv_menu() { bash <(fetch "${LIBRETV_SCRIPT}?t=$(date +%s)"); }
@@ -198,7 +168,7 @@ check_docker_service() {
     if ! command -v docker &>/dev/null; then echo "❌ Docker 未安装"; return; fi
     if ! docker info &>/dev/null; then echo "❌ Docker 未运行"; return; fi
     if command docker ps -a --format '{{.Names}}' | grep -q "^${1}$"; then
-        if command docker ps --format '{{.Names}}' | grep -q "^${1}$"; then echo "✅ 运行中"; else echo "⚠️ 已停止"; fi
+        if command docker ps --format '{{.Names}}' | grep -q "^${1}$"; then echo "${C_GREEN}✅ 运行中${C_RESET}"; else echo "⚠️ 已停止"; fi
     else echo "❌ 未安装"; fi
 }
 
@@ -238,8 +208,8 @@ update_menu_script() {
     info "🔄 正在从 GitHub 拉取最新的 menu.sh..."
     if fetch "${SCRIPT_URL}?t=$(date +%s)" -o "$SCRIPT_PATH"; then
         chmod +x "$SCRIPT_PATH"
-        info "✅ menu.sh 已经成功更新到 $SCRIPT_PATH！"
-        info "🚀 正在为您自动重新载入主菜单..."
+        info "✅ menu.sh 已经成功更新！"
+        info "🚀 正在为您自动重新载入..."
         sleep 1.5
         exec bash "$SCRIPT_PATH"
     else
@@ -263,35 +233,35 @@ while true; do
     casaos_current_status=$(casaos_status)
     cfst_status=$([[ -d /root/cfst ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     tailscale_current_status=$(tailscale_status_check)
+    filebrowser_status=$(check_docker_service "filebrowser")
     
     if command -v docker &>/dev/null && command docker ps --format '{{.Names}}' | grep -q "^panhub$"; then panhub_status="${C_GREEN}✅ 运行中 (Docker)${C_RESET}"
     else panhub_status="❌ 未安装"; fi
 
     render_menu "🚀 服务管理中心" \
-        "1) MoonTV 安装                 $moon_status" \
-        "2) RustDesk 安装                $rustdesk_status" \
-        "3) LibreTV 安装                 $libretv_status" \
-        "4) 甬哥Sing-box-yg安装           $singbox_status" \
-        "5) 勇哥ArgoSB脚本                $argosb_status" \
-        "6) Kejilion.sh 一键脚本工具箱      ⚡ 远程调用" \
-        "7) zjsync（GitHub 文件自动同步）    $zjsync_status" \
-        "8) Pansou 网盘搜索               $panso_status" \
-        "9) 域名绑定管理                  ⚡ 远程调用" \
-        "10) Subconverter API后端         $subconverter_status" \
-        "11) Poste.io 邮件服务器           $posteio_status" \
-        "12) Shlink 短链接生成             $shlink_status" \
-        "13) SearxNG 一键安装/卸载         $searxng_status" \
-        "14) Telegram MTProto 代理         $(mtproto_status)" \
-        "15) CosyVoice 文本转语音          $(check_docker_service "cov")" \
+        "1) MoonTV 安装                $moon_status" \
+        "2) RustDesk 安装              $rustdesk_status" \
+        "3) LibreTV 安装               $libretv_status" \
+        "4) 甬哥Sing-box-yg安装        $singbox_status" \
+        "5) 勇哥ArgoSB脚本             $argosb_status" \
+        "6) Kejilion.sh 一键脚本工具箱 ⚡ 远程调用" \
+        "7) zjsync（GitHub 文件自动同步） $zjsync_status" \
+        "8) Pansou 网盘搜索            $panso_status" \
+        "9) 域名绑定管理               ⚡ 远程调用" \
+        "10) Subconverter API后端      $subconverter_status" \
+        "11) Poste.io 邮件服务器       $posteio_status" \
+        "12) Shlink 短链接生成         $shlink_status" \
+        "13) SearxNG 一键安装/卸载      $searxng_status" \
+        "14) Telegram MTProto 代理      $(mtproto_status)" \
+        "15) CosyVoice 文本转语音       $(check_docker_service "cov")" \
         "16) 系统工具（Swap 管理 + 主机名修改） ⚡" \
-        "17) CasaOS 一键安装/管理          $casaos_current_status" \
-        "18) PanHub 盘搜聚合 (支持多架构)  $panhub_status" \
-        "19) Cloudflare 优选 IP 工具箱     $cfst_status" \
-        "20) Tailscale & DERP 组网工具     $tailscale_current_status" \
+        "17) CasaOS 一键安装/管理      $casaos_current_status" \
+        "18) PanHub 盘搜聚合           $panhub_status" \
+        "19) Cloudflare 优选 IP 工具箱  $cfst_status" \
+        "20) Tailscale & DERP 组网工具  $tailscale_current_status" \
+        "21) FileBrowser 网盘管理      $filebrowser_status" \
         "00) 更新菜单脚本 menu.sh" \
-        "0) 退出" \
-        "" \
-        "提示：此脚本已自动设置 q 或 Q 快捷键，下次直接输入即可运行"
+        "0) 退出"
 
     read -rp "请输入选项: " main_choice
 
@@ -300,8 +270,8 @@ while true; do
         6) bash <(fetch "https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh") ;;
         7) zjsync_menu ;; 8) panso_menu ;; 9) nginx_menu ;; 10) subconverter_menu ;; 11) posteio_menu ;;
         12) shlink_menu ;; 13) searxng_menu ;; 14) mtproto_menu ;; 15) cosyvoice_menu ;; 16) system_tool_menu ;;
-        17) casaos_menu ;; 18) panhub_menu ;; 19) cfst_menu ;; 20) tailscale_menu ;;
-        00) update_menu_script ;; 0) exit 0 ;; *) error "❌ 无效输入"; sleep 2 ;;
+        17) casaos_menu ;; 18) panhub_menu ;; 19) cfst_menu ;; 20) tailscale_menu ;; 21) filebrowser_menu ;;
+        00) update_menu_script ;; 0) exit 0 ;; *) error "❌ 无效输入"; sleep 1 ;;
     esac
 
     if [[ "$main_choice" != "0" ]]; then
