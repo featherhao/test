@@ -31,137 +31,87 @@ get_rustdesk_key() {
     if [[ -f "$KEY_FILE" ]]; then
         cat "$KEY_FILE"
     else
-        echo "⏳ Key 尚未生成或卷未挂载，请确认容器已启动并挂载 /data"
+        echo "⏳ Key 尚未生成"
     fi
 }
 
-
-check_update() {
-    local image="rustdesk/rustdesk-server:latest"
-    echo "🔍 异步检查更新中..."
-    # 异步执行，不阻塞
-    (docker pull $image >/tmp/rustdesk_update.log 2>&1 && \
-    if grep -q 'Image is up to date' /tmp/rustdesk_update.log; then
-        echo "✅ 当前已是最新版本（本地镜像存在）"
-    else
-        echo "⬆️ 有新版本可更新！(选择 5 更新)"
-    fi) &
-}
-
-
-show_info() {
-    echo "🌐 RustDesk 服务端连接信息："
-    echo "ID Server : ${SERVER_IP}:21115"
-    echo "Relay     : ${SERVER_IP}:21116"
-    echo "API       : ${SERVER_IP}:21117"
-    echo "🔑 客户端 Key：$(get_rustdesk_key)"
-}
-
 # ==================
-# 安装
+# 功能函数
 # ==================
 install_rustdesk() {
-    echo "📦 安装 RustDesk Server..."
+    echo "📦 安装/重置 RustDesk Server..."
     mkdir -p $WORKDIR/data
     check_port 21115
     check_port 21116
     check_port 21117
 
-    # 启动 hbbs
     docker run -d --name hbbs \
     --restart unless-stopped \
     -v $WORKDIR/data:/data \
     -p 21115:21115 -p 21116:21116 -p 21116:21116/udp \
     rustdesk/rustdesk-server hbbs -r ${SERVER_IP}:21117
 
-
-    # 启动 hbbr
     docker run -d --name hbbr \
         --restart unless-stopped \
         -v $WORKDIR/data:/data \
         -p 21117:21117 \
         rustdesk/rustdesk-server hbbr
+    
+    echo "✅ Server 安装/启动完成"
+}
 
-    # 如果 Key 文件不存在，等待容器生成
+install_api() {
+    echo "📦 正在安装 RustDesk API..."
+    check_port 21114
+    
     if [[ ! -f "$WORKDIR/data/id_ed25519.pub" ]]; then
-        echo "⏳ 等待 hbbs 生成 Key..."
-        sleep 5
-        KEY=$(docker logs hbbs 2>&1 | grep 'Key:' | tail -n1 | awk '{print $NF}')
-        if [[ -n "$KEY" ]]; then
-            echo "$KEY" > "$WORKDIR/data/id_ed25519.pub"
-            echo "✅ Key 已生成并写入 $WORKDIR/data/id_ed25519.pub"
-        else
-            echo "⚠️ 未能获取 Key，请稍后再查看"
-        fi
+        echo "❌ 错误：未找到 Key 文件，请先安装 Server"
+        return
     fi
-
-    echo "✅ 安装完成"
-    show_info
+    
+    local KEY=$(cat "$WORKDIR/data/id_ed25519.pub")
+    
+    docker run -d --name rustdesk-api \
+    --restart unless-stopped \
+    -p 21114:21114 \
+    -v $WORKDIR/data:/app/data \
+    -e RUSTDESK_API_RUSTDESK_ID_SERVER=${SERVER_IP}:21116 \
+    -e RUSTDESK_API_RUSTDESK_RELAY_SERVER=${SERVER_IP}:21117 \
+    -e RUSTDESK_API_RUSTDESK_API_SERVER=http://${SERVER_IP}:21114 \
+    -e RUSTDESK_API_RUSTDESK_KEY=${KEY} \
+    lejianwen/rustdesk-api
+    
+    echo "✅ API 已启动，访问: http://${SERVER_IP}:21114/_admin/"
 }
 
-# ==================
-# 卸载
-# ==================
-uninstall_rustdesk() {
-    echo "🗑️ 卸载 RustDesk Server..."
-    docker rm -f hbbs hbbr 2>/dev/null || true
-    read -p "是否删除数据文件 (Key/配置)? [y/N] " yn
-    if [[ "$yn" =~ ^[Yy]$ ]]; then
-        rm -rf $WORKDIR
-        echo "🗑️ 数据文件已删除"
-    fi
-    echo "✅ 卸载完成"
-}
-
-# ==================
-# 重启
-# ==================
-restart_rustdesk() {
-    echo "🔄 重启 RustDesk Server..."
-    docker restart hbbs hbbr
-    echo "✅ 重启完成"
-}
-
-# ==================
-# 更新
-# ==================
-update_rustdesk() {
-    echo "⬆️ 更新 RustDesk Server..."
-    docker pull rustdesk/rustdesk-server:latest
-    docker rm -f hbbs hbbr 2>/dev/null || true
-    install_rustdesk
-    echo "✅ 更新完成"
+uninstall_api() {
+    echo "🗑️ 正在停止并移除 API 容器..."
+    docker rm -f rustdesk-api 2>/dev/null || echo "⚠️ 未发现 API 容器"
+    echo "✅ API 已卸载，不影响原有的 hbbs/hbbr 服务。"
 }
 
 # ==================
 # 主菜单
 # ==================
 while true; do
+    echo -e "\n============================="
+    echo "      RustDesk 综合管理"
     echo "============================="
-    echo "     RustDesk 服务端管理"
-    echo "============================="
-    if docker ps --format '{{.Names}}' | grep -q hbbs; then
-        echo "服务端状态: 已安装 ✅"
-    else
-        echo "服务端状态: 未安装 ❌"
-    fi
-    check_update
-
-    echo "1) 安装 RustDesk Server"
-    echo "2) 卸载 RustDesk Server"
-    echo "3) 重启 RustDesk Server"
-    echo "4) 查看连接信息"
-    echo "5) 更新 RustDesk Server"
+    echo "1) 安装/覆盖安装 RustDesk Server (hbbs/hbbr)"
+    echo "2) 安装/更新 RustDesk API"
+    echo "3) 卸载 RustDesk API (安全，不影响 Server)"
+    echo "4) 卸载所有服务 (含 Server)"
+    echo "5) 查看当前连接信息"
     echo "0) 退出"
     read -p "请选择操作 [0-5]: " choice
 
     case $choice in
         1) install_rustdesk ;;
-        2) uninstall_rustdesk ;;
-        3) restart_rustdesk ;;
-        4) show_info; read -p "按回车继续..." ;;
-        5) update_rustdesk; read -p "按回车继续..." ;;
+        2) install_api ;;
+        3) uninstall_api ;;
+        4) docker rm -f hbbs hbbr rustdesk-api; echo "✅ 所有容器已删除" ;;
+        5) get_rustdesk_key; read -p "按回车继续..." ;;
         0) exit 0 ;;
-        *) echo "无效选项，请重试" ;;
+        *) echo "无效选项" ;;
     esac
 done
