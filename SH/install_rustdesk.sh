@@ -61,15 +61,18 @@ install_rustdesk() {
 }
 
 install_api() {
-    echo "📦 正在安装 RustDesk API..."
+    echo "📦 正在安装/更新 RustDesk API (lejianwen)..."
     check_port 21114
     
     if [[ ! -f "$WORKDIR/data/id_ed25519.pub" ]]; then
-        echo "❌ 错误：未找到 Key 文件，请先安装 Server"
+        echo "❌ 错误：未找到 Key 文件，请先确保已安装 Server"
         return
     fi
     
     local KEY=$(cat "$WORKDIR/data/id_ed25519.pub")
+    
+    # 如果容器已存在，先删除，确保重新部署能获取最新状态
+    docker rm -f rustdesk-api 2>/dev/null || true
     
     docker run -d --name rustdesk-api \
     --restart unless-stopped \
@@ -81,13 +84,18 @@ install_api() {
     -e RUSTDESK_API_RUSTDESK_KEY=${KEY} \
     lejianwen/rustdesk-api
     
-    echo "✅ API 已启动，访问: http://${SERVER_IP}:21114/_admin/"
-}
-
-uninstall_api() {
-    echo "🗑️ 正在停止并移除 API 容器..."
-    docker rm -f rustdesk-api 2>/dev/null || echo "⚠️ 未发现 API 容器"
-    echo "✅ API 已卸载，不影响原有的 hbbs/hbbr 服务。"
+    echo "⏳ 正在等待容器初始化并获取初始密码..."
+    sleep 5
+    
+    # 自动提取密码
+    local PASS=$(docker logs rustdesk-api | grep "Admin Password Is:" | tail -n1 | awk '{print $NF}')
+    
+    echo "============================================"
+    echo "✅ API 安装完成！"
+    echo "🌐 管理地址: http://${SERVER_IP}:21114/_admin/"
+    echo "👤 用户名: admin"
+    echo "🔑 初始密码: ${PASS:-无法自动获取，请手动执行: docker logs rustdesk-api | grep 'Password Is'}"
+    echo "============================================"
 }
 
 # ==================
