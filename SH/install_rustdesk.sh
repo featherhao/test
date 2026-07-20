@@ -46,11 +46,14 @@ install_server() {
     -p 21117:21117 \
     rustdesk/rustdesk-server hbbr
 
-    echo "⏳ 等待生成 Key..."
-    sleep 5
-    KEY=$(docker logs hbbs 2>&1 | grep "Key:" | tail -n1 | awk '{print $NF}')
-    [[ -n "$KEY" ]] && echo "$KEY" > "$WORKDIR/data/id_ed25519.pub"
-    echo "✅ Server 安装完成"
+    echo "⏳ 检查 Key..."
+    sleep 3
+    # 只有当文件不存在时才去尝试提取
+    if [[ ! -f "$WORKDIR/data/id_ed25519.pub" ]]; then
+        KEY=$(docker logs hbbs 2>&1 | grep "Key:" | tail -n1 | awk '{print $NF}')
+        [[ -n "$KEY" ]] && echo "$KEY" > "$WORKDIR/data/id_ed25519.pub"
+    fi
+    echo "✅ Server 已运行 (Key 已保留)"
 }
 
 install_api() {
@@ -59,7 +62,6 @@ install_api() {
         return
     fi
     echo "📦 正在安装 API 模块..."
-    # 清理旧容器和旧数据，确保重装是干净的
     docker rm -f rustdesk-api 2>/dev/null || true
     rm -rf $WORKDIR/api_data/*
     mkdir -p $WORKDIR/api_data
@@ -73,33 +75,36 @@ install_api() {
     -e RUSTDESK_API_RUSTDESK_RELAY_SERVER=${SERVER_IP}:21117 \
     -e RUSTDESK_API_RUSTDESK_API_SERVER=http://${SERVER_IP}:21114 \
     -e RUSTDESK_API_RUSTDESK_KEY=$(cat $WORKDIR/data/id_ed25519.pub) \
-    -e RUSTDESK_API_PASSWORD=admin \
     lejianwen/rustdesk-api
     
+    echo "⏳ 等待 API 初始化..."
+    sleep 6
+    PASS=$(docker logs rustdesk-api 2>&1 | grep "Admin Password Is:" | tail -n1 | awk -F'Is: ' '{print $2}' | awk '{print $1}')
     echo -e "\n============================================"
-    echo "✅ API 安装成功"
-    echo "🌐 管理地址: http://${SERVER_IP}:21114/_admin/"
     echo "👤 用户名: admin"
-    echo "🔑 密码: admin (已通过脚本固定)"
+    echo "🔑 初始密码: ${PASS:-手动查看: docker logs rustdesk-api | grep 'Password Is'}"
     echo "============================================"
 }
 
-uninstall_api() {
-    echo "🧹 正在彻底卸载 API..."
-    docker rm -f rustdesk-api 2>/dev/null || true
-    rm -rf $WORKDIR/api_data
-    echo "✅ API 容器及数据库数据已清除。"
+uninstall_server() {
+    echo -e "\n🛠  卸载 Server 服务"
+    read -p "是否保留数据目录（Key）？[Y/n]: " keep
+    docker rm -f hbbs hbbr 2>/dev/null || true
+    if [[ "$keep" =~ ^[Nn]$ ]]; then
+        rm -rf $WORKDIR/data
+        echo "✅ 数据已彻底清除。"
+    else
+        echo "✅ Key 已保留，下次安装 Server 将自动挂载。"
+    fi
 }
 
 uninstall_all() {
-    echo -e "\n⚠️  警告：将彻底删除所有服务及数据 ($WORKDIR)！"
-    read -p "确认操作吗？[y/N]: " confirm
+    echo -e "\n⚠️  警告：将删除所有服务及数据 ($WORKDIR)！"
+    read -p "确认彻底清理吗？[y/N]: " confirm
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
         docker rm -f hbbs hbbr rustdesk-api 2>/dev/null || true
         rm -rf $WORKDIR
-        echo "✅ 所有容器及数据已清理。"
-    else
-        echo "❌ 取消卸载。"
+        echo "✅ 所有服务及数据已删除。"
     fi
 }
 
@@ -110,20 +115,22 @@ while true; do
     echo -e "\n============================="
     echo "   RustDesk 综合管理面板"
     echo "============================="
-    echo "1) 安装/重置 Server"
+    echo "1) 安装/更新 Server (自动识别已有 Key)"
     echo "2) 安装/更新 API"
-    echo "3) 仅卸载 API (自动清理数据)"
-    echo "4) 彻底卸载所有服务 (Server+API)"
-    echo "5) 查看连接信息"
+    echo "3) 卸载 Server (可选择是否保留 Key)"
+    echo "4) 仅卸载 API"
+    echo "5) 彻底卸载所有 (含 Key)"
+    echo "6) 查看连接信息"
     echo "0) 退出"
     read -p "请选择: " choice
 
     case $choice in
         1) install_server ;;
         2) install_api ;;
-        3) uninstall_api ;;
-        4) uninstall_all ;;
-        5) show_info; read -p "按回车继续..." ;;
+        3) uninstall_server ;;
+        4) docker rm -f rustdesk-api; rm -rf $WORKDIR/api_data; echo "✅ API 已卸载" ;;
+        5) uninstall_all ;;
+        6) show_info; read -p "按回车继续..." ;;
         0) exit 0 ;;
         *) echo "无效选项" ;;
     esac
