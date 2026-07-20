@@ -172,6 +172,19 @@ check_docker_service() {
     else echo "❌ 未安装"; fi
 }
 
+rustdesk_status_check() {
+    if ! command -v docker &>/dev/null; then echo "❌ 未安装"; return; fi
+    # 同时检查两个核心容器
+    if docker ps --format '{{.Names}}' | grep -q "^hbbs$" && docker ps --format '{{.Names}}' | grep -q "^hbbr$"; then
+        echo "${C_GREEN}✅ 运行中${C_RESET}"
+    elif docker ps -a --format '{{.Names}}' | grep -q "^hbbs$"; then
+        echo "${C_YELLOW}⚠️ 已停止${C_RESET}"
+    else
+        echo "❌ 未安装"
+    fi
+}
+
+
 casaos_status() {
     if systemctl list-unit-files 2>/dev/null | grep -q "casaos.service"; then
         systemctl is-active --quiet casaos && echo "${C_GREEN}✅ 运行中${C_RESET}" || echo "${C_YELLOW}⚠️ 已停止${C_RESET}"; return
@@ -220,7 +233,6 @@ update_menu_script() {
 # ================== 主菜单循环 ==================
 while true; do
     moon_status=$([[ -d /opt/moontv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
-    rustdesk_status=$([[ -d /opt/rustdesk ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     libretv_status=$([[ -d /opt/libretv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     singbox_status=$(command -v sing-box &>/dev/null && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     argosb_status=$(argosb_status_check)
@@ -234,6 +246,7 @@ while true; do
     cfst_status=$([[ -d /root/cfst ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     tailscale_current_status=$(tailscale_status_check)
     filebrowser_status=$(check_docker_service "filebrowser")
+    rustdesk_status=$(rustdesk_status_check)
     
     if command -v docker &>/dev/null && command docker ps --format '{{.Names}}' | grep -q "^panhub$"; then panhub_status="${C_GREEN}✅ 运行中 (Docker)${C_RESET}"
     else panhub_status="❌ 未安装"; fi
