@@ -193,22 +193,14 @@ casaos_status() {
 }
 
 mtproto_status() {
-    if systemctl list-unit-files 2>/dev/null | grep -qE "mtg.service|mtproto.service"; then
-        systemctl is-active --quiet mtg 2>/dev/null || systemctl is-active --quiet mtproto 2>/dev/null && echo "${C_GREEN}✅ 运行中${C_RESET}" || echo "${C_YELLOW}⚠️ 已停止${C_RESET}"
-        return
+    if systemctl is-active --quiet mtg 2>/dev/null; then
+        echo "${C_GREEN}✅ 运行中${C_RESET}"
+    elif systemctl list-unit-files 2>/dev/null | grep -q "mtg.service"; then
+        echo "${C_YELLOW}⚠️ 已停止${C_RESET}"
+    else
+        echo "❌ 未安装"
     fi
-    if command -v docker &>/dev/null; then
-        if docker ps --format '{{.Names}}' | grep -qE "^(mtg|mtproto|telegram-proxy)$"; then
-            echo "${C_GREEN}✅ 运行中${C_RESET}"
-            return
-        elif docker ps -a --format '{{.Names}}' | grep -qE "^(mtg|mtproto|telegram-proxy)$"; then
-            echo "${C_YELLOW}⚠️ 已停止${C_RESET}"
-            return
-        fi
-    fi
-    echo "❌ 未安装"
 }
-
 argosb_status_check() {
     [[ -f "/opt/argosb/installed.flag" ]] && { echo "✅ 已安装 (标记文件)"; return; }
     echo "❌ 未安装"
@@ -237,7 +229,7 @@ update_menu_script() {
 while true; do
     moon_status=$([[ -d /opt/moontv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     libretv_status=$([[ -d /opt/libretv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
-    singbox_status=$([[ -f /usr/local/bin/sing-box || -f /etc/sing-box/config.json ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
+    singbox_status=$(systemctl is-active --quiet sing-box 2>/dev/null && echo "${C_GREEN}✅ 运行中${C_RESET}" || (systemctl list-unit-files 2>/dev/null | grep -q "sing-box.service" && echo "${C_YELLOW}⚠️ 已停止${C_RESET}" || echo "❌ 未安装"))
     argosb_status=$(argosb_status_check)
     panso_status=$(check_docker_service "pansou-web")
     zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "${C_GREEN}✅ 已配置${C_RESET}" || echo "❌ 未配置")
