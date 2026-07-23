@@ -193,14 +193,17 @@ casaos_status() {
 }
 
 mtproto_status() {
-    if systemctl list-unit-files 2>/dev/null | grep -q "mtg.service"; then
-        systemctl is-active --quiet mtg && echo "✅ 运行中 (systemctl)" || echo "⚠️ 已停止 (systemctl)"; return
+    if systemctl list-unit-files 2>/dev/null | grep -qE "mtg.service|mtproto.service"; then
+        systemctl is-active --quiet mtg 2>/dev/null || systemctl is-active --quiet mtproto 2>/dev/null && echo "${C_GREEN}✅ 运行中${C_RESET}" || echo "${C_YELLOW}⚠️ 已停止${C_RESET}"
+        return
     fi
     if command -v docker &>/dev/null; then
-        local cid
-        cid=$(command docker ps -a --filter "ancestor=telegrammessenger/proxy" --format '{{.ID}}' | head -n1)
-        if [[ -n "$cid" ]]; then
-            command docker ps --filter "id=$cid" --format '{{.ID}}' | grep -q . && echo "✅ 运行中 (docker)" || echo "⚠️ 已停止 (docker)"; return
+        if docker ps --format '{{.Names}}' | grep -qE "^(mtg|mtproto|telegram-proxy)$"; then
+            echo "${C_GREEN}✅ 运行中${C_RESET}"
+            return
+        elif docker ps -a --format '{{.Names}}' | grep -qE "^(mtg|mtproto|telegram-proxy)$"; then
+            echo "${C_YELLOW}⚠️ 已停止${C_RESET}"
+            return
         fi
     fi
     echo "❌ 未安装"
@@ -234,13 +237,13 @@ update_menu_script() {
 while true; do
     moon_status=$([[ -d /opt/moontv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     libretv_status=$([[ -d /opt/libretv ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
-    singbox_status=$(command -v sing-box &>/dev/null && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
+    singbox_status=$([[ -f /usr/local/bin/sing-box || -f /etc/sing-box/config.json ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
     argosb_status=$(argosb_status_check)
     panso_status=$(check_docker_service "pansou-web")
     zjsync_status=$([[ -f /etc/zjsync.conf ]] && echo "${C_GREEN}✅ 已配置${C_RESET}" || echo "❌ 未配置")
     subconverter_status=$(check_docker_service "subconverter")
     shlink_status=$(check_docker_service "shlink")
-    posteio_status=$(check_docker_service "posteio")
+    posteio_status=$(check_docker_service "poste.io")
     searxng_status=$(check_docker_service "searxng")
     casaos_current_status=$(casaos_status)
     cfst_status=$([[ -d /root/cfst ]] && echo "${C_GREEN}✅ 已安装${C_RESET}" || echo "❌ 未安装")
