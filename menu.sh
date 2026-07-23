@@ -201,11 +201,17 @@ mtproto_status() {
         echo "❌ 未安装"
     fi
 }
-argosb_status_check() {
-    [[ -f "/opt/argosb/installed.flag" ]] && { echo "✅ 已安装 (标记文件)"; return; }
-    echo "❌ 未安装"
-}
 
+argosb_status_check() {
+    # 1. 优先检查标记文件或 systemd 服务是否处于激活状态
+    if [[ -f "/opt/argosb/installed.flag" ]] || systemctl is-active --quiet argo 2>/dev/null; then
+        echo "${C_GREEN}✅ 运行中${C_RESET}"
+    elif systemctl list-unit-files 2>/dev/null | grep -q "argo.service"; then
+        echo "${C_YELLOW}⚠️ 已停止${C_RESET}"
+    else
+        echo "❌ 未安装"
+    fi
+}
 tailscale_status_check() {
     if command -v tailscale &>/dev/null; then
         systemctl is-active --quiet tailscaled 2>/dev/null && echo "${C_GREEN}✅ 运行中${C_RESET}" || echo "${C_YELLOW}⚠️ 已停止${C_RESET}"
