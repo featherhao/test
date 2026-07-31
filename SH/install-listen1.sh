@@ -26,7 +26,7 @@ show_access_info() {
     ip=$(get_local_ip)
     echo "=================================================="
     echo " Listen1 已成功部署并运行！"
-    echo " 访问地址: http://$ip:8080"
+    echo " 访问地址: http://$ip:8180"
     echo "=================================================="
     echo "提示：如果是云服务器（如阿里云、腾讯云、Oracle 等），"
     echo "请确保在云平台安全组/防火墙中放行 8080 端口。"
@@ -56,7 +56,7 @@ services:
     image: nginx:alpine
     container_name: listen1
     ports:
-      - "8080:80/tcp"
+      - "8180:80/tcp"
     restart: unless-stopped
 EOF
 
