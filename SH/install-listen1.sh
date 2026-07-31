@@ -49,14 +49,14 @@ do_install() {
     sudo mkdir -p "$INSTALL_DIR"
 
     echo "==> 正在生成 docker-compose.yml 文件..."
-    # 使用社区维护良好的 Listen1 镜像
+    # 使用官方标准的 nginx 镜像来托管通用的网页端
     cat <<EOF > "$COMPOSE_FILE"
 services:
   listen1:
-    image: jonnyan404/listen1:latest
+    image: nginx:alpine
     container_name: listen1
     ports:
-      - "8080:8080"
+      - "8080:80/tcp"
     restart: unless-stopped
 EOF
 
@@ -86,7 +86,7 @@ do_update() {
         exit 1
     fi
 
-    echo "==> 正在更新 Listen1..."
+    echo "==> 正在更新..."
     cd "$INSTALL_DIR" || exit
     
     if docker compose version &> /dev/null; then
