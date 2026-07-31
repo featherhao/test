@@ -49,11 +49,11 @@ do_install() {
     sudo mkdir -p "$INSTALL_DIR"
 
     echo "==> 正在生成 docker-compose.yml 文件..."
-    # 使用目前社区常用的 listen1 docker 镜像 (例如 ilden/listen1 或类似稳定镜像)
+    # 使用社区维护良好的 Listen1 镜像
     cat <<EOF > "$COMPOSE_FILE"
 services:
   listen1:
-    image: ilden/listen1_desktop:latest
+    image: jonnyan404/listen1:latest
     container_name: listen1
     ports:
       - "8080:8080"
