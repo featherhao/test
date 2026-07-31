@@ -49,14 +49,24 @@ do_install() {
     sudo mkdir -p "$INSTALL_DIR/data"
     sudo chown -R 1000:1000 "$INSTALL_DIR"
     
-    # 提示用户输入音乐目录路径
-    read -p "请输入您的本地音乐库绝对路径 (默认: /data/music): " MUSIC_PATH
-    MUSIC_PATH=${MUSIC_PATH:-"/data/music"}
+    # 循环检查并获取有效的绝对路径
+    while true; do
+        read -p "请输入您的本地音乐库绝对路径 (默认: /data/music): " MUSIC_PATH
+        MUSIC_PATH=${MUSIC_PATH:-"/data/music"}
+
+        # 检查是否以 / 开头（必须是绝对路径）
+        if [[ "$MUSIC_PATH" =~ ^/ ]]; then
+            break
+        else
+            echo "错误: 音乐目录必须是绝对路径（需以 / 开头，例如 /root/music 或 /data/music），请重新输入。"
+        fi
+    done
 
     # 如果音乐目录不存在则自动创建，防止挂载报错
     if [ ! -d "$MUSIC_PATH" ]; then
         echo "==> 提示: 音乐目录 $MUSIC_PATH 不存在，正在为您自动创建..."
         mkdir -p "$MUSIC_PATH"
+        sudo chown -R 1000:1000 "$MUSIC_PATH"
     fi
 
     echo "==> 正在生成 docker-compose.yml 文件..."
