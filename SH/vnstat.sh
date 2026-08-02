@@ -37,7 +37,7 @@ deploy_vnstat() {
         
         # 等待几秒让容器初始化并自动添加网卡
         sleep 3
-        # 尝试自动添加默认网卡（如 eth0 等，通过 iflist 自动适配）
+        # 尝试自动添加默认网卡
         DEFAULT_IF=$(docker exec ${CONTAINER_NAME} vnstat --iflist | awk 'NR==2{print $1}')
         if [ -n "$DEFAULT_IF" ]; then
             echo "检测到默认网卡: $DEFAULT_IF，正在加入监控..."
@@ -98,7 +98,7 @@ show_menu() {
         *)
             echo "无效的输入，请重新选择！"
             ;;
-    end
+    esac
     
     echo ""
     read -p "按回车键继续..."
