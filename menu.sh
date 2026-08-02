@@ -131,6 +131,7 @@ CLEAN_VPS_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/m
 COSYVOICE_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/cosyvoice.sh"
 CFST_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/cfst.sh"
 TAILSCALE_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/Tailscale"
+VNSTAT_SCRIPT="https://raw.githubusercontent.com/featherhao/test/refs/heads/main/SH/vnstat.sh"
 
 # ================== 子脚本调用函数 ==================
 filebrowser_menu() { bash <(fetch "${FILEBROWSER_SCRIPT}?t=$(date +%s)"); }
@@ -152,6 +153,7 @@ system_tool_menu() { bash <(fetch "${SYSTEM_TOOL_SCRIPT}?t=$(date +%s)"); }
 cosyvoice_menu() { bash <(fetch "${COSYVOICE_SCRIPT}?t=$(date +%s)"); }
 cfst_menu() { bash <(fetch "${CFST_SCRIPT}?t=$(date +%s)"); }
 tailscale_menu() { bash <(fetch "${TAILSCALE_SCRIPT}?t=$(date +%s)"); }
+vnstat_menu() { bash <(fetch "${VNSTAT_SCRIPT}?t=$(date +%s)"); }
 
 casaos_menu() {
     clear
@@ -174,7 +176,6 @@ check_docker_service() {
 
 rustdesk_status_check() {
     if ! command -v docker &>/dev/null; then echo "❌ 未安装"; return; fi
-    # 同时检查两个核心容器
     if docker ps --format '{{.Names}}' | grep -q "^hbbs$" && docker ps --format '{{.Names}}' | grep -q "^hbbr$"; then
         echo "${C_GREEN}✅ 运行中${C_RESET}"
     elif docker ps -a --format '{{.Names}}' | grep -q "^hbbs$"; then
@@ -183,7 +184,6 @@ rustdesk_status_check() {
         echo "❌ 未安装"
     fi
 }
-
 
 casaos_status() {
     if systemctl list-unit-files 2>/dev/null | grep -q "casaos.service"; then
@@ -203,7 +203,6 @@ mtproto_status() {
 }
 
 argosb_status_check() {
-    # 1. 优先检查标记文件或 systemd 服务是否处于激活状态
     if [[ -f "/opt/argosb/installed.flag" ]] || systemctl is-active --quiet argo 2>/dev/null; then
         echo "${C_GREEN}✅ 运行中${C_RESET}"
     elif systemctl list-unit-files 2>/dev/null | grep -q "argo.service"; then
@@ -212,6 +211,7 @@ argosb_status_check() {
         echo "❌ 未安装"
     fi
 }
+
 tailscale_status_check() {
     if command -v tailscale &>/dev/null; then
         systemctl is-active --quiet tailscaled 2>/dev/null && echo "${C_GREEN}✅ 运行中${C_RESET}" || echo "${C_YELLOW}⚠️ 已停止${C_RESET}"
@@ -248,25 +248,26 @@ while true; do
     tailscale_current_status=$(tailscale_status_check)
     filebrowser_status=$(check_docker_service "filebrowser")
     rustdesk_status=$(rustdesk_status_check)
+    vnstat_status=$(check_docker_service "vnstat")
     
     if command -v docker &>/dev/null && command docker ps --format '{{.Names}}' | grep -q "^panhub$"; then panhub_status="${C_GREEN}✅ 运行中 (Docker)${C_RESET}"
     else panhub_status="❌ 未安装"; fi
 
     render_menu "🚀 服务管理中心" \
-        "1) MoonTV 安装                $moon_status" \
+        "1) MoonTV 安装                 $moon_status" \
         "2) RustDesk 安装              $rustdesk_status" \
         "3) LibreTV 安装               $libretv_status" \
-        "4) 甬哥Sing-box-yg安装        $singbox_status" \
+        "4) 甬哥Sing-box-yg安装         $singbox_status" \
         "5) 勇哥ArgoSB脚本             $argosb_status" \
         "6) Kejilion.sh 一键脚本工具箱 ⚡ 远程调用" \
         "7) zjsync（GitHub 文件自动同步） $zjsync_status" \
-        "8) Pansou 网盘搜索            $panso_status" \
-        "9) 域名绑定管理               ⚡ 远程调用" \
+        "8) Pansou 网盘搜索             $panso_status" \
+        "9) 域名绑定管理                ⚡ 远程调用" \
         "10) Subconverter API后端      $subconverter_status" \
         "11) Poste.io 邮件服务器       $posteio_status" \
         "12) Shlink 短链接生成         $shlink_status" \
         "13) SearxNG 一键安装/卸载      $searxng_status" \
-        "14) Telegram MTProto 代理      $(mtproto_status)" \
+        "14) Telegram MTProto 代理     $(mtproto_status)" \
         "15) CosyVoice 文本转语音       $(check_docker_service "cov")" \
         "16) 系统工具（Swap 管理 + 主机名修改） ⚡" \
         "17) CasaOS 一键安装/管理      $casaos_current_status" \
@@ -274,6 +275,7 @@ while true; do
         "19) Cloudflare 优选 IP 工具箱  $cfst_status" \
         "20) Tailscale & DERP 组网工具  $tailscale_current_status" \
         "21) FileBrowser 网盘管理      $filebrowser_status" \
+        "22) VPS 流量统计 (vnStat)      $vnstat_status" \
         "00) 更新菜单脚本 menu.sh" \
         "0) 退出"
 
@@ -285,6 +287,7 @@ while true; do
         7) zjsync_menu ;; 8) panso_menu ;; 9) nginx_menu ;; 10) subconverter_menu ;; 11) posteio_menu ;;
         12) shlink_menu ;; 13) searxng_menu ;; 14) mtproto_menu ;; 15) cosyvoice_menu ;; 16) system_tool_menu ;;
         17) casaos_menu ;; 18) panhub_menu ;; 19) cfst_menu ;; 20) tailscale_menu ;; 21) filebrowser_menu ;;
+        22) vnstat_menu ;;
         00) update_menu_script ;; 0) exit 0 ;; *) error "❌ 无效输入"; sleep 1 ;;
     esac
 
