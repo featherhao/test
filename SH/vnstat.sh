@@ -48,7 +48,30 @@ deploy_vnstat() {
     fi
 }
 
-# 3. 交互菜单
+# 3. 卸载 vnstat 容器及相关数据
+uninstall_vnstat() {
+    echo "=========================================="
+    echo "         卸载 vnStat 流量监控             "
+    echo "=========================================="
+    read -p "确定要卸载 vnStat 吗？历史流量数据将会丢失！[y/N]: " confirm
+    case "$confirm" in
+        [yY][eE][sS]|[yY])
+            if [ "$(docker ps -a -q -f name=^/${CONTAINER_NAME}$)" ]; then
+                echo "正在停止并删除容器..."
+                docker stop ${CONTAINER_NAME} &>/dev/null
+                docker rm ${CONTAINER_NAME} &>/dev/null
+                echo "vnstat 容器已成功卸载！"
+            else
+                echo "未检测到运行中的 vnstat 容器。"
+            fi
+            ;;
+        *)
+            echo "已取消卸载操作。"
+            ;;
+    esac
+}
+
+# 4. 交互菜单
 show_menu() {
     clear
     echo "=========================================="
@@ -60,9 +83,10 @@ show_menu() {
     echo " 4. 查看每月流量统计"
     echo " 5. 查看实时网卡带宽速率"
     echo " 6. 查看网页端访问地址 (Web UI)"
+    echo " 7. 卸载 vnStat 服务"
     echo " 0. 退出脚本"
     echo "=========================================="
-    read -p "请输入选项 [0-6]: " choice
+    read -p "请输入选项 [0-7]: " choice
 
     case "$choice" in
         1)
@@ -91,6 +115,9 @@ show_menu() {
             echo " 网页端地址: http://$SERVER_IP:8685"
             echo " (如果无法访问请检查 VPS 的防火墙/安全组)"
             echo "=========================================="
+            ;;
+        7)
+            uninstall_vnstat
             ;;
         0)
             exit 0
